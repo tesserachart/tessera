@@ -118,6 +118,7 @@ jobs:
             echo "X display, window manager and WebDriver already installed"
             exit 0
           fi
+          sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends "${missing[@]}"
 
       - name: tauri-driver
