@@ -62,7 +62,7 @@ jobs:
   build:
     name: Build (${{ matrix.platform }})
     needs: ci
-    runs-on: ${{ matrix.platform == 'mac' && (vars.MAC_RUNNER || 'macos-15') || matrix.platform == 'windows' && (vars.HOSTED_RUNNERS == 'true' && 'windows-latest' || 'tessera-win') || (vars.HOSTED_RUNNERS == 'true' && 'ubuntu-latest' || 'tessera-vm') }}
+    runs-on: ${{ matrix.platform == 'mac' && (vars.MAC_RUNNER || 'macos-15') || matrix.platform == 'windows' && (vars.HOSTED_RUNNERS == 'true' && 'windows-latest' || 'tessera-win') || (vars.HOSTED_RUNNERS == 'true' && 'ubuntu-22.04' || 'tessera-vm') }}
     timeout-minutes: 120
     permissions:
       contents: read
