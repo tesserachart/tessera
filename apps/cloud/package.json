@@ -1,0 +1,26 @@
+{
+  "name": "@tessera/cloud",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Tessera Cloud: the Cloudflare Worker the app and the site talk to (accounts, alpha access, check-ins).",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --env staging --ip 127.0.0.1 --local-upstream 127.0.0.1:8787 --upstream-protocol http",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tessera/ui": "workspace:*",
+    "hono": "4.13.13",
+    "jose": "6.2.12",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261016.1",
+    "jsonc-parser": "3.3.1",
+    "miniflare": "4.20260730.0",
+    "wrangler": "4.151.1"
+  }
+}

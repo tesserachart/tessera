@@ -1,0 +1,74 @@
+name: Fresh base
+description: Publishes the "Fresh base" status, failing a pull request whose head is more than max-behind commits behind main or carries another branch's commits, unless it is labelled stack (scripts/stale-base.ts); with no pull request, fails every open one main has left more than max-behind commits behind
+
+inputs:
+  pull-request:
+    description: The pull request's number; empty to recheck every open pull request against main
+    default: ''
+  head:
+    description: The pull request's head commit
+    default: ''
+  max-behind:
+    description: How many commits behind main the head may be
+    default: '5'
+  token:
+    description: A token that may read pull requests and write commit statuses
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      if: inputs.pull-request != ''
+      with:
+        persist-credentials: false
+        ref: ${{ inputs.head }}
+        path: .fresh-base
+        fetch-depth: 0
+        filter: tree:0
+        sparse-checkout: scripts
+
+    - name: Publish the Fresh base status
+      if: inputs.pull-request != ''
+      shell: bash
+      working-directory: .fresh-base
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        PR: ${{ inputs.pull-request }}
+        HEAD_SHA: ${{ inputs.head }}
+        MAX_BEHIND: ${{ inputs.max-behind }}
+      run: |
+        labels=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/labels" --jq '.[].name')
+        verdict=0
+        report=$(bun scripts/stale-base.ts --max-behind "$MAX_BEHIND" --labels "$labels" 2>&1) || verdict=$?
+        echo "$report"
+        case "$verdict" in
+          0) state=success description=$(head -1 <<< "$report") ;;
+          1) state=failure description="Stale base: $(sed -n 's/^  - //p' <<< "$report" | paste -sd ';' | sed 's/;/; /g')" ;;
+          *) exit "$verdict" ;;
+        esac
+        gh api "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" -f state="$state" -f context="Fresh base" \
+          -f description="${description:0:140}" -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null
+
+    - name: Remove its checkout
+      if: always() && inputs.pull-request != ''
+      shell: bash
+      run: rm -rf .fresh-base
+
+    - name: Fail every open pull request main has left behind
+      if: inputs.pull-request == ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        MAX_BEHIND: ${{ inputs.max-behind }}
+      run: |
+        gh pr list --state open --limit 200 --json number,headRefOid,labels,isCrossRepository \
+          --jq '.[] | select(.isCrossRepository | not) | select(all(.labels[]; .name != "stack")) | "\(.number) \(.headRefOid)"' |
+          while read -r pr sha; do
+            behind=$(gh api "repos/$GITHUB_REPOSITORY/compare/$GITHUB_SHA...$sha" --jq .behind_by)
+            [ "$behind" -gt "$MAX_BEHIND" ] || continue
+            echo "#$pr is $behind commits behind main."
+            gh api "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=failure -f context="Fresh base" \
+              -f description="Stale base: $behind commits behind origin/main (at most $MAX_BEHIND)" \
+              -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null
+          done

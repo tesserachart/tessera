@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "id": "eric",
+  "name": "Eric",
+  "about": "American, smooth",
+  "vendor": {
+    "id": "elevenlabs",
+    "voiceId": "cjVigY5qzO86Huf0OWal",
+    "model": "eleven_v4",
+    "plan": "free",
+    "commercialUse": false,
+    "credit": "Voices by ElevenLabs"
+  },
+  "generated": "2026-11-05",
+  "lines": {
+    "order_filled": {
+      "file": "order_filled.mp3",
+      "text": "Order filled.",
+      "durationMs": 916,
+      "lufs": -20.5
+    },
+    "market_filled": {
+      "file": "market_filled.mp3",
+      "text": "Market filled.",
+      "durationMs": 1182,
+      "lufs": -20.7
+    },
+    "limit_filled": {
+      "file": "limit_filled.mp3",
+      "text": "Limit filled.",
+      "durationMs": 1078,
+      "lufs": -20.4
+    },
+    "stop_filled": {
+      "file": "stop_filled.mp3",
+      "text": "Stop order filled.",
+      "durationMs": 1397,
+      "lufs": -21.9
+    },
+    "stop_limit_filled": {
+      "file": "stop_limit_filled.mp3",
+      "text": "Stop limit filled.",
+      "durationMs": 1811,
+      "lufs": -20.9
+    },
+    "partially_filled": {
+      "file": "partially_filled.mp3",
+      "text": "Partially filled.",
+      "durationMs": 1145,
+      "lufs": -20.4
+    },
+    "stop_hit": {
+      "file": "stop_hit.mp3",
+      "text": "Stop loss hit.",
+      "durationMs": 1212,
+      "lufs": -21
+    },
+    "target_hit": {
+      "file": "target_hit.mp3",
+      "text": "Target hit.",
+      "durationMs": 938,
+      "lufs": -20.3
+    },
+    "position_closed": {
+      "file": "position_closed.mp3",
+      "text": "Position closed.",
+      "durationMs": 1190,
+      "lufs": -20.4
+    },
+    "position_reversed": {
+      "file": "position_reversed.mp3",
+      "text": "Position reversed.",
+      "durationMs": 1317,
+      "lufs": -20.4
+    },
+    "order_cancelled": {
+      "file": "order_cancelled.mp3",
+      "text": "Order cancelled.",
+      "durationMs": 1134,
+      "lufs": -20.6
+    },
+    "order_rejected": {
+      "file": "order_rejected.mp3",
+      "text": "Order rejected.",
+      "durationMs": 1196,
+      "lufs": -20.5
+    },
+    "loss_limit": {
+      "file": "loss_limit.mp3",
+      "text": "Loss limit reached.",
+      "durationMs": 1355,
+      "lufs": -20.5
+    },
+    "account_locked": {
+      "file": "account_locked.mp3",
+      "text": "Account locked.",
+      "durationMs": 1157,
+      "lufs": -20.4
+    },
+    "connection_lost": {
+      "file": "connection_lost.mp3",
+      "text": "Connection lost.",
+      "durationMs": 1397,
+      "lufs": -20.4
+    },
+    "connection_restored": {
+      "file": "connection_restored.mp3",
+      "text": "Connection restored.",
+      "durationMs": 1246,
+      "lufs": -20.3
+    },
+    "alert": {
+      "file": "alert.mp3",
+      "text": "Alert.",
+      "durationMs": 623,
+      "lufs": -20.5
+    },
+    "big_buyer": {
+      "file": "big_buyer.mp3",
+      "text": "Big buyer.",
+      "durationMs": 959,
+      "lufs": -20.4
+    },
+    "big_seller": {
+      "file": "big_seller.mp3",
+      "text": "Big seller.",
+      "durationMs": 976,
+      "lufs": -20.3
+    }
+  }
+}

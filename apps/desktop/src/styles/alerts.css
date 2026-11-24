@@ -1,0 +1,161 @@
+.al-anchor {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.t-popover.al-pop {
+  width: 360px;
+  padding: var(--sp-3) var(--sp-4) var(--sp-3);
+}
+.al-form {
+  display: grid;
+  gap: var(--sp-1);
+}
+.al-form-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding-bottom: var(--sp-2);
+  font: var(--fw-strong) var(--fs-body) / 1.2 var(--sans);
+  color: var(--t1);
+}
+.al-fixed {
+  margin: 0 0 var(--sp-2);
+  color: var(--t1);
+}
+.al-repeat {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.al-repeat .al-cool {
+  width: 110px;
+}
+.al-deliver {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-4);
+  padding: var(--sp-2) 0 var(--sp-1);
+}
+.al-err {
+  margin: var(--sp-1) 0 0;
+  padding-left: var(--sp-2);
+  font: 400 var(--fs-meta) / 1.35 var(--sans);
+  color: var(--t1);
+  box-shadow: inset var(--rule) 0 0 var(--brass);
+}
+
+.al-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.al-line {
+  position: absolute;
+  height: 0;
+  border-top: 1px dotted var(--brass-60);
+}
+.al-mark.is-paused {
+  opacity: 0.45;
+}
+.al-tag {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 var(--sp-1);
+  background: var(--chart-bg, var(--ink));
+  border: 1px solid var(--brass-60);
+  color: var(--brass);
+  font: 500 11px / 16px var(--sans);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.al-tag.is-drag {
+  cursor: ns-resize;
+}
+.al-tag .t-icon {
+  flex: none;
+  --icon: 11px;
+}
+.al-mark.is-moving .al-tag {
+  background: var(--ink-2);
+}
+.al-fired {
+  position: absolute;
+  transform: translateY(-50%);
+  padding: 1px var(--sp-1-5);
+  background: var(--chart-bg, var(--ink));
+  border: 1px solid var(--brass);
+  color: var(--t1);
+  font: 500 11px / 16px var(--sans);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  animation: al-note 8s var(--ease-out) both;
+}
+@keyframes al-note {
+  0% {
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .al-fired {
+    animation: none;
+  }
+}
+
+.al-table .al-title {
+  max-width: 0;
+  width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.al-table .al-cond {
+  color: var(--t1);
+}
+.al-table tr.is-paused td,
+.al-table tr.is-spent td {
+  color: var(--t3);
+}
+.al-table tr.is-spent .al-cond,
+.al-table tr.is-paused .al-cond {
+  color: var(--t2);
+}
+.al-word.is-active {
+  color: var(--t1);
+}
+.al-word.is-waiting {
+  color: var(--t2);
+  box-shadow: inset var(--rule) 0 0 var(--brass);
+  padding-left: var(--sp-1-5);
+}
+.al-table .al-state {
+  white-space: nowrap;
+}
+.al-empty {
+  max-width: 520px;
+  text-align: center;
+  line-height: 1.4;
+}
+@container pz (max-width: 760px) {
+  .al-table .col-deliver {
+    display: none;
+  }
+}

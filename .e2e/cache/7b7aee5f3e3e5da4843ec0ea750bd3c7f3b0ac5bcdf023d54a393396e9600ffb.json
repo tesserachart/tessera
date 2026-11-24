@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-05T15:33:17.626Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Journal\"",
+        "target": {
+          "role": "button",
+          "name": "Journal"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/agent/areas.e2e.ts::the%20agent%20opens%20the%20Journal%20area",
+      "targetId": "web",
+      "instructionDigest": "0a7015967334ff502a30ed2510efe41710d4211ac5767b3336bed8c17b73905f"
+    },
+    "summary": "Journal is open: the workspace shows the Journal tabpanel with positions and the status “Journal opened.”",
+    "startPath": "/",
+    "endPath": "/",
+    "endAnchors": [
+      {
+        "text": "open positions"
+      },
+      {
+        "text": "unrealized P&L"
+      },
+      {
+        "text": "realized on open positions"
+      },
+      {
+        "role": "columnheader",
+        "name": "Symbol"
+      },
+      {
+        "role": "columnheader",
+        "name": "Side · Qty"
+      },
+      {
+        "role": "columnheader",
+        "name": "Avg"
+      },
+      {
+        "role": "columnheader",
+        "name": "Mark"
+      },
+      {
+        "role": "columnheader",
+        "name": "Unrealized"
+      }
+    ],
+    "endWaitMs": 86654
+  }
+}

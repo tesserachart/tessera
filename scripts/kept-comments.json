@@ -1,0 +1,426 @@
+{
+  ".github/actions/bun/action.yml": [
+    "NetworkService, the Windows runner's account, may not create the symlink setup-bun makes.",
+    "Node runs the tools themselves: `bun run` starts their bins through the `node` shebang."
+  ],
+  ".github/workflows/build.yml": [
+    "With CI=true the bundler skips the Finder pass that lays out the .dmg window (background, icon positions)."
+  ],
+  ".github/workflows/ci.yml": [
+    "The typed lint of the whole repository peaks near 4 GB, past Node's default heap on the runner."
+  ],
+  "apps/cloud/src/app.ts": ["Any port: RFC 8252 §7.3 requires accepting any loopback port for native apps."],
+  "apps/cloud/src/web.tsx": ["Under `no-referrer` a browser posts forms with `Origin: null`."],
+  "apps/cloud/src/workos.ts": ["WorkOS answers 404 for an unknown or already revoked session."],
+  "apps/desktop/dev/launch-link.ts": ["`writeFileSync`'s `mode` only affects a newly created file."],
+  "apps/desktop/dev/runtime-plugin.ts": [
+    "Vite's default CORS reflects every localhost Origin, on every route.",
+    "Vite's SIGTERM handler keeps an exit code that is already set"
+  ],
+  "apps/desktop/index.html": ["boot"],
+  "apps/desktop/scripts/bench-chart.ts": [
+    "Chromium rasters a canvas's recorded draws at the next commit; reading a pixel rasters them now."
+  ],
+  "apps/desktop/scripts/dmg-background.ts": [
+    "Finder draws a .dmg background at 2x on a Retina screen only from a TIFF that holds both sizes, 1x at 72 dpi then 2x at 144 dpi, the file `tiffutil -cathidpicheck` writes."
+  ],
+  "apps/desktop/scripts/dmg-window.sh": [
+    "A hosted Mac runner's only display is 1x and offers no HiDPI mode, where Finder never shows the 2x background."
+  ],
+  "apps/desktop/scripts/prepare-sidecar.ts": [
+    "Tauri expects each `bundle.externalBin` at `src-tauri/binaries/<name>-<host triple>`."
+  ],
+  "apps/desktop/scripts/tauri-dev.ts": ["A changed `devUrl` (`tauri dev --config`) rebuilds the shell crate."],
+  "apps/desktop/src-tauri/src/lib.rs": [
+    "AppKit offers a key to the menu bar before the page, so the default menu's ⌘W Close Window would close the window instead of letting ⌘W reach the page.",
+    "the edit items carry the clipboard keys into the webview's fields",
+    "The app's local data directory is the webviews' default data directory on Linux and Windows."
+  ],
+  "apps/desktop/src-tauri/src/mac_windows.rs": [
+    "AppKit lists only titled windows in the Window menu and the Dock, and adds one only as it is ordered in or retitled; an undecorated Tauri window is borderless, and already on screen when Tauri reports it ready."
+  ],
+  "apps/desktop/src-tauri/src/login_path.rs": [
+    "An app opened from the Finder or the Dock does not start from a terminal: macOS gives it only `/usr/bin:/bin:/usr/sbin:/sbin` as its `PATH`.",
+    "Interactive and login (`-il`), so both `.zprofile` and `.zshrc` run, where nvm, Homebrew and the CLIs' installers add to `PATH`."
+  ],
+  "apps/desktop/src-tauri/src/main.rs": ["Prevents an extra console window on Windows."],
+  "apps/desktop/src-tauri/src/sidecar.rs": [
+    "`Child::wait` blocks while it borrows the `Child`, so polling leaves it free for `stop` to kill.",
+    "Tauri copies each `externalBin` sidecar next to the shell executable.",
+    "`wait_for` returns a read guard on the channel: drop it (`is_ok`) before anything sends."
+  ],
+  "apps/desktop/src/accounts/ConnectionSetup.tsx": ["A second Rithmic session of a connected login can end the first."],
+  "apps/desktop/src/alerts/formStore.ts": ["A closing Radix menu hands the focus back to its trigger."],
+  "apps/desktop/src/analyst/attachments.ts": ["A whole piece would exceed `fromCharCode`'s argument limit."],
+  "apps/desktop/src/app/store.ts": [
+    "useSyncExternalStore re-renders forever when its snapshot is a new object for the same state."
+  ],
+  "apps/desktop/src/app/telemetry.ts": [
+    "posthog-js takes a remote config preloaded on `window._POSTHOG_REMOTE_CONFIG[token]` instead of fetching one."
+  ],
+  "apps/desktop/src/areas/AreaRail.tsx": [
+    "HTML5 takes a picture of the ghost as the drag starts; it leaves the page on the next frame."
+  ],
+  "apps/desktop/src/areas/AreaView.tsx": ["WebKit (the desktop shell's webview) has no idle callback"],
+  "apps/desktop/src/areas/agents/Markdown.tsx": [
+    "react-markdown's component is a plain function (no hooks): called, it gives the tree"
+  ],
+  "apps/desktop/src/areas/agents/composerFoot.ts": ["`scrollWidth` rounds to whole pixels."],
+  "apps/desktop/src/areas/agents/signInState.ts": [
+    "the CLI's own fallback page ends on a code to paste back, for a browser that did not hand the sign-in back"
+  ],
+  "apps/desktop/src/chart/ChartTrading.tsx": [
+    "React bubbles a portal's events through its React parents, so the menu's rows reach this handler."
+  ],
+  "apps/desktop/src/chart/drawings/DrawingTemplateMenu.tsx": [
+    "Radix moves the focus on a menu item's pointer move and leave unless the event is default-prevented."
+  ],
+  "apps/desktop/src/chart/placementRun.ts": ["Radix mounts menus and popovers only while they are open."],
+  "apps/desktop/src/chart/settings/DefaultsMenu.tsx": [
+    "Radix's menu typeahead takes the character keys typed anywhere inside the menu."
+  ],
+  "apps/desktop/src/chart/templates/TemplateMenu.tsx": [
+    "Radix's menu typeahead takes the character keys typed anywhere inside the menu.",
+    "Radix moves the focus on a menu item's pointer move and leave unless the event is default-prevented."
+  ],
+  "apps/desktop/src/orderflow/dom/ladderView.ts": ["Setting `textContent` replaces the text node on every write."],
+  "apps/desktop/src/orderflow/rowMetrics.ts": [
+    "Reading a computed style after a write to the page forces a style recalculation."
+  ],
+  "apps/desktop/src/orderflow/tape/tapeModel.ts": [
+    "A double cannot hold a UTC nanosecond past 2^53 exactly: it can round to a little after the exchange's time."
+  ],
+  "apps/desktop/src/shell/boot.ts": ["a finished animation's currentTime stops at its end"],
+  "apps/desktop/src/shell/keys.ts": ["⌘M minimises a macOS window."],
+  "apps/desktop/src/shell/orderHotkeys.ts": [
+    "⌥W types ∑ on a Mac, so the letter or digit is read from `code`, not `key`."
+  ],
+  "apps/desktop/src/shell/titleBar.ts": [
+    "Tauri's `drag.js` (tauri 2.12) drags only on a press on the bare attribute's own element, never its children, and maximises on a double-click (on the release on macOS); a double-click handler of the page's own would undo it."
+  ],
+  "apps/desktop/src/shell/tradeActions.ts": [
+    "Rithmic's native bracket cannot drop a leg of a working entry.",
+    "Rithmic's native bracket cannot gain a leg once sent."
+  ],
+  "apps/desktop/src/sound/context.ts": [
+    "performance.now() stands still while macOS sleeps; Date.now() does not.",
+    "The webview's autoplay rule keeps the context suspended until a press or key."
+  ],
+  "apps/desktop/src/sound/voice/lines.ts": [
+    "Its full stop makes the vendor read it as a statement, falling at the end."
+  ],
+  "apps/desktop/src/sound/voice/manifest.ts": ["A free plan's clips are not licensed for a product that is sold."],
+  "apps/desktop/src/styles/shell.css": [
+    "clip, not hidden: an overflow: hidden box still scrolls to a focus or a scroll-into-view inside it"
+  ],
+  "apps/desktop/src/styles/stage.css": ["dockview stacks its floats, drop overlays and popups at z-index 999 and up"],
+  "apps/desktop/src/workspace/Workspace.tsx": [
+    "dockview places the panels it keeps in its overlay from their on-screen boxes: a box read while a transform still runs leaves that panel shifted and shrunk until the next layout.",
+    "the whole dock's size, edges included (what dockview lays out from); `api.width` is the centre grid's alone"
+  ],
+  "apps/desktop/src/workspace/dock/header/HeaderTab.tsx": [
+    "a middle-button press starts the browser's autoscroll unless prevented"
+  ],
+  "apps/desktop/src/workspace/dock/edgeDrop.ts": [
+    "Chromium sends dragleave with no related target all along a drag, so the pointer's place says it left the window",
+    "dockview cancels its own drop when its overlay is refused.",
+    "Esc ends an HTML drag with a dragend and no drop"
+  ],
+  "apps/desktop/src/workspace/dock/open.ts": [
+    "dockview collapses an edge its last tile left",
+    "dockview's keyboard navigation ships only in the paid dockview-enterprise."
+  ],
+  "apps/desktop/src/workspace/dock/responsive.ts": [
+    "dockview's own `width` and `height` are the centre grid's, without the edges."
+  ],
+  "apps/desktop/src/workspace/dock/tileSettings.ts": [
+    "dockview's panel api only knows the last params handed to `updateParameters`, and nothing before the first.",
+    "dockview merges an update into the panel's params and drops the keys set to undefined"
+  ],
+  "apps/desktop/src/workspace/dock/undo.ts": [
+    "dockview's own layout history ships only in the paid dockview-enterprise."
+  ],
+  "apps/desktop/src/workspace/tiles/TapeTile.tsx": [
+    "Radix gives Esc to the top layer: a tip under an open menu would take the menu's Esc"
+  ],
+  "apps/desktop/test/frame.test.ts": [
+    "dockview merges an update into the panel's params and drops keys set to undefined; the api only remembers the last params handed to `updateParameters`."
+  ],
+  "apps/desktop/test/order-hotkeys.test.ts": ["On a Mac ⌥W types ∑; its place is still KeyW."],
+  "apps/desktop/test/runtime-json.test.ts": ["Vite itself refuses a Host it does not allow."],
+  "apps/desktop/test/support/appCss.ts": [
+    "happy-dom ignores @layer blocks, so the layers are unwrapped in their cascade order ahead of the unlayered rules."
+  ],
+  "bunfig.toml": [
+    "Bun's built-in list of trusted packages applies only when package.json \"trustedDependencies\" is absent."
+  ],
+  "crates/tessera-agent/src/child_env.rs": [
+    "Windows: a program started without `SystemRoot` cannot load Winsock or the system's crypto providers, and Node's `os.homedir()`, temporary files and the CLIs' settings come from `USERPROFILE`, `TEMP` and `APPDATA`."
+  ],
+  "crates/tessera-agent/src/claude.rs": [
+    "`claude auth login` opens the page in the browser itself and ends once the browser hands the sign-in back; the page it prints instead ends on a code to paste.",
+    "the CLI would create a home that does not exist yet",
+    "Claude Code streams each message as `stream_event` partials, then sends it again whole as `assistant`.",
+    "Claude Code does not have a conversation that never got past its first turn",
+    "Claude Code saves the conversation once a turn completes or is interrupted"
+  ],
+  "crates/tessera-agent/src/codex.rs": [
+    "`codex app-server` speaks JSON-RPC over stdio: one JSON object per line, no `\"jsonrpc\"` field.",
+    "In the Codex home's `config.toml`, a custom model provider's key comes from the environment variable its `env_key` names.",
+    "Codex has no document input."
+  ],
+  "crates/tessera-agent/tests/claude_service.rs": ["the shell adds PWD, SHLVL and _"],
+  "crates/tessera-agent/tests/fixtures/fake-claude.sh": [
+    "the conversation's id, as the real CLI echoes it in every frame"
+  ],
+  "crates/tessera-broker/src/paper/engine.rs": ["A moved limit joins the back of its new price's queue."],
+  "crates/tessera-broker/src/paper/room.rs": [
+    "AMP Futures' default most contracts a retail account may hold (ampfutures.com/trading-info/position-limits)."
+  ],
+  "crates/tessera-broker/src/protect/manager.rs": [
+    "A connection may report a fill before the position it makes: Rithmic's order plant and PnL plant are two connections."
+  ],
+  "crates/tessera-core/src/instrument.rs": [
+    "Last trade of a CME equity-index contract: 09:30 ET on expiry (special opening quotation).",
+    "Eight calendar days before expiry: the Thursday of the prior week, CME's published roll convention.",
+    "An exchange names a dated contract by the month it is for, whatever day it expires: a crude contract expires the month before."
+  ],
+  "crates/tessera-core/src/money.rs": [
+    "serde_json writes an f64 in its shortest round-trip form.",
+    "Rust's `Display` for f64 prints the shortest string that round-trips."
+  ],
+  "crates/tessera-core/src/private.rs": ["Windows: a new file takes the access list of its directory."],
+  "crates/tessera-core/src/products.rs": [
+    "CME Group exchange initial margins (110% of maintenance), as restated by Discount Trading (discounttrading.com/margin.html) on 2026-10-09."
+  ],
+  "crates/tessera-core/src/session.rs": [
+    "Western (Gregorian) Easter Sunday, anonymous Gregorian algorithm.",
+    "NYSE does not observe New Year's Day on the preceding Friday (Dec 31)."
+  ],
+  "crates/tessera-intel/src/source/provider.rs": [
+    "the signed link's signature covers its query, so it is sent exactly as received"
+  ],
+  "crates/tessera-journal/src/import.rs": ["R | Trader puts several sections in one file, each with its own header."],
+  "crates/tessera-market/examples/flow_load.rs": [
+    "Fields after the parenthesised command name; utime and stime are the 12th and 13th."
+  ],
+  "crates/tessera-market/src/aggregate.rs": ["A CME trade date opens at 18:00 ET the evening before that date."],
+  "crates/tessera-market/src/hub/depth_history.rs": ["In f64, `4.35 / 0.01` is `434.99999999999994`."],
+  "crates/tessera-market/src/hub/mod.rs": [
+    "tokio drops an aborted task's future later, after a newer pump of the same key may have started."
+  ],
+  "crates/tessera-market/src/hub/tape.rs": ["`VecDeque` doubles its capacity when it is full."],
+  "crates/tessera-market/src/mock/model.rs": ["US DST changes happen at 02:00 on Sundays, when both are closed."],
+  "crates/tessera-market/tests/mock.rs": [
+    "Await (rather than poll once) so tokio's cooperative budget refills between items."
+  ],
+  "crates/tessera-mcp/src/json.rs": [
+    "The workspace's `serde_json::Map` sorts its keys; turning on its `preserve_order` feature would change every other JSON the runtime writes."
+  ],
+  "crates/tessera-rithmic/src/account.rs": [
+    "Rithmic's \"no limit\" for an RMS loss limit (sent as `9999999`).",
+    "A prop account on Rithmic reports no buying power.",
+    "Rithmic's open-pending and trigger-pending notifications can carry a quantity of 0.",
+    "rithmic-rs message structs are `#[non_exhaustive]`, so tests build them from `Default`."
+  ],
+  "crates/tessera-rithmic/src/book.rs": [
+    "A depth-by-order snapshot comes as one frame per price level, listing its orders. Each snapshot frame carries the sequence number of the last update it includes. Several depth-by-order updates can share one sequence number.",
+    "A depth-by-order snapshot carries no time of its own."
+  ],
+  "crates/tessera-rithmic/src/broker.rs": [
+    "rithmic-rs's order plant sends login info (300) and trade routes (310) itself after login.",
+    "Rithmic can send a bracket's leg notifications before the submit's reply arrives.",
+    "On Apex a stop-only bracket's stop leg names neither its entry nor its tag.",
+    "Rithmic never places a bracket's legs when its entry ends unfilled.",
+    "R|Protocol does not document how a bracket leg's level is numbered.",
+    "One login serves every handle of a rithmic-rs plant, an empty account's included.",
+    "Rithmic replays an account's order history onto the order updates.",
+    "Rithmic delivers the P&L snapshot as updates, not in the reply.",
+    "Rithmic counts a bracket leg's ticks from the entry's fill once it has filled."
+  ],
+  "crates/tessera-rithmic/src/broker/fill_days.rs": [
+    "Rithmic numbers fill history by CME trade date in Chicago, and answers at most 30 days of it per request."
+  ],
+  "crates/tessera-rithmic/src/broker/orders.rs": [
+    "Rithmic holds a native bracket's legs and places them itself once the entry fills.",
+    "Rithmic copies the entry's user tag onto the legs it places."
+  ],
+  "crates/tessera-rithmic/src/broker/tests.rs": [
+    "rithmic-rs message structs are `#[non_exhaustive]`, so tests build them from `Default`."
+  ],
+  "crates/tessera-rithmic/src/directory.rs": [
+    "R|Protocol answers templates 16 and 20 without a login. The gateway closes the WebSocket once it has answered either one.",
+    "R|Protocol's `rp_code` is success when empty or led by `\"0\"`; else a code, then words."
+  ],
+  "crates/tessera-rithmic/src/firms.rs": [
+    "Prop firms' systems, named exactly as Rithmic's system list spells them, each with the words the firm writes in a funded account's id or name. Each system runs the firm's simulated evaluation accounts, and at some firms its funded ones."
+  ],
+  "crates/tessera-rithmic/src/history.rs": [
+    "A Rithmic time-bar replay returns at most 10,000 rows and says nothing when it stops there. Rithmic's intraday time bars are aligned to the clock."
+  ],
+  "crates/tessera-rithmic/src/map.rs": [
+    "`LastTrade.aggressor` is the exchange's own aggressor flag. The `LastTrade` answering a subscription (`is_snapshot`) restates the last print. A replayed bar's `marker` is its close in Unix seconds; daily and weekly bars use `YYYYMMDD`. Rithmic's price doubles are not always the double nearest the exchange's price.",
+    "The live feed sends `source_nsecs` as the whole nanosecond-of-second.",
+    "The finest futures tick, 1/256, has 8 decimal places.",
+    "Rithmic's `net_change` is the last price minus the prior settlement.",
+    "Settlement prices may sit between ticks."
+  ],
+  "crates/tessera-rithmic/src/plant.rs": [
+    "In rithmic-rs 3.2 a dropped plant's actor keeps running, keeping the connection and login alive. Rithmic answers sessions beyond its per-user limit with a ForcedLogout.",
+    "The abort reaches the plant's one actor whichever account the handle is scoped to."
+  ],
+  "crates/tessera-rithmic/src/provider.rs": [
+    "Rithmic answers an unlisted contract with an empty reference-data reply (`no data`).",
+    "Rithmic's `YYYYMMDD` dates are CME trade dates in Chicago.",
+    "Rithmic replays closed bars only.",
+    "Rithmic answers a quote subscription with separate BBO, last-trade and session messages."
+  ],
+  "crates/tessera-rithmic/src/session.rs": [
+    "`rithmic-rs` sets no request deadline of its own.",
+    "rithmic-rs requires a second URL even when only one is used."
+  ],
+  "crates/tessera-rithmic/tests/copy.rs": [
+    "rithmic-rs message structs are `#[non_exhaustive]`, so tests build them from `Default`."
+  ],
+  "crates/tessera-rithmic/tests/fixture.rs": [
+    "BBO and depth-by-order travel as separate messages, so a BBO can lead its order update."
+  ],
+  "crates/tessera-rithmic/tests/forced_logout.rs": [
+    "Every request carries `template_id` and `user_msg` under the same tags."
+  ],
+  "crates/tessera-rithmic/tests/orders.rs": [
+    "rithmic-rs message structs are `#[non_exhaustive]`, so tests build them from `Default`.",
+    "Every request carries `template_id` and `user_msg` under the same tags.",
+    "Rithmic refuses an adjustment that does not name its level."
+  ],
+  "crates/tessera-rithmic/tests/sessions.rs": [
+    "Every request carries `template_id` and `user_msg` under the same tags."
+  ],
+  "crates/tessera-runtime/src/auth.rs": [
+    "A browser page cannot set headers on a WebSocket. Browsers send a `127.0.0.1` cookie to every port of `127.0.0.1`, whatever its `HttpOnly`/`SameSite` attributes, so any other local HTTP server the browser visits receives it."
+  ],
+  "crates/tessera-runtime/src/build_source.rs": [
+    "cargo identifies a workspace member's build by its path relative to the workspace root, so two checkouts that share one `CARGO_TARGET_DIR` can be handed each other's binary, or a mix of both checkouts' crates."
+  ],
+  "crates/tessera-runtime/src/cli.rs": [
+    "Not `spawn_blocking`: a blocking task stuck in `read` would keep the tokio runtime from dropping, so a signal-initiated shutdown would hang while the parent keeps the pipe open."
+  ],
+  "crates/tessera-runtime/src/connectors.rs": [
+    "Rithmic answers a second session of the same login with a ForcedLogout.",
+    "Rithmic answers a second session of the same login with a ForcedLogout.",
+    "Rithmic answers a second session of the same login with a ForcedLogout."
+  ],
+  "crates/tessera-runtime/src/lock.rs": [
+    "Unlinking a lock file while another process waits on it lets two processes hold the lock.",
+    "Windows: no other handle can read a locked file."
+  ],
+  "crates/tessera-runtime/src/logging.rs": ["The default panic hook writes the message straight to stderr."],
+  "crates/tessera-runtime/src/private.rs": ["Windows: a directory's entries inherit its access list."],
+  "crates/tessera-runtime/src/secrets.rs": [
+    "Keyring calls block (D-Bus) and may wait on an unlock prompt.",
+    "A blocking thread cannot be cancelled: the call may still finish."
+  ],
+  "crates/tessera-runtime/src/telemetry/remote.rs": [
+    "`/flags?v=2` answers each flag as `{enabled, variant}`; older answers are `featureFlags: {key: value}`.",
+    "PostHog's recordings endpoint refuses the `{api_key, batch}` shape: each event carries the token in its properties."
+  ],
+  "crates/tessera-runtime/tests/process.rs": [
+    "one masked text frame (RFC 6455 §5.2): FIN + text, mask bit + 16-bit length, a zero mask"
+  ],
+  "crates/tessera-runtime/tests/ws.rs": ["A 127.0.0.1 cookie would go to every other local port."],
+  "crates/tessera-store/src/lib.rs": [
+    "SQLite's WAL mode is a persistent property of the database file.",
+    "Shared-cache memory databases fail with `SQLITE_LOCKED`, which busy_timeout does not retry."
+  ],
+  "crates/tessera-store/src/repos.rs": [
+    "SQLite: a deferred read-then-write transaction fails at once if another connection wrote."
+  ],
+  "e2e.config.ts": ["The e2e runner passes the app command only PATH, HOME and the temp variables."],
+  "e2e/agent/support/launch.ts": ["e2e step labels name `app.open` URLs."],
+  "e2e/agent/support/replay-only.ts": [
+    "The e2e runner replays a committed recording before it calls an executor, so a step that replays never reaches this code."
+  ],
+  "packages/bridge/src/bridge.ts": [
+    "With `titleBarStyle: Overlay`, macOS draws the traffic lights over the window's top-left corner.",
+    "Tauri ≥ 2 sets `isTauri` on the global object."
+  ],
+  "packages/bridge/src/browser.ts": [
+    "A browser tells the opener nothing when a popup closes.",
+    "A page sees only the screen it stands on without asking the user for the window-management permission.",
+    "Reading a window's storage throws in opaque origins and where storage is disabled."
+  ],
+  "packages/bridge/src/session.ts": [
+    "A link that changes only the fragment does not load the page again.",
+    "Back from the back/forward cache, the page still holds everything in memory."
+  ],
+  "packages/bridge/src/tauri.ts": [
+    "Window labels may contain only `a-zA-Z0-9-/:_`.",
+    "Tauri's file-drop handler would take the page's own drag and drop."
+  ],
+  "packages/bridge/test/browser.test.ts": [
+    "What a page posts on a `BroadcastChannel` reaches every other page on it, a task later."
+  ],
+  "packages/chart/src/chart.ts": ["Object.assign would copy a getter's value once"],
+  "packages/chart/src/format.ts": ["`toLocaleString` with options builds a new formatter on every call."],
+  "packages/chart/src/gpu/surface.ts": [
+    "without preventDefault the browser never restores the context",
+    "a WebGL context otherwise lives until its canvas is collected"
+  ],
+  "packages/chart/src/render/columns.ts": [
+    "Skia rasterises thousands of pixel-aligned rects as one path several times slower than as one fillRect each."
+  ],
+  "packages/chart/src/render/glyphs.ts": [
+    "Writing to the cache makes the next blit from it copy the whole bitmap.",
+    "a blit between device pixels blurs the figure"
+  ],
+  "packages/protocol/scripts/schemas.ts": [
+    "The wire may differ from the ts-rs type (a `bigint` is a JSON number, an Option field may be absent or `null`).",
+    "serde reads an absent Option field and `null` alike. ts-rs's `optional_fields` types `x?: T` though serde still writes `null`, and `skip_serializing_if` leaves the key out of a `T | null` field.",
+    "ts-rs types an empty struct `Record<symbol, never>`."
+  ],
+  "packages/protocol/src/runtimeClient.ts": [
+    "A close event always follows.",
+    "TypeScript's narrowing cannot see an await change `closed`."
+  ],
+  "packages/ui/fonts/make_tessera_keys.py": ["TrueType: outer contours clockwise (y up) = negative signed area"],
+  "packages/ui/src/components/Combobox.tsx": [
+    "Radix overlays hear Esc on the document in the capture phase, before the search line does.",
+    "a listbox owns only options and groups",
+    "A Radix dialog's scroll lock swallows the wheel over a list portaled out of it unless the popover is modal too."
+  ],
+  "packages/ui/src/components/ContextMenu.tsx": [
+    "The browser aims a keyboard context-menu request at the focused element, so a list with `aria-activedescendant` rows gets it, not the row the keys have reached."
+  ],
+  "packages/ui/src/components/Floating.tsx": [
+    "Radix's tooltip throws without a provider above it.",
+    "A Radix menu, popover or dialog that closes gives the focus back to its trigger.",
+    "Radix counts a pick that moved the focus outside as an interaction outside, and takes the focus back",
+    "Radix's `asChild` trigger needs a child that takes a ref."
+  ],
+  "packages/ui/src/components/Sheet.tsx": [
+    "a closing Radix menu gives the focus back to its trigger, which a non-modal dialog takes as a focus outside"
+  ],
+  "packages/ui/src/components/ToggleGroup.tsx": ["Radix's default role for a multiple toggle group is toolbar"],
+  "packages/ui/src/selection.ts": [
+    "WebKit (the macOS window) lets a drag that begins on unselectable chrome go on to select the text it crosses, and every engine lets a selection dragged out of one text run on into any other selectable text in the window."
+  ],
+  "packages/ui/src/shortcut.ts": ["Alt/Option and Shift change `key` on many layouts (⌥1 → ¡, ⇧1 → !)."],
+  "packages/ui/src/styles/base.css": ["WKWebView reads -webkit-user-select."],
+  "packages/ui/src/styles/components.css": [
+    "Radix keeps a closing menu, popover, tooltip or dialog mounted only while a keyframe animation plays on it; a transition does not hold it."
+  ],
+  "packages/ui/src/styles/controls.css": ["Radix wraps the content in a table that grows to fit it"],
+  "packages/ui/test/components.test.tsx": ["Radix gives the focus back a task after the menu unmounts"],
+  "packages/ui/test/selection.test.ts": [
+    "CSS UI 4 resolves `auto` to the parent's value and WebKit inherits it; happy-dom computes the declared value only."
+  ],
+  "scripts/channel.ts": ["The updater asks `{os}-{arch}-{bundle type}` first, then `{os}-{arch}`."],
+  "scripts/e2e-agent.ts": ["An e2e retry never replays."],
+  "scripts/voices/audio.ts": ["EBU R128 measures loudness in 400 ms blocks."],
+  "scripts/voices/elevenlabs.ts": [
+    "ElevenLabs' free plan speaks its premade voices only, as MP3 at 44.1 kHz and 128 kbps at most, two requests at a time."
+  ],
+  "scripts/voices/generate.ts": ["the account's count catches up a few seconds after the requests"],
+  "scripts/voices/plan.ts": ["ElevenLabs licenses clips for a product that is sold on paid plans only."],
+  "scripts/voices/vendor.ts": ["ISO 639-1; a lone word is otherwise read in whatever language the model guesses."]
+}

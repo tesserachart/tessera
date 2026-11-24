@@ -1,0 +1,10 @@
+[install]
+registry = "https://registry.npmjs.org/"
+linker = "isolated"
+
+minimumReleaseAge = 86400
+minimumReleaseAgeExcludes = []
+
+auto = "disable"
+
+# Bun's built-in list of trusted packages applies only when package.json "trustedDependencies" is absent.

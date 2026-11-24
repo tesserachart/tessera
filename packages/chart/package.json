@@ -1,0 +1,19 @@
+{
+  "name": "@tessera/chart",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Tessera imperative chart engine: typed-array store, session-aware scales, Canvas2D layers. No React.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "1.0.10"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-05T15:34:24.709Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "pressKey",
+        "summary": "press \"Control+k\" on the focused field",
+        "key": "Control+k"
+      },
+      {
+        "name": "tap",
+        "summary": "tap option \"Open Agents Ctrl+Shift+5\" in \"Open Trade\"",
+        "target": {
+          "role": "option",
+          "name": "Open Agents Ctrl+Shift+5",
+          "within": "Open Trade"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/agent/areas.e2e.ts::the%20agent%20opens%20the%20Agents%20area",
+      "targetId": "web",
+      "instructionDigest": "0a7015967334ff502a30ed2510efe41710d4211ac5767b3336bed8c17b73905f"
+    },
+    "summary": "The Agents area is open: the workspace shows the Agents tabpanel and an “Agents opened” status.",
+    "startPath": "/",
+    "endPath": "/",
+    "endAnchors": [
+      {
+        "role": "tabpanel",
+        "name": "Agents"
+      },
+      {
+        "role": "status",
+        "name": "Agents opened"
+      },
+      {
+        "name": "Sees paper-main"
+      },
+      {
+        "role": "document",
+        "name": "Tessera — PAPER — Agents"
+      },
+      {
+        "name": "Exchange time",
+        "text": "· Regular · closes in"
+      },
+      {
+        "role": "region",
+        "name": "Agents"
+      }
+    ],
+    "endWaitMs": 27196
+  }
+}

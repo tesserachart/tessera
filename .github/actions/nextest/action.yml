@@ -1,0 +1,24 @@
+name: cargo-nextest
+description: Puts the pinned cargo-nextest on the PATH, checking its archive's SHA-256
+
+runs:
+  using: composite
+  steps:
+    - name: cargo-nextest
+      shell: bash
+      env:
+        VERSION: 0.9.150
+      run: |
+        case "$RUNNER_OS" in
+          Linux) target=x86_64-unknown-linux-gnu sha=b0959bc64232974224cf9fb22c915845398c0e8668fa7831eb5b43fb1eef781f ;;
+          Windows) target=x86_64-pc-windows-msvc sha=b7a8bf567140b8b366716f2dea27b32e088dc12f53597315f976d0dbf7c6ade8 ;;
+          *) echo "::error::No pinned cargo-nextest for $RUNNER_OS"; exit 1 ;;
+        esac
+        if [ "$RUNNER_OS" = Windows ]; then bin="$(cygpath -u "$RUNNER_TEMP")/nextest"; else bin="$RUNNER_TEMP/nextest"; fi
+        mkdir -p "$bin"
+        archive="$bin/cargo-nextest.tar.gz"
+        curl -fsSL -o "$archive" "https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-$VERSION/cargo-nextest-$VERSION-$target.tar.gz"
+        echo "$sha  $archive" | sha256sum -c -
+        tar xzf "$archive" -C "$bin"
+        if [ "$RUNNER_OS" = Windows ]; then cygpath -w "$bin" >> "$GITHUB_PATH"; else echo "$bin" >> "$GITHUB_PATH"; fi
+        "$bin/cargo-nextest" nextest --version

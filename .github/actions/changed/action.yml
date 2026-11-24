@@ -1,0 +1,30 @@
+name: What changed
+description: For a pull request, whether the Rust code reads a changed file, the Tauri shell or runtime crates changed, anything the desktop app is built from changed, and which e2e agent specs cover the change (all, none or their paths), each with the reason in the log; empty on other events, so everything runs (docs/dev.md §8)
+
+outputs:
+  rust:
+    value: ${{ steps.changed.outputs.rust }}
+  desktop:
+    value: ${{ steps.changed.outputs.desktop }}
+  app:
+    value: ${{ steps.changed.outputs.app }}
+  e2e:
+    value: ${{ steps.changed.outputs.e2e }}
+
+runs:
+  using: composite
+  steps:
+    - name: Changed files
+      id: changed
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        changed=$(git diff --name-only --no-renames HEAD^1 HEAD) || changed=unknown
+        rust=$(bun scripts/rust-affected.ts <<< "$changed") || rust=true
+        desktop=false
+        if grep -qE '^(apps/desktop/src-tauri/|crates/|Cargo\.(toml|lock)$|rust-toolchain\.toml$|scripts/release-smoke\.ts$|unknown$)' <<< "$changed"; then desktop=true; fi
+        app=true
+        if ! grep -qvE '^(docs/|design/|apps/site/|apps/cloud/|apps/video/|\.agents/|[^/]+\.md$)' <<< "$changed"; then app=false; fi
+        e2e=$(bun scripts/e2e-affected.ts <<< "$changed") || e2e=all
+        echo "rust=$rust desktop=$desktop app=$app e2e=$e2e"
+        printf 'rust=%s\ndesktop=%s\napp=%s\ne2e=%s\n' "$rust" "$desktop" "$app" "$e2e" >> "$GITHUB_OUTPUT"

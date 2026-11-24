@@ -1,0 +1,33 @@
+name: Mac keychain hand-over
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keychain-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  CI: 'true'
+
+jobs:
+  macos:
+    name: Saved logins survive an update (login keychain)
+    runs-on: ${{ vars.MAC_RUNNER || 'macos-15' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/rust
+        with:
+          cache-key: keychain-macos
+
+      - name: cargo test --test handover -- --include-ignored
+        run: cargo test -p tessera-runtime --test handover -- --include-ignored --nocapture

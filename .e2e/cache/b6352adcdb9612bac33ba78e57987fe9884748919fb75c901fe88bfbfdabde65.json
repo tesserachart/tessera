@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-05T15:34:05.546Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Connections\"",
+        "target": {
+          "role": "button",
+          "name": "Connections"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/agent/areas.e2e.ts::the%20agent%20opens%20the%20Connections%20area",
+      "targetId": "web",
+      "instructionDigest": "0a7015967334ff502a30ed2510efe41710d4211ac5767b3336bed8c17b73905f"
+    },
+    "summary": "Connections is open and selected. The Connections workspace is visible with Runtime, AI, Market data and brokers, Market intelligence, and Tools sections.",
+    "startPath": "/",
+    "endPath": "/",
+    "endAnchors": [
+      {
+        "role": "heading",
+        "name": "Runtime"
+      },
+      {
+        "text": "ws://127.0.0.1:47231/ws"
+      },
+      {
+        "text": "Tessera runtime 0.1.0"
+      },
+      {
+        "text": "protocol 1 · PAPER · demo data"
+      },
+      {
+        "text": "Connected"
+      },
+      {
+        "role": "heading",
+        "name": "AI"
+      },
+      {
+        "text": "Connect Codex or Claude Code"
+      },
+      {
+        "role": "heading",
+        "name": "Market data and brokers"
+      }
+    ],
+    "endWaitMs": 55623
+  }
+}

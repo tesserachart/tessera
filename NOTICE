@@ -1,0 +1,25 @@
+Tessera
+Copyright 2026 The Tessera Authors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The following material in this repository is not covered by that licence and
+stays under its owners' terms:
+
+- Rithmic and OMNE attribution marks (apps/desktop/src/assets/rithmic/).
+  "Trading Platform by Rithmic" is a trademark of Rithmic, LLC. "Powered by
+  OMNE" is a trademark of Omnesys, LLC and Omnesys Technologies, Inc. The
+  R | Protocol API software is Copyright (c) Rithmic, LLC. The OMNE software
+  is Copyright (c) Omnesys, LLC and Omnesys Technologies, Inc. Software that
+  connects to Rithmic shows these marks as Rithmic requires; keep them when you
+  ship a build that does.
+
+- Fonts (packages/ui/fonts/), under the SIL Open Font License 1.1. Each
+  font's licence text ships next to it.
+
+- Voice clips (apps/desktop/src/sound/voice/packs/), generated with
+  ElevenLabs. Each pack's manifest.json names the vendor, plan and credit.
+
+The Tessera name and logo are trademarks of their owner. The Apache License
+does not grant permission to use them, except to describe where the work
+comes from.

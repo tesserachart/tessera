@@ -1,0 +1,32 @@
+{
+  "extraKnownMarketplaces": {
+    "cursor-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "cursor/plugins"
+      },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "pstack@cursor-plugins": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/scripts/cloud-session-setup.sh"
+            ],
+            "timeout": 600,
+            "statusMessage": "Installing Rust and bun for cloud checks"
+          }
+        ]
+      }
+    ]
+  }
+}

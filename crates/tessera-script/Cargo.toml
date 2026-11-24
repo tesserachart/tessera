@@ -1,0 +1,23 @@
+[package]
+name = "tessera-script"
+description = "Tessera's engine for user code (custom indicators, study strategies and level-file adapters): JavaScript in an embedded QuickJS (rquickjs) with no host access, a memory limit and a time limit, and the indicator API (declaration, bars, ta, session helpers, lines, labels and boxes)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tessera-core.workspace = true
+tessera-protocol.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+rquickjs = { version = "0.14.0", features = ["array-buffer"] }
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+ts-rs = { workspace = true, features = ["serde-json-impl"] }
+
+[lints]
+workspace = true

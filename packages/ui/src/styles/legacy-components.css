@@ -1,0 +1,94 @@
+.num,
+.mono {
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+.serif:not(.t-env) {
+  font-family: var(--serif);
+  font-weight: 400;
+  letter-spacing: -0.005em;
+}
+.fig {
+  font-family: var(--fig);
+  font-weight: 400;
+  font-feature-settings: normal;
+  letter-spacing: 0;
+}
+code,
+kbd,
+.code {
+  font-family: var(--sans);
+}
+.ag {
+  color: var(--aqua);
+}
+.hz {
+  color: var(--brass);
+}
+.cap {
+  font-size: var(--fs-meta);
+  line-height: var(--lh-meta);
+  font-weight: 600;
+}
+.cmp {
+  font-stretch: 100%;
+}
+
+.ui-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-sheet);
+  background: var(--ink-70);
+}
+.ui-dialog {
+  position: fixed;
+  z-index: var(--z-palette);
+  top: 18vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(var(--palette-w), calc(100vw - 32px));
+  max-height: 64vh;
+  overflow: auto;
+  background: var(--menu);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--fall-off);
+  --t3: var(--t3-raised);
+  --color-t3: var(--t3-raised);
+}
+.ui-dialog {
+  --overlay-grow: var(--scale-overlay);
+}
+:is(.ui-dialog, .ui-dialog-overlay)[data-state='open'] {
+  animation: t-overlay-in var(--dur-menu) var(--ease-out-strong);
+}
+:is(.ui-dialog, .ui-dialog-overlay)[data-state='closed'] {
+  animation: t-overlay-out var(--dur-menu-out) var(--ease-out) forwards;
+}
+.ui-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--cmd-h);
+  padding: 0 var(--sp-4);
+  border-bottom: 1px solid var(--line);
+}
+.ui-dialog-title {
+  font-size: var(--fs-strong);
+  font-weight: 600;
+}
+.ui-dialog-description {
+  padding: var(--sp-2) var(--sp-4) 0;
+  color: var(--t2);
+}
+.ui-dialog-body {
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+}
+.ui-confirm {
+  width: min(440px, calc(100vw - 32px));
+}
+.ui-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}

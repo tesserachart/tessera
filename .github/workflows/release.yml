@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and smoke test every platform, publish nothing
+        type: boolean
+        default: true
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: updates-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Version
+    runs-on: ${{ vars.HOSTED_RUNNERS == 'true' && 'ubuntu-latest' || 'tessera-vm' }}
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+      version: ${{ steps.plan.outputs.version }}
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Plan
+        id: plan
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          UPDATES_URL: ${{ vars.UPDATES_URL }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then tag="$GITHUB_REF_NAME"; else tag="v$(node scripts/channel.ts next)"; fi
+          if [ "$GITHUB_REF_TYPE" = tag ] || { [ "$GITHUB_REF" = refs/heads/main ] && [ "$DRY_RUN" = false ]; }; then publish=true; else publish=false; fi
+          printf 'tag=%s\nversion=%s\npublish=%s\n' "$tag" "${tag#v}" "$publish" >> "$GITHUB_OUTPUT"
+          echo "${tag#v}: $([ "$publish" = true ] && echo "builds and publishes" || echo "a dry run from $GITHUB_REF, nothing published")"
+
+  build:
+    needs: plan
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.plan.outputs.version }}
+      platforms: '["linux", "mac", "windows"]'
+      publish: ${{ needs.plan.outputs.publish == 'true' }}
+      tag: ${{ needs.plan.outputs.tag }}

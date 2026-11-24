@@ -1,0 +1,386 @@
+---
+import Legal from '../layouts/Legal.astro';
+import { CONTACT_EMAIL, ENTITY, ENTITY_ADDRESS, ENTITY_FULL } from '../config';
+
+const sections = [
+  { id: 'short', title: 'In short' },
+  { id: 'who', title: 'Who is responsible' },
+  { id: 'local', title: 'What stays on your computer' },
+  { id: 'reaches', title: 'What reaches us' },
+  { id: 'share', title: 'Crash reports and usage analytics' },
+  { id: 'third', title: 'Services you connect' },
+  { id: 'sync', title: 'Optional cloud sync' },
+  { id: 'basis', title: 'Laws and legal bases' },
+  { id: 'rights', title: 'Your rights' },
+  { id: 'us', title: 'United States residents' },
+  { id: 'security', title: 'Security' },
+  { id: 'children', title: 'Children' },
+  { id: 'changes', title: 'Changes to this policy' },
+  { id: 'contact', title: 'Contact' },
+];
+---
+
+<Legal
+  title="Privacy policy"
+  description="How Tessera handles your data: it runs on your computer, your credentials stay in your operating system's keychain, we sell no data, and what you send to your own AI provider or broker is governed by your agreement with them."
+  sections={sections}
+>
+  <h2 id="short">In short</h2>
+  <ul>
+    <li>We do not sell your personal data, share it for advertising, or use it to train AI models.</li>
+    <li>
+      Tessera runs on your computer. Your trading data, journal, layouts and analyst conversations are stored there.
+    </li>
+    <li>Your broker and data credentials are kept in your operating system's keychain. We never receive them.</li>
+    <li>
+      To use the alpha you sign in to a Tessera account. We keep who you are, your application, what your account may
+      use and when your app opens; never your credentials, trades or market data.
+    </li>
+    <li>
+      The app sends us anonymous crash reports, which say what failed and where in Tessera's code and never who you are.
+      It also asks whether to share usage analytics, and sends none unless you say Yes. Both go to PostHog, our
+      analytics provider. Usage analytics include logs and a recording of the app's screen in which every number, every
+      field you type in and every private area is hidden. Neither ever includes your credentials, account numbers,
+      market data, orders, prices, sizes, positions, profit and loss, journal, prompts or the analyst's answers. You can
+      turn each off at any time in Settings › App › Privacy.
+    </li>
+    <li>
+      You bring your own AI and your own data. The analyst is your own AI agent: what you ask it, and the data it reads
+      to answer, goes to your AI provider under your agreement with them. Market data comes from the broker or vendor
+      you connect.
+    </li>
+    <li>
+      This website sets no cookies and runs no analytics. The account pages set only the cookies that keep you signed
+      in.
+    </li>
+  </ul>
+
+  <h2 id="who">Who is responsible</h2>
+  <p>
+    The controller of personal data described here is {ENTITY_FULL} ("Tessera", "we"). This is an individual
+    entrepreneur registered in Georgia, not a company or any other separate legal entity. You can reach us at{' '}
+    <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+  </p>
+
+  <h2 id="local">What stays on your computer</h2>
+  <p>
+    Tessera's desktop app and its runtime run locally. The following are stored on your computer and are not sent to us:
+  </p>
+  <ul>
+    <li>
+      <strong>Credentials</strong> for your brokers, prop-firm accounts, data vendors and alert destinations, in your
+      operating system's keychain (the macOS keychain, Windows Credential Manager or the Secret Service on Linux).
+    </li>
+    <li>
+      <strong>Market data</strong> received from your connections, and the recordings Tessera keeps of it.
+    </li>
+    <li>
+      <strong>Orders, positions and fills</strong> from your accounts, and the audit log of every action.
+    </li>
+    <li>
+      <strong>Your work</strong>: journal entries, screenshots, trades you import, research studies, indicators,
+      layouts, settings and analyst conversations.
+    </li>
+    <li>
+      <strong>Your acceptance of the terms</strong>: which version of the terms you accepted in the app, and when.
+    </li>
+  </ul>
+  <p>You can delete this data by deleting it in the app or removing Tessera's data folder from your computer.</p>
+
+  <h2 id="reaches">What reaches us</h2>
+  <h3>This website</h3>
+  <p>
+    The site is static and sets no cookies. It loads no analytics, advertising or third-party fonts. Our hosting
+    provider, Cloudflare, processes the technical data every web request carries (IP address, browser, the page
+    requested and the time) to serve and protect the site, and may keep it in logs for a limited period.
+  </p>
+  <h3>Downloads</h3>
+  <p>
+    When you download Tessera, the server that hosts the file (Cloudflare) records the same technical data for that
+    request.
+  </p>
+  <h3>Your Tessera account</h3>
+  <p>
+    To use the alpha you sign in at account.tesserachart.com, with Google or with a code sent to your email. WorkOS runs
+    the sign-in for us and receives your email address and, when you sign in with Google, your name. Our account
+    service, Tessera Cloud, keeps:
+  </p>
+  <ul>
+    <li>
+      <strong>Your account</strong>: your email address, your name, the identifier WorkOS gives you, and when you signed
+      up and last signed in.
+    </li>
+    <li>
+      <strong>Your application</strong>: your answers (your prop firm or broker, the platform you use and how you
+      trade), whether we approved it, and when.
+    </li>
+    <li>
+      <strong>What your account may use</strong> (access to the alpha today), and when it was granted.
+    </li>
+    <li>
+      <strong>A check-in each time the app opens</strong>: the app's version, your platform (Mac, Windows or Linux), its
+      processor architecture, its release channel and the time.
+    </li>
+  </ul>
+  <p>
+    Tessera Cloud never receives your broker or data credentials, your orders, positions or trades, your market data, or
+    anything else from your work in the app. We use what it keeps to decide on your access and give it to you, to email
+    you about your account (the email with your download link, sent through Cloudflare), and to know which versions are
+    in use. The account pages set one cookie that keeps you signed in for up to seven days, and a second one for the few
+    minutes a sign-in takes; they set no other cookies and run no analytics. Tessera Cloud runs on Cloudflare, which
+    stores this data for us. We keep it while your account exists and delete it when you ask.
+  </p>
+  <h3>The app</h3>
+  <p>
+    Each time the app opens, it checks in with your Tessera account as described above. A few minutes after it opens and
+    then every few hours, it asks our download server (Cloudflare) whether a newer version exists; that request carries
+    only the technical data every web request does, and no account, trading or usage data. Apart from that, the app
+    sends us only anonymous crash reports, unless you turn them off, and usage analytics, if you choose to share them,
+    as described in <a href="#share">Crash reports and usage analytics</a>.
+  </p>
+  <h3>When you write to us</h3>
+  <p>
+    If you email us or send us a report from the app, we use your address or account and your message to answer you, and
+    keep them as long as needed for that purpose.
+  </p>
+
+  <h2 id="share">Crash reports and usage analytics</h2>
+  <p>
+    Settings › App › Privacy has a switch for each: Send crash reports, and Share usage analytics. Turning one off stops
+    it from that moment. It does not undo what was already sent.
+  </p>
+  <h3>Crash reports</h3>
+  <p>
+    The app sends a crash report when the runtime crashes or a part of the window stops with an error: the error
+    message, its stack trace (the places in Tessera's code that led to it), the versions of the app and the runtime,
+    your operating system and its version, the processor architecture, and which part of the window stopped. Crash
+    reports are on unless you turn them off, and the first time the app opens it says so. A crash report is anonymous:
+    it carries a random identifier for your installation, which the app keeps on your computer, never your Tessera
+    account, and never your credentials, account numbers, orders or anything you type.
+  </p>
+  <h3>Usage analytics</h3>
+  <p>
+    The first time it opens, the app asks one question: "Share usage analytics", Yes or No. Neither answer is chosen in
+    advance, and the app goes on only once you choose one. The app sends no usage analytics before you answer, and none
+    if you answer No.
+  </p>
+  <p>If you say Yes, the app sends PostHog these events:</p>
+  <ul>
+    <li>
+      <strong>Usage events</strong>: when the app opens, when you sign in or out, which areas and panels you open, which
+      instrument and timeframe a chart loads, and the moments in each area: adding or removing a connection, switching
+      the account in the order ticket (with how many accounts you have), starting an analyst session, running a research
+      study, placing, modifying or cancelling an order, flattening or reversing a position, creating, switching on or
+      off, flattening or resyncing a copy group (with how many followers it has), importing, logging, reviewing or
+      exporting journal trades (whether you added notes, a rating or tags, never what they say), creating an alert, and
+      opening a market replay. A connection event gives the connection's kind, such as Rithmic, and never its login. An
+      order event gives the order type, the instrument, and whether you, the analyst or a connected app placed it. No
+      event gives an account, size, price, position or profit and loss.
+    </li>
+    <li>
+      <strong>Analyst usage</strong>, for each analyst turn: the AI provider and model, the reasoning effort, the number
+      of tokens used, how long the turn took, which Tessera tools the analyst called and how long each took, and whether
+      the turn failed and with what error. It never includes your prompts, the analyst's answers or what a tool read or
+      returned.
+    </li>
+    <li>
+      <strong>A recording of the app's screen</strong>, while the app is open: where you click and scroll and which
+      parts of the app you look at, so we can see where it gets in your way. Before the recording leaves the app, every
+      digit is hidden (so no price, size, balance, profit and loss or account number), every field you type in is
+      hidden, and all text is hidden in the analyst, the journal, positions, accounts, the trade copier, your profile,
+      your connections and the command line, including their menus. Charts are not recorded. We can turn recording off
+      for everyone from PostHog.
+    </li>
+    <li>
+      <strong>Logs</strong> the runtime writes: what it did and what went wrong, such as a broker connection ending or a
+      market data gap, from information level up, with the same identifiers as the events.
+    </li>
+    <li>
+      <strong>Survey answers</strong>, when you answer a question we ask in the app, such as how you would feel without
+      Tessera.
+    </li>
+    <li>
+      <strong>Technical data</strong> the app adds to events: the window size, the app's internal page address, the
+      browser engine's version, whether the build is a release, and a random identifier for each app session.
+    </li>
+  </ul>
+  <p>
+    While you are signed in, each usage event carries your Tessera account's identifier. Events from before you sign in
+    carry the random identifier for your installation instead; when you sign in, PostHog links the two. The account
+    identifier does not name you, but it links the events to your account. Crash reports never carry it.
+  </p>
+  <p>
+    If you write to us from Report a problem, in Settings › About or the Tessera menu, your message reaches us through
+    PostHog with your account's identifier. Report a problem works only while sharing is on. You can always write to us
+    at <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> instead.
+  </p>
+  <p>The app never sends PostHog:</p>
+  <ul>
+    <li>your credentials, passwords, keys or tokens, or your account ids or logins</li>
+    <li>your market data</li>
+    <li>an order's account, size or price, or your positions, trades or profit and loss</li>
+    <li>your journal, your prompts or the analyst's answers</li>
+    <li>any number shown on your screen, anything you type, or any text from the private areas above</li>
+  </ul>
+  <p>
+    The app's own runtime on your computer sends the events, recordings and logs. Before any of them leaves your
+    computer, the runtime removes from it every token, password, API key, account id and login name it knows, and your
+    email address. The app adds no location from your IP address. PostHog's lookup of location by IP address is off, and
+    our PostHog project discards IP addresses.
+  </p>
+  <p>
+    PostHog, Inc. receives the events as our service provider for product analytics and error tracking, and stores them
+    in its EU cloud in Frankfurt, Germany. PostHog is a US company and may access the data from the United States, under
+    its data processing agreement with us and under the European Commission's standard contractual clauses. It processes
+    the data for us under that agreement, not for its own purposes.
+  </p>
+  <p>
+    We use crash reports to find and fix crashes and errors. With your consent, we use the usage events, recordings and
+    logs to see where Tessera gets in your way and which parts are used so we know what to improve, to try new features
+    with some traders before others, and to understand the analyst's cost and reliability. PostHog keeps the events for
+    one year under our plan. We delete the events linked to your account when you ask, or when we delete your account.
+    We will not use this data for anything new without asking you first, as a separate choice.
+  </p>
+
+  <h2 id="third">Services you connect</h2>
+  <p>
+    Tessera connects directly from your computer to the services you choose. Each is a separate company with its own
+    privacy policy, and we do not control what it does with your data:
+  </p>
+  <ul>
+    <li>
+      <strong>Your AI provider.</strong> When the analyst works, Tessera passes your prompts and the data needed to
+      answer them (for example chart data, levels, your journal or positions) to the Claude Code or Codex CLI on your
+      computer, which sends them to Anthropic or OpenAI under your account with them.
+    </li>
+    <li>
+      <strong>Brokers and trading systems</strong>, such as Rithmic and the firms that use it, receive your login and
+      orders.
+    </li>
+    <li>
+      <strong>Data and level vendors</strong> receive the keys and requests needed to send you their data.
+    </li>
+    <li>
+      <strong>Alert destinations</strong> you set up, such as a Discord webhook, receive the alerts you send them.
+    </li>
+  </ul>
+
+  <h2 id="sync">Optional cloud sync</h2>
+  <p>
+    We plan optional sync of layouts, templates, conversations and similar work between your Macs, through your Tessera
+    account. It will be off unless you turn it on, and it will never sync your credentials. Before it launches we will
+    update this policy with what it stores, where, for how long, and the legal basis.
+  </p>
+
+  <h2 id="basis">Laws and legal bases</h2>
+  <p>
+    We handle personal data under the Law of Georgia on Personal Data Protection and, if you are in the European Union,
+    the European Economic Area or the United Kingdom, the EU General Data Protection Regulation (GDPR) and the UK GDPR.
+    If you are in the United States, see <a href="#us">United States residents</a> below. Under the GDPR we rely on
+    these legal bases:
+  </p>
+  <ul>
+    <li>
+      <strong>Providing what you asked for</strong> (our agreement with you): your account, your application, your
+      access, the email with your download link, and the check-in each time the app opens.
+    </li>
+    <li>
+      <strong>Your consent</strong>: the usage analytics you choose to share. You can withdraw it at any time in
+      Settings › App › Privacy, and withdrawing does not affect what we processed before.
+    </li>
+    <li>
+      <strong>Our legitimate interests</strong> in running and protecting Tessera: anonymous crash reports, so we can
+      fix what breaks, the technical data of website and download requests, knowing which versions are in use, and
+      answering what you write to us. You can object to crash reports at any time by turning them off in Settings › App
+      › Privacy.
+    </li>
+    <li>
+      <strong>Legal obligations</strong>, where a law requires us to keep or disclose data.
+    </li>
+  </ul>
+  <p>
+    WorkOS, Cloudflare and PostHog process this data for us as our service providers, under their data processing terms,
+    and may do so outside your country, including in the United States. Where data about people in the EU, the EEA or
+    the UK goes to a country without an adequacy decision, it does so under the safeguards those providers offer, such
+    as the European Commission's standard contractual clauses or the EU-US Data Privacy Framework. We decide on each
+    application ourselves; no decision about you is made by automated means alone. We do not sell personal data or use
+    it for advertising.
+  </p>
+
+  <h2 id="rights">Your rights</h2>
+  <p>
+    Depending on where you live, you may have the right to access, correct, delete or export personal data we hold about
+    you, to object to or restrict its processing, and to complain to a data protection authority: in Georgia, the
+    Personal Data Protection Service, or the authority where you live. Because Tessera keeps your data on your computer,
+    most of it is already under your control; what Tessera Cloud keeps about your account, and what you can choose to
+    share with us, are listed above. To exercise a right over data we hold, including deleting your account, contact us
+    at <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. We answer within one month.
+  </p>
+
+  <h2 id="us">United States residents</h2>
+  <p>
+    This section gives residents of California and other US states with consumer privacy laws the disclosures those laws
+    ask for. We give the same rights to every US user, whether or not a state law requires it of us.
+  </p>
+  <h3>What we collect, and from where</h3>
+  <ul>
+    <li>
+      <strong>Identifiers</strong>: your name, email address, the account identifier WorkOS gives you, and the IP
+      address of your requests. From you, from WorkOS when you sign in, and from your browser and app.
+    </li>
+    <li>
+      <strong>Professional information</strong>: your application answers (your prop firm or broker, the platform you
+      use and how you trade). From you.
+    </li>
+    <li>
+      <strong>Internet and device activity</strong>: the technical data of website and download requests, and each app
+      check-in (version, platform, processor architecture, release channel and time), anonymous crash reports unless you
+      turn them off, and, if you choose to share them, the usage analytics described in
+      <a href="#share">Crash reports and usage analytics</a>. From your browser and app.
+    </li>
+  </ul>
+  <p>
+    We collect no sensitive personal information, precise location, financial account numbers or credentials. The only
+    trading data we receive is in the order events you can choose to share, and they never include an order's account,
+    size or price. We use what we collect only for the purposes described in <a href="#reaches">What reaches us</a> and
+    <a href="#share">What you can choose to share</a>, and keep it for as long as described there.
+  </p>
+  <h3>Selling and sharing</h3>
+  <p>
+    We do not sell your personal information and do not share it for cross-context behavioural advertising, and we have
+    not done so in the past twelve months. We do not knowingly sell or share the information of anyone under 16. Because
+    there is nothing to opt out of, there is no "Do Not Sell or Share" link; we would treat a Global Privacy Control
+    signal as such a request all the same. We disclose personal information only to our service providers, WorkOS,
+    Cloudflare and PostHog, for the business purposes described above, and where the law requires it.
+  </p>
+  <h3>Your rights</h3>
+  <p>
+    You may ask us to tell you what personal information we hold about you and how we use it, to give you a copy, to
+    correct it, and to delete it. Write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> from the email
+    address of your account, which is how we confirm the request is yours; someone you authorize may ask for you with
+    your signed permission. We answer within 45 days. Using a right never changes the service you get or its price. If
+    we decline a request, you can appeal by replying to our answer, and we will tell you the outcome and how to complain
+    to your state's attorney general.
+  </p>
+
+  <h2 id="security">Security</h2>
+  <p>
+    Credentials are kept in your operating system's keychain rather than in Tessera's own files. No method of storage or
+    transmission is perfectly secure; keep your computer's software up to date and protect it with a password.
+  </p>
+
+  <h2 id="children">Children</h2>
+  <p>Tessera is not meant for anyone under 18, and we do not knowingly collect data from children.</p>
+
+  <h2 id="changes">Changes to this policy</h2>
+  <p>
+    We will post any change here with its date. When this policy or the terms change, the app shows you the new version
+    the next time it opens.
+  </p>
+
+  <h2 id="contact">Contact</h2>
+  <p>
+    Privacy questions: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>, or by post to {ENTITY}, {ENTITY_ADDRESS}
+    .
+  </p>
+</Legal>

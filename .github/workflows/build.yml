@@ -1,0 +1,319 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: The app version the builds carry
+        type: string
+        required: true
+      platforms:
+        description: A JSON list of the platforms to build, from linux, mac and windows
+        type: string
+        required: true
+      publish:
+        description: Publish the builds to the update feed; otherwise a dry run that publishes nothing
+        type: boolean
+        required: true
+      tag:
+        description: Also publish the installers as this GitHub pre-release, and only once every platform has built
+        type: string
+        default: ''
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  CI: 'true'
+  NODE_OPTIONS: --max-old-space-size=6144
+
+jobs:
+  ci:
+    name: CI passed on this commit
+    runs-on: ${{ vars.HOSTED_RUNNERS == 'true' && 'ubuntu-latest' || 'tessera-vm' }}
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    steps:
+      - name: CI passed on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          runs='.workflow_runs'
+          if [ "$PUBLISH" = true ]; then runs='[.workflow_runs[] | select(.event != "pull_request")]'; fi
+          read -r status conclusion < <(
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&per_page=100" \
+              --jq "$runs"' | max_by(.created_at) // {} | "\(.status // "missing") \(.conclusion // "none")"'
+          )
+          if [ "$status" = completed ] && [ "$conclusion" = success ]; then
+            exit 0
+          fi
+          if [ "$status" = missing ] && [ "$PUBLISH" = true ]; then
+            echo "CI with the Windows checks has not run on $GITHUB_SHA; refusing to publish"
+          elif [ "$status" = missing ]; then
+            echo "CI has not run on $GITHUB_SHA; refusing to build"
+          elif [ "$status" = completed ]; then
+            echo "CI ended ${conclusion//_/ } on $GITHUB_SHA; refusing to build"
+          else
+            echo "CI is still ${status//_/ } on $GITHUB_SHA; refusing to build"
+          fi
+          exit 1
+
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: ci
+    runs-on: ${{ matrix.platform == 'mac' && (vars.MAC_RUNNER || 'macos-15') || matrix.platform == 'windows' && (vars.HOSTED_RUNNERS == 'true' && 'windows-latest' || 'tessera-win') || (vars.HOSTED_RUNNERS == 'true' && 'ubuntu-latest' || 'tessera-vm') }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms) }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      PLATFORM: ${{ matrix.platform }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Git Bash on PATH
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: Join-Path (Split-Path (Split-Path (Get-Command git).Source)) 'bin' | Out-File $env:GITHUB_PATH -Append -Encoding utf8
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/tauri-linux
+        if: runner.os == 'Linux'
+
+      - uses: ./.github/actions/rust
+        with:
+          cache-key: release-${{ matrix.platform }}
+
+      - uses: ./.github/actions/bun
+
+      - name: Empty the last bundle
+        run: |
+          bundle="${CARGO_TARGET_DIR:-$PWD/apps/desktop/src-tauri/target}/release/bundle"
+          rm -rf "$bundle"
+          echo "BUNDLE=$bundle" >> "$GITHUB_ENV"
+
+      - name: Version and update endpoint
+        env:
+          UPDATES_URL: ${{ vars.UPDATES_URL }}
+        run: node scripts/channel.ts config --platform "$PLATFORM" --version "$VERSION" --out "$RUNNER_TEMP/channel.json"
+
+      - name: X display, window manager and WebDriver
+        if: runner.os == 'Linux'
+        run: |
+          pkgs=(webkit2gtk-driver xvfb openbox x11-utils xdotool wmctrl dbus ffmpeg)
+          missing=()
+          for p in "${pkgs[@]}"; do
+            dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p")
+          done
+          if [ ${#missing[@]} -eq 0 ]; then
+            echo "X display, window manager and WebDriver already installed"
+            exit 0
+          fi
+          sudo apt-get install -y -q --no-install-recommends "${missing[@]}"
+
+      - name: tauri-driver
+        if: runner.os == 'Linux'
+        env:
+          TAURI_DRIVER_VERSION: 2.1.0
+        run: |
+          bin="${CARGO_HOME:-$HOME/.cargo}/bin"
+          echo "$bin" >> "$GITHUB_PATH"
+          export PATH="$bin:$PATH"
+          if ! command -v tauri-driver >/dev/null || ! cargo install --list | grep -qx "tauri-driver v$TAURI_DRIVER_VERSION:"; then
+            cargo install tauri-driver --version "$TAURI_DRIVER_VERSION" --locked --force
+          fi
+          command -v tauri-driver
+
+      - name: The app's windows on Linux
+        id: windows
+        if: runner.os == 'Linux'
+        run: bun run check --only tauri-windows
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure() && steps.windows.outcome == 'failure'
+        with:
+          name: linux-windows
+          path: .e2e/tauri
+          include-hidden-files: true
+
+      - name: bun run tauri:build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TESSERA_RITHMIC_DIRECTORY: ${{ vars.TESSERA_RITHMIC_DIRECTORY }}
+          TESSERA_CLOUD_URL: ${{ vars.CLOUD_URL }}
+          TESSERA_POSTHOG_KEY: ${{ vars.POSTHOG_PROJECT_KEY }}
+          POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}
+          POSTHOG_CLI_PROJECT_ID: ${{ vars.POSTHOG_PROJECT_ID }}
+          CARGO_PROFILE_RELEASE_DEBUG: line-tables-only
+          CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO: packed
+          # With CI=true the bundler skips the Finder pass that lays out the .dmg window (background, icon positions).
+          TAURI_BUNDLER_DMG_IGNORE_CI: 'true'
+        run: bun run tauri:build --config "$RUNNER_TEMP/channel.json"
+
+      - name: Smoke test the runtime each bundle ships
+        run: |
+          case "$PLATFORM" in
+            linux)
+              dpkg-deb --field "$BUNDLE"/deb/*.deb Package Version
+              dpkg-deb -x "$BUNDLE"/deb/*.deb "$RUNNER_TEMP/deb"
+              appimage=$(ls "$BUNDLE"/appimage/*.AppImage)
+              chmod +x "$appimage"
+              (cd "$RUNNER_TEMP" && "$appimage" --appimage-extract >/dev/null)
+              readelf -d "$RUNNER_TEMP/squashfs-root/usr/bin/tessera-runtime" | grep -E 'RUNPATH|NEEDED'
+              runtimes=("$RUNNER_TEMP/deb/usr/bin/tessera-runtime" "$RUNNER_TEMP/squashfs-root/usr/bin/tessera-runtime")
+              ;;
+            mac) runtimes=("$BUNDLE/macos/Tessera.app/Contents/MacOS/tessera-runtime") ;;
+            windows) runtimes=("$CARGO_TARGET_DIR/release/tessera-runtime.exe") ;;
+          esac
+          for runtime in "${runtimes[@]}"; do
+            echo "::group::$runtime"
+            TESSERA_RUNTIME_BIN="$runtime" bun run smoke --release
+            echo "::endgroup::"
+          done
+
+      - name: Stage
+        run: node scripts/channel.ts stage --platform "$PLATFORM" --version "$VERSION" --bundles "$BUNDLE" --out "$RUNNER_TEMP/staged"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: staged-${{ matrix.platform }}
+          path: ${{ runner.temp }}/staged
+          retention-days: 1
+          compression-level: 0
+
+      - name: The .dmg window in Finder
+        if: runner.os == 'macOS'
+        run: apps/desktop/scripts/dmg-window.sh "$BUNDLE" "$RUNNER_TEMP/dmg-window"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: runner.os == 'macOS'
+        with:
+          name: dmg-window
+          path: ${{ runner.temp }}/dmg-window
+
+      - name: Pop-out windows on macOS
+        id: popout
+        if: runner.os == 'macOS'
+        run: node e2e/tauri/mac/popout-check.ts "$BUNDLE/macos/Tessera.app" "$RUNNER_TEMP/popout-check"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() && steps.popout.outcome != 'skipped' }}
+        with:
+          name: popout-check
+          path: ${{ runner.temp }}/popout-check
+
+  publish:
+    name: Publish
+    needs: [ci, build]
+    if: ${{ !cancelled() && needs.ci.result == 'success' }}
+    runs-on: ${{ vars.HOSTED_RUNNERS == 'true' && 'ubuntu-latest' || 'tessera-vm' }}
+    timeout-minutes: 30
+    env:
+      PUBLISH: ${{ inputs.publish }}
+      TAG: ${{ inputs.tag }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: staged-*
+          path: ${{ runner.temp }}/staged
+
+      - name: The platforms that built
+        id: built
+        env:
+          PLANNED: ${{ inputs.platforms }}
+        run: |
+          platforms=$(find "$RUNNER_TEMP/staged" -name staged.json -exec jq -r .platform {} + 2>/dev/null | sort | paste -sd,)
+          if [ -z "$platforms" ]; then
+            echo "::error::No platform built"
+            exit 1
+          fi
+          planned=$(jq -r 'sort | join(",")' <<< "$PLANNED")
+          echo "staged: $platforms (planned: $planned)"
+          if [ -n "$TAG" ] && [ "$platforms" != "$planned" ]; then
+            echo "::error::A release publishes only once every platform has staged"
+            exit 1
+          fi
+          echo "platforms=$platforms" >> "$GITHUB_OUTPUT"
+
+      - name: The pre-release
+        if: inputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t installers < <(node scripts/channel.ts installers --staged "$RUNNER_TEMP/staged")
+          notes="Tessera ${VERSION}, built from ${GITHUB_SHA::8}, for Macs with Apple Silicon (macOS 13 or later), Windows 10 and 11 (x64) and Linux (x86_64).
+
+          The app is not signed by Apple or Microsoft yet. The first time:
+          - Mac: open the .dmg, drag Tessera to Applications, open it, then System Settings › Privacy & Security › Open Anyway.
+          - Windows: run the installer; when SmartScreen says it protected your PC, choose More info, then Run anyway.
+          - Linux: make the AppImage executable (chmod +x) and run it, or install the .deb with sudo apt install ./<file>.
+
+          After that it updates itself."
+          if [ "$PUBLISH" != true ]; then
+            printf 'would create the pre-release %s with:\n' "$TAG"
+            printf '  %s\n' "${installers[@]##*/}"
+            exit 0
+          fi
+          gh release create "$TAG" "${installers[@]}" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "Tessera ${VERSION}" --notes "$notes"
+
+      - name: AWS CLI
+        run: |
+          command -v aws && exit 0
+          curl -fsSL -o "$RUNNER_TEMP/awscli.zip" https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+          unzip -q -o "$RUNNER_TEMP/awscli.zip" -d "$RUNNER_TEMP"
+          if sudo -n true 2>/dev/null; then
+            sudo "$RUNNER_TEMP/aws/install"
+          else
+            "$RUNNER_TEMP/aws/install" -i "$HOME/.local/aws-cli" -b "$HOME/.local/bin"
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fi
+
+      - name: The update
+        env:
+          PLATFORMS: ${{ steps.built.outputs.platforms }}
+          UPDATES_URL: ${{ vars.UPDATES_URL }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          node scripts/channel.ts publish --platforms "$PLATFORMS" --commit "$GITHUB_SHA" \
+            --staged "$RUNNER_TEMP/staged" $([ "$PUBLISH" = true ] || echo --dry-run)
+
+      - name: Offer the new platforms on the site and in the approval emails
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run site.yml --repo "$GITHUB_REPOSITORY" --ref main
+          gh workflow run cloud.yml --repo "$GITHUB_REPOSITORY" --ref main -f environment=production
+
+      - name: Delete the staged builds
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '.artifacts[] | select(.name | startswith("staged-")) | .id' |
+            while read -r id; do gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id"; done

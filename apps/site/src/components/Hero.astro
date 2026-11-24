@@ -1,0 +1,66 @@
+---
+import appIcon from '@tessera/ui/brand/appicon.svg?url';
+import { APPLY_URL, TAGLINE } from '../config';
+import Install from './Install.astro';
+---
+
+<section class="hero">
+  <div class="wrap head">
+    <img class="icon" src={appIcon} alt="" width="76" height="76" />
+    <h1 class="title">{TAGLINE}</h1>
+    <p class="sub">Charts, order flow, execution, a journal and your own AI agent, in one native app.</p>
+    <div class="get">
+      <Install />
+      <p class="meta">
+        Alpha. Signing in needs an alpha account.{' '}
+        <a class="link" href={APPLY_URL}>
+          Request access
+        </a>
+        {' · '}
+        <a class="link" href="/download">
+          Install guide
+        </a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    min-height: 100svh;
+    display: grid;
+    align-items: center;
+    padding-block: 112px 88px;
+  }
+  .head {
+    display: grid;
+    justify-items: center;
+    text-align: center;
+  }
+  .icon {
+    width: 76px;
+    height: auto;
+  }
+  .title {
+    margin-top: 36px;
+    font-family: var(--serif);
+    font-size: clamp(2.75rem, 1.6rem + 4.2vw, 5.25rem);
+    line-height: 1;
+    letter-spacing: -0.012em;
+    color: var(--t1);
+  }
+  .sub {
+    margin-top: 20px;
+    max-width: 42em;
+    font-size: clamp(1rem, 0.94rem + 0.3vw, 1.1875rem);
+    line-height: 1.55;
+    color: var(--t2);
+  }
+  .get {
+    width: 100%;
+    margin-top: 40px;
+    display: grid;
+    justify-items: center;
+    gap: 18px;
+  }
+</style>

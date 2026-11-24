@@ -1,0 +1,46 @@
+name: Site
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps/site/**', 'packages/ui/**', '.github/workflows/site.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Pages
+    runs-on: ${{ vars.HOSTED_RUNNERS == 'true' && 'ubuntu-latest' || 'tessera-vm' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/bun
+
+      - name: Published platforms
+        id: published
+        env:
+          UPDATES_URL: ${{ vars.UPDATES_URL }}
+        run: echo "platforms=$(node scripts/channel.ts published)" >> "$GITHUB_OUTPUT"
+
+      - name: Build the site
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          PUBLIC_UPDATES_URL: ${{ vars.UPDATES_URL }}
+          PUBLIC_PLATFORMS: ${{ steps.published.outputs.platforms }}
+          PUBLIC_CLOUD_URL: ${{ vars.CLOUD_URL }}
+        run: bun run site:build
+
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+        run: apps/cloud/node_modules/.bin/wrangler pages deploy apps/site/dist --project-name tessera --branch main --commit-dirty=true

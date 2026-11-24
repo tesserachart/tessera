@@ -1,0 +1,68 @@
+:root {
+  --ground: var(--ink);
+  --ink2: var(--ink-2);
+  --rail: var(--ink-2);
+  --band: var(--ink-2);
+  --raised: var(--raise);
+  --hairline: var(--line);
+  --line2: var(--line-2);
+  --petrol2: var(--petrol-2);
+
+  --up-fill: var(--up);
+  --down-fill: var(--down);
+  --up-volume: var(--color-up-volume);
+  --down-volume: var(--color-down-volume);
+  --up-tint: transparent;
+  --down-tint: transparent;
+  --agent-a: var(--color-agent-60);
+  --agent-tint: var(--color-agent-12);
+  --hazard: var(--brass);
+
+  --sel: var(--raise);
+  --pulse: transparent;
+
+  --env-ink: var(--mist-key);
+  --card-muted: var(--card-t3);
+  --card-edge: var(--card-line-2);
+  --card-action: var(--approve);
+  --frame-ink: var(--approve-ink);
+  --frame-t2: var(--on-petrol-2);
+
+  --grad-frame: var(--petrol);
+  --grad-agent: var(--ink-2);
+  --grad-nav-on: var(--nav-on);
+
+  --font-ui: var(--sans);
+  --font-num: var(--sans);
+  --font-display: var(--serif);
+  --font-code: var(--sans);
+  --tnum: 'tnum' 1;
+  --fs-small: var(--fs-body);
+  --lh-small: var(--lh-meta);
+  --fs-tag: var(--fs-meta);
+  --fs-brand: var(--fs-fig-card);
+  --fs-fig-price: var(--fs-figure);
+  --fs-fig-netliq: var(--fs-fig-card);
+  --fs-fig-stat: var(--fs-fig-card);
+  --fs-fig-draft: var(--fs-fig-card);
+  --stretch-compact: 100%;
+
+  --row-compact: 24px;
+  --row-default: 28px;
+  --row-comfortable: 32px;
+  --row: var(--row-h);
+
+  --env-h: var(--rule);
+  --left-w: 256px;
+  --agent-w: 392px;
+  --agent-wide-w: 640px;
+  --panel-header-h: 32px;
+  --band-h: var(--row-h);
+  --grout: 1px;
+  --radius-popover: 0;
+  --space-1: var(--sp-1);
+  --space-2: var(--sp-2);
+  --space-3: var(--sp-3);
+  --space-4: var(--sp-4);
+  --space-5: var(--sp-5);
+}

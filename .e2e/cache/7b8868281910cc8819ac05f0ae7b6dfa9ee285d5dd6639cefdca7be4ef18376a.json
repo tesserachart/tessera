@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-04T01:28:55.158Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Symbol QQQ\" (1 of 2)",
+        "target": {
+          "role": "button",
+          "name": "Symbol QQQ",
+          "position": {
+            "index": 0,
+            "of": 2
+          }
+        }
+      },
+      {
+        "name": "type",
+        "summary": "type \"NQ\" into combobox \"Command palette\"",
+        "target": {
+          "role": "combobox",
+          "name": "Command palette",
+          "placeholder": "Symbol or command · ? asks the analyst"
+        },
+        "value": "NQ"
+      },
+      {
+        "name": "tap",
+        "summary": "tap option \"NQ Z6 E-mini Nasdaq-100 Dec 2026 Change…\" in \"NQ Z6\"",
+        "target": {
+          "role": "option",
+          "name": "NQ Z6 E-mini Nasdaq-100 Dec 2026 Change chart symbol",
+          "within": "NQ Z6"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/agent/chart.e2e.ts::the%20agent%20changes%20the%20chart%20symbol%20to%20NQ%20through%20the%20command%20palette",
+      "targetId": "web",
+      "instructionDigest": "b3de3a8dc10e1853eb2de1687b0d6f691f14c12290f110185cd6f90c1d83b6b1"
+    },
+    "summary": "Opened the command palette, searched for NQ, and selected NQ Z6. The chart changed from QQQ to NQ Z6 at 5m.",
+    "startPath": "/",
+    "endPath": "/",
+    "endAnchors": [
+      {
+        "name": "Change since prior close",
+        "text": "+136.75 · +0.67%"
+      },
+      {
+        "role": "button",
+        "name": "Symbol NQZ6.CME"
+      }
+    ],
+    "endWaitMs": 12559
+  }
+}

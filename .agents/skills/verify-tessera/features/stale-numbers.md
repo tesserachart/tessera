@@ -1,0 +1,36 @@
+# Stale numbers
+
+The desk says when a number on it is old. A position, its P/L, the bid/ask and the chart's price read **behind** while the page trails the runtime's events by 2 s or more, in steps that hold still ("10 s behind", "2 min behind"), and **stale** once the runtime drops ("Runtime dropped") or a connection's prices stop coming in ("No live prices"). While a connection's prices are down, the runtime's one price gate refuses a market order that would open or add on its instruments, whoever sends it: the ticket, an order key, the chart or an agent's draft the trader approves. Flat, a close, Reverse, limits and stops pass the gate, and a toast says the connection dropped until the prices are back. Paper then fills no market order until its prices are back (`paper-orders.md`, `order-live-price`). A quiet market is never stale: nothing here counts trades.
+
+## Sub-features
+
+- `stale-dropped` marks the position, P/L and prices "Runtime dropped" once the runtime the page was connected to goes away.
+- `stale-behind` marks them "… behind" while the page reads its events late: 2, 5, 10, 20, 30 or 45 s, then whole minutes. The runtime sends a `session.pulse` every second to a page that asks for it, each in its own place in the queue however slowly the page reads, and its hello answer carries the pulse clock (`pulseMs`), so a page already behind at its first pulse counts that time. A request or an order on a page that is behind waits for its real answer instead of saying "No answer"; only a runtime that sends nothing at all for the request's timeout (15 s; an order's 20 s, `ORDER_FRESH_MS`), or a page that has read past that deadline, gives up.
+- `stale-prices` marks the prices of a market-data connection named in the `health` topic's `pricesDown` "No live prices", and leaves its position live.
+- `stale-market-orders`: the ticket's `Buy market` or `Sell market` goes dim while it would open or add, its tooltip reading `Market orders wait for live prices; Flat, closes and Reverse still go`; one that only closes stays lit, as do the bid and ask, the limits and stops, Flat and Reverse. A market order that would open or add, sent by an order key or an approved draft, is refused by the runtime with `<connection> dropped and is reconnecting. New market orders wait until its prices are back; Flat, closes and Reverse still go. Nothing sent.`, shown as `Not sent · … · <that reason>` in the desk notices. An agent's draft approved meanwhile shows the same words under its card and stays to approve again once the prices are back. A market order that only closes part or all of the position, Reverse and Flat pass the gate. On Paper they meet Paper's own refusal, `No live price for NQZ6 since 14:42. Nothing sent.`, until the prices are back.
+- `stale-toast` shows `<connection> dropped · Reconnecting. New market orders wait for live prices` in the desk notices while a connection's prices are down and it reconnects (a ForcedLogout reads the same while the login tries once more by itself; its own words when it does not reconnect, as `Another session of this login took over. Close it, then reconnect in Connections.` once the other session takes the seat back), and `Runtime dropped · Reconnecting` while the runtime is gone. It goes once they are back.
+
+## How to get to it (user POV)
+
+- The Trade ticket's `"Paper read-out"`: the reason sits beside `Position`, and Open P/L and Today lose their colour.
+- The chart's position tag (`group "Long 1 · 20,641.50 · …"`, test id `tag-entry`) shows the reason in place of its P/L. The price tag on the axis turns dashed and grey and stops counting the bar down.
+- `table "Positions, orders and fills"`: the open group's header reads `Open · 1 · <reason>`, and its rows dim.
+
+## Driving it with the e2e MCP
+
+Preconditions:
+
+- The baseline in `README.md`. This feature ends the session's runtime, so drive it last in a session.
+
+- **Live.** Tap `button "Buy market"`. `"Paper read-out"` shows `Position` `+1 @ 20,641.50` with nothing beside it, `group "Long 1 · 20,641.50 · −$5"` is on the NQ chart, and the Positions header is `columnheader "Open · 1"`. Save `runtime.ts <port> portfolio.get_positions`: one position, `paper-main`, `qty` 1.
+- **Prices down.** Find the session runtime's pid as below and `kill -USR1 <pid>` (`docs/dev.md` §9). Within seconds `"Paper read-out"` shows `text="No live prices"` beside `+1 @ 20,641.50` and `"Desk notices"` reads `Mock market dropped · Reconnecting. New market orders wait for live prices`. `button "Buy market"` is disabled and its tooltip reads `Market orders wait for live prices; Flat, closes and Reverse still go`; `button "Sell market"` (it would close the long) stays enabled. Draft `orders.create_draft` (`runtime.ts <port> orders.create_draft '{"accountId":"paper-main","instrument":"NQZ6.CME","side":"buy","qty":1,"orderType":"market"}'`) (it prints `Error: orders.create_draft: pending_approval`: the draft is made) and tap its card's `button "Approve on paper"`: the same reason, ending `Nothing sent.`, shows as an `alert` under the card and the card stays, its Approve arming again. Tap `button "Flat"`: Paper refuses the close, the status line reads `Not flat: No live price for NQZ6 since 14:42. Nothing sent. 1 NQZ6 still open with its exits working`, and `Position` stays `+1 @ 20,641.50`. `kill -USR2 <pid>`: the toast goes; tap `button "Approve on paper"` again once it arms, within the draft's minute: the draft fills and `Position` reads `+2`. Tap `button "Flat"`, then `button "Buy market"`, so the next step starts from `+1 @ 20,641.50`.
+- **Dropped.** Stop the session's runtime by the pid listening on its port: `ss -ltnp | grep ":<port> "` names one `tessera-test-ru` pid; `kill -KILL <pid>`. Within seconds, `"Paper read-out"` shows `text="Runtime dropped"` beside `+1 @ 20,641.50`, the chart tag is `group "Long 1 · 20,641.50 · Runtime dropped"`, and the Positions header is `columnheader "Open · 1 · Runtime dropped"`. The status line says `Runtime dropped.` with `Retry now`.
+- Then `close_session` and the usual cleanup checks (`../SKILL.md`).
+
+## Gotchas
+
+- Never stop a runtime by process name: other checkouts run their own. Only the pid on the session's port is this session's.
+- `stale-behind` needs a page that falls behind a moving market (the busy market of `docs/dev.md` §9, on a page slowed down); an e2e session cannot drive it, and `apps/desktop/test/freshness.test.tsx` and `packages/protocol/test/runtimeClient.test.ts` cover it. A Rithmic session that leaves its live phase is covered by `crates/tessera-rithmic/tests/sessions.rs`; the mock market's outage stands in for it here.
+- The sim's clock is frozen, so a draft past its minute reads `Expired` on its card but the runtime still holds it: a new draft for the same contract is refused (`loop_guard … resolve it first`) for the rest of the session. Keep the prices-down steps inside the draft's minute.
+- The sim's default market is frozen: nothing trades, so it is also the quiet market. A minute on it leaves `button "Buy market"` enabled, no note under the grid and no toast.
+- A busy page can say it is behind for a few seconds before "Runtime dropped": it has not yet read the close behind its queued events.

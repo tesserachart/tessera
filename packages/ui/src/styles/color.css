@@ -1,0 +1,217 @@
+.t-color {
+  display: grid;
+  place-items: center;
+  width: var(--control-h-s);
+  height: var(--control-h-s);
+  color: var(--t2);
+  transition: background-color var(--dur-hover) var(--ease-out);
+}
+.t-color:hover,
+.t-color[data-state='open'] {
+  background: var(--raise);
+}
+.t-color:disabled {
+  opacity: 0.5;
+}
+.t-color-chip,
+.t-color-swatch > span,
+.t-color-dot {
+  position: relative;
+  display: block;
+  background: repeating-conic-gradient(var(--raise) 0% 25%, var(--ink-2) 0% 50%) 0 0 / 8px 8px;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.t-color-chip::after,
+.t-color-swatch > span::after,
+.t-color-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--c, transparent);
+  box-shadow: inherit;
+  border-radius: inherit;
+}
+.t-color-chip {
+  width: 16px;
+  height: 16px;
+}
+.t-color[data-empty] .t-color-chip {
+  background: linear-gradient(135deg, transparent 47%, var(--t3) 48% 52%, transparent 53%);
+}
+.t-color[data-empty] .t-color-chip::after {
+  content: none;
+}
+
+.t-popover.t-color-pop {
+  width: 236px;
+  padding: var(--sp-3);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-2);
+}
+.t-color-pop:focus-visible {
+  outline: none;
+}
+.t-color-plane,
+.t-color-strip {
+  position: relative;
+  touch-action: none;
+  user-select: none;
+  cursor: crosshair;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.t-color-plane {
+  height: 132px;
+  background: linear-gradient(to top, #000000, transparent), linear-gradient(to right, #ffffff, var(--hue));
+}
+.t-color-strip {
+  height: 10px;
+  cursor: ew-resize;
+}
+.t-color-hue {
+  background: linear-gradient(
+    to right,
+    #ff0000 0%,
+    #ffff00 16.67%,
+    #00ff00 33.33%,
+    #00ffff 50%,
+    #0000ff 66.67%,
+    #ff00ff 83.33%,
+    #ff0000 100%
+  );
+}
+.t-color-opacity {
+  background:
+    linear-gradient(to right, transparent, var(--c)),
+    repeating-conic-gradient(var(--raise) 0% 25%, var(--ink-2) 0% 50%) 0 0 / 8px 8px;
+}
+.t-color-plane:focus-visible,
+.t-color-strip:focus-visible {
+  outline: none;
+}
+.t-color-thumb,
+.t-color-knob {
+  position: absolute;
+  pointer-events: none;
+  background: var(--c);
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 3px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -50%);
+}
+.t-color-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.t-color-knob {
+  top: 50%;
+  width: 6px;
+  height: 14px;
+}
+.t-color-plane:focus-visible .t-color-thumb,
+.t-color-strip:focus-visible .t-color-knob {
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 3px rgba(0, 0, 0, 0.45),
+    var(--focus-ring);
+}
+.t-color-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 20px);
+  justify-content: space-between;
+  row-gap: var(--sp-1);
+}
+.t-color-swatch {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+}
+.t-color-swatch > span {
+  width: 100%;
+  height: 100%;
+  transition: box-shadow var(--dur-press) var(--ease-out-strong);
+}
+.t-color-swatch:hover > span {
+  box-shadow:
+    inset 0 0 0 1px var(--line-2),
+    0 0 0 1px var(--line-3);
+}
+.t-color-swatch.is-on > span {
+  box-shadow:
+    0 0 0 1px var(--panel),
+    0 0 0 2px var(--mist);
+}
+.t-color-swatch:focus-visible {
+  outline: none;
+}
+.t-color-swatch:focus-visible > span {
+  box-shadow: var(--focus-ring);
+}
+.t-color-recent {
+  display: grid;
+  gap: var(--sp-1-5);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--line);
+}
+.t-color-cap {
+  font: 400 var(--fs-meta) / 1 var(--sans);
+  color: var(--t3);
+}
+.t-color-fields {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.t-color-pct {
+  min-width: 36px;
+  text-align: right;
+  font: 400 var(--fs-meta) / 1 var(--sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--t3);
+}
+.t-color-hex {
+  flex: 1;
+  min-width: 0;
+  height: var(--control-h-s);
+  padding: 0 var(--sp-2);
+  gap: var(--sp-2);
+  font-variant-numeric: tabular-nums;
+}
+.t-color-hex input {
+  min-width: 0;
+  width: 100%;
+  font: 400 var(--fs-body) / 1 var(--sans);
+  letter-spacing: 0;
+  text-transform: lowercase;
+}
+.t-color-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+.t-color-pop .t-input input:focus-visible {
+  box-shadow: none;
+}
+.t-color-pop .t-input.is-invalid {
+  border-color: var(--t2);
+}
+.t-color-err {
+  max-width: 236px;
+  font: 400 var(--fs-meta) / var(--lh-meta) var(--sans);
+  color: var(--t2);
+}
+.t-color-reset {
+  justify-self: start;
+  height: 24px;
+  padding: 0 var(--sp-2);
+  margin: calc(var(--sp-1) * -1) 0 calc(var(--sp-1) * -1) calc(var(--sp-2) * -1);
+  font: 400 var(--fs-meta) / 1 var(--sans);
+  color: var(--t2);
+  transition: color var(--dur-hover) var(--ease-out);
+}
+.t-color-reset:hover {
+  color: var(--t1);
+  background: var(--raise);
+}

@@ -1,0 +1,101 @@
+---
+import Legal from '../layouts/Legal.astro';
+
+const sections = [
+  { id: 'futures', title: 'Trading futures is risky' },
+  { id: 'advice', title: 'Not investment advice' },
+  { id: 'analyst', title: 'The analyst can be wrong' },
+  { id: 'research', title: 'Research, backtests and statistics' },
+  { id: 'hypothetical', title: 'Hypothetical performance' },
+  { id: 'technology', title: 'Software and connections fail' },
+  { id: 'tools', title: 'Copier, brackets and limits' },
+  { id: 'prop', title: 'Prop-firm accounts' },
+  { id: 'demo', title: 'Demo data and this website' },
+];
+---
+
+<Legal
+  title="Risk disclaimer"
+  description="Trading futures carries substantial risk of loss. Tessera is software, not advice; its analyst, research and tools can be wrong or fail. Read this before you trade with it."
+  sections={sections}
+>
+  <h2 id="futures">Trading futures is risky</h2>
+  <p>
+    Trading futures and other leveraged instruments involves substantial risk of loss and is not suitable for every
+    investor. Because of leverage, a small move in price can produce a large loss, and you can lose more than you
+    deposited. Only trade with money you can afford to lose. Consider your experience, objectives and finances, and seek
+    independent advice if you are unsure.
+  </p>
+
+  <h2 id="advice">Not investment advice</h2>
+  <p>
+    Tessera is software. It is not a broker, an adviser or a commodity trading advisor, and it does not know your
+    circumstances. Nothing in the app or on this site, including levels, statistics, alerts and anything the analyst
+    writes, is a recommendation to buy or sell. Every decision to trade is yours.
+  </p>
+
+  <h2 id="analyst">The analyst can be wrong</h2>
+  <p>
+    The analyst is a language model running on your own AI subscription. It can misread a chart, a level or a number,
+    rely on stale data, state something false with confidence, or draft an order that does not match what you meant. Its
+    drafts are proposals: read the instrument, side, size, price and bracket before you approve one.
+  </p>
+  <p>
+    If you give a session Full access, the analyst can place, change and close orders on your accounts without asking,
+    including live accounts, and it can act faster than you can follow. Use that mode only if you accept that risk, and
+    set the risk limits you want before you turn it on.
+  </p>
+
+  <h2 id="research">Research, backtests and statistics</h2>
+  <p>
+    Research results describe how a rule behaved on past data. They depend on the data you have, how you split it, the
+    costs you assumed and how many variants you tried, and they can be distorted by overfitting, look-ahead,
+    survivorship and small samples. A result that held in the past may not hold in the future. Tessera shows sample
+    sizes and keeps hypotheses, measurements and interpretation apart so you can judge them; it cannot make them
+    predictive.
+  </p>
+
+  <h2 id="hypothetical">Hypothetical performance</h2>
+  <p>
+    Hypothetical or simulated performance results have certain limitations. Unlike an actual performance record,
+    simulated results do not represent actual trading. Also, since the trades have not been executed, the results may
+    have under- or over-compensated for the impact, if any, of certain market factors, such as lack of liquidity.
+    Simulated trading programs in general are also subject to the fact that they are designed with the benefit of
+    hindsight. No representation is being made that any account will or is likely to achieve profit or losses similar to
+    those shown.
+  </p>
+  <p>
+    The same applies to paper trading: fills on a paper account are simulated and can be better than you would get in
+    the market.
+  </p>
+
+  <h2 id="technology">Software and connections fail</h2>
+  <p>
+    Tessera is in alpha. Like any trading software it can have bugs, and it depends on your computer, your internet
+    connection, your broker, the trading system, data vendors and your AI provider, any of which can be slow, wrong or
+    unavailable. Orders can be delayed, rejected, partly filled or filled at a worse price than you saw, and what the
+    screen shows can lag the market. Keep another way to see and manage your positions, such as your broker's own
+    platform or trade desk.
+  </p>
+
+  <h2 id="tools">Copier, brackets and limits</h2>
+  <p>
+    Copying trades to several accounts multiplies your exposure, and a follower's fill can differ from the leader's.
+    Brackets, breakeven, hotkeys, alerts and risk limits only act when Tessera and your connections are working, and
+    only as you configured them. They are aids, not guarantees.
+  </p>
+
+  <h2 id="prop">Prop-firm accounts</h2>
+  <p>
+    Evaluation and funded accounts carry the rules of the firm that provides them, such as daily loss limits, trailing
+    drawdowns and restrictions on news or copying. Those rules are the firm's to enforce, and Tessera does not enforce
+    them unless you set matching limits yourself. Check that your use of Tessera and of trade copying is allowed by your
+    firm.
+  </p>
+
+  <h2 id="demo">Demo data and this website</h2>
+  <p>
+    Charts, prices, orders, fills, journal figures and research results shown on this website are demo data or
+    illustrations. They are not real trading results and do not suggest any result you might achieve.
+  </p>
+</Legal>

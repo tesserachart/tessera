@@ -1,0 +1,69 @@
+{
+  "about": "Point of control and value area over dense row volumes (lowest row first, empty rows as 0), checked by the runtime (tessera-market orderflow::profile, the volume_profile concept) and the desk's visible-range profile alike. poc, val and vah are row indexes; held is the volume inside the value area. The POC is the busiest row, among equals the one nearest the middle, then the lower. The value area grows from it one row at a time toward the busier neighbour, both when they are equal, until it holds share of the volume.",
+  "cases": [
+    { "name": "one row", "volumes": [5], "share": 0.7, "poc": 0, "val": 0, "vah": 0, "held": 5 },
+    {
+      "name": "grows toward the busier side",
+      "volumes": [1, 4, 10, 6, 2],
+      "share": 0.7,
+      "poc": 2,
+      "val": 1,
+      "vah": 3,
+      "held": 20
+    },
+    {
+      "name": "equal neighbours are taken together",
+      "volumes": [2, 5, 9, 5, 2],
+      "share": 0.7,
+      "poc": 2,
+      "val": 1,
+      "vah": 3,
+      "held": 19
+    },
+    {
+      "name": "a tie for the POC goes to the row nearest the middle",
+      "volumes": [9, 1, 2, 9, 1],
+      "share": 0.5,
+      "poc": 3,
+      "val": 2,
+      "vah": 3,
+      "held": 11
+    },
+    {
+      "name": "an even count's middle tie goes to the lower",
+      "volumes": [1, 7, 7, 1],
+      "share": 0.7,
+      "poc": 1,
+      "val": 1,
+      "vah": 2,
+      "held": 14
+    },
+    {
+      "name": "empty rows count as zero and the band stays contiguous",
+      "volumes": [3, 0, 0, 12, 0, 8, 1],
+      "share": 0.9,
+      "poc": 3,
+      "val": 0,
+      "vah": 6,
+      "held": 24
+    },
+    {
+      "name": "the whole profile at 100%",
+      "volumes": [1, 2, 3],
+      "share": 1.0,
+      "poc": 2,
+      "val": 0,
+      "vah": 2,
+      "held": 6
+    },
+    {
+      "name": "a session-like profile at 70%",
+      "volumes": [12, 40, 85, 130, 210, 260, 245, 190, 120, 60, 25, 8],
+      "share": 0.7,
+      "poc": 5,
+      "val": 3,
+      "vah": 7,
+      "held": 1035
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import './tokens.css';
+@import './legacy-tokens.css';
+@import './fonts.css';
+@import './legacy.css';
+@import './base.css' layer(base);
+@import './components.css';
+@import './icons.css';
+@import './primitives.css';
+@import './controls.css';
+@import './color.css';
+@import './legacy-components.css';
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+
+@source '..';
+@source '../../../../apps/desktop/src';
+
+@custom-variant hover (&:hover);

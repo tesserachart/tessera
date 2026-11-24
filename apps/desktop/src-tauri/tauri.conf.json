@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Tessera",
+  "version": "0.2.0",
+  "identifier": "com.tesserachart.desktop",
+  "build": {
+    "beforeDevCommand": "bun run dev:shell-ui",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "bun run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Tessera",
+        "width": 1600,
+        "height": 1000,
+        "minWidth": 1100,
+        "minHeight": 680,
+        "decorations": false,
+        "resizable": true,
+        "center": true,
+        "visible": false,
+        "backgroundColor": "#05080b",
+        "dragDropEnabled": false,
+        "backgroundThrottling": "disabled"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost ws://127.0.0.1:* http://127.0.0.1:*; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'",
+      "devCsp": null,
+      "dangerousDisableAssetCspModification": ["style-src"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "appimage"],
+    "category": "Finance",
+    "shortDescription": "Agent-first trading workspace",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkxMjA4QzMyNUVCNUI0RTIKUldUaXRMVmVNb3dna1ZNaFJhUXdWbENMNWhzN3ZjcU5wWjlGbUdRZ2hwbkhxL1ZLOGY0NkpQK1gK",
+      "endpoints": []
+    }
+  }
+}

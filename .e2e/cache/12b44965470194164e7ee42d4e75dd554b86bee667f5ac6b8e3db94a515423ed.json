@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-04T01:29:15.234Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"15m\" in \"1m\"",
+        "target": {
+          "role": "button",
+          "name": "15m",
+          "within": "1m"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/agent/chart.e2e.ts::the%20agent%20changes%20the%20chart%20timeframe%20to%2015m",
+      "targetId": "web",
+      "instructionDigest": "2bf166ee9039f5f2e0a1af2020712c40d84465371c7c61fa0b18b1d5995aeeed"
+    },
+    "summary": "The QQQ chart is set to 15m: the stage-bar 15m timeframe button is pressed, and the chart region and header both show QQQ 15m.",
+    "startPath": "/",
+    "endPath": "/",
+    "endAnchors": [
+      {
+        "text": "515 bars"
+      }
+    ],
+    "endWaitMs": 27930
+  }
+}

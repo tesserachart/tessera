@@ -1,0 +1,48 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "tessera-cloud",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "rules": [
+    { "type": "Data", "globs": ["**/*.woff2"], "fallthrough": true },
+    { "type": "Text", "globs": ["**/*.svg"], "fallthrough": true },
+  ],
+  "routes": [{ "pattern": "account.tesserachart.com", "custom_domain": true }],
+  "vars": {
+    "WORKOS_CLIENT_ID": "client_01M54TYTJP2CT5GQXZEXNSKFT5",
+    "SITE_URL": "https://tesserachart.com",
+    "FEEDBACK_REPO": "tesserachart/tessera",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tessera-cloud",
+      "database_id": "637c740f-e990-43a5-a343-2f416a264d23",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["beta@tesserachart.com"] }],
+  "env": {
+    "staging": {
+      "name": "tessera-cloud-staging",
+      "routes": [{ "pattern": "account-staging.tesserachart.com", "custom_domain": true }],
+      "vars": {
+        "WORKOS_CLIENT_ID": "client_01M54TYT538MKZP95R9XJZ089D",
+        "SITE_URL": "https://tesserachart.com",
+        "FEEDBACK_REPO": "tesserachart/tessera",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "tessera-cloud-staging",
+          "database_id": "c51eaf50-0656-4221-b3a4-7b54606b1d28",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "r2_buckets": [{ "binding": "SHARE_IMAGES", "bucket_name": "tessera-shares-staging" }],
+      "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["beta@tesserachart.com"] }],
+    },
+  },
+}

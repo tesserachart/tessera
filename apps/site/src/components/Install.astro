@@ -1,0 +1,210 @@
+---
+import { APPLY_URL, PLATFORMS, UPDATES_URL } from '../config';
+import { firstTabWithRows, installTabs } from '../lib/install';
+import { pickTab } from '../scripts/pickTab';
+
+const tabs = installTabs(UPDATES_URL, PLATFORMS);
+const chosen = firstTabWithRows(tabs);
+const pickVisitorTab = `(${pickTab.toString()})(document.currentScript.previousElementSibling)`;
+---
+
+<div class="install" data-install>
+  <div class="tabs" role="tablist" aria-label="Your computer">
+    {tabs.map((t) => (
+      <button
+        type="button"
+        role="tab"
+        id={`install-tab-${t.platform}`}
+        aria-controls={`install-${t.platform}`}
+        aria-selected={t.platform === chosen ? 'true' : 'false'}
+        tabindex={t.platform === chosen ? 0 : -1}
+        data-platform={t.platform}
+      >
+        {t.name}
+      </button>
+    ))}
+  </div>
+  {tabs.map((t) => (
+    <div
+      class="panel"
+      role="tabpanel"
+      id={`install-${t.platform}`}
+      aria-labelledby={`install-tab-${t.platform}`}
+      hidden={t.platform !== chosen}
+    >
+      {t.rows.length === 0 ? (
+        <p class="soon">
+          The {t.name} build is not out yet.{' '}
+          <a class="link" href={APPLY_URL}>
+            Request access
+          </a>{' '}
+          and we email you when it is.
+        </p>
+      ) : (
+        <ul class="rows">
+          {t.rows.map((row) => (
+            <li class="row">
+              <span class="label">{row.label}</span>
+              {row.command ? (
+                <code class="cmd" title={row.command}>
+                  {row.command}
+                </code>
+              ) : (
+                <span class="note">{row.note}</span>
+              )}
+              {row.command && (
+                <button type="button" class="act" data-copy={row.command} aria-label={`Copy the ${row.label} command`}>
+                  Copy
+                </button>
+              )}
+              {row.download && (
+                <a class="act act-primary" href={row.download}>
+                  Download
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  ))}
+  <p class="sr-only" aria-live="polite" data-copied></p>
+</div>
+
+<script is:inline set:html={pickVisitorTab} />
+<script>
+  import '../scripts/install';
+</script>
+
+<style>
+  .install {
+    width: min(100%, 680px);
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+  }
+  .tabs {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--line-2);
+    background: var(--ink-2);
+  }
+  .tabs button {
+    min-width: 104px;
+    height: 34px;
+    padding-inline: 18px;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--t3);
+    transition:
+      color var(--dur-hover) linear,
+      background-color var(--dur-hover) linear;
+  }
+  .tabs button:hover {
+    color: var(--t2);
+  }
+  .tabs button[aria-selected='true'] {
+    background: var(--raise);
+    color: var(--t1);
+  }
+  .panel {
+    width: 100%;
+    border: 1px solid var(--line-2);
+    background: var(--ink-2);
+    text-align: left;
+  }
+  .rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 8.5rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    min-height: 54px;
+    padding: 8px 8px 8px 18px;
+  }
+  .row + .row {
+    border-top: 1px solid var(--line);
+  }
+  .label {
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--t1);
+  }
+  .cmd {
+    font-family: var(--mono);
+    font-size: 0.78125rem;
+    color: var(--t2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .note {
+    font-size: var(--fs-meta);
+    color: var(--t3);
+  }
+  .act {
+    grid-column: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 96px;
+    height: 36px;
+    padding-inline: 14px;
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    color: var(--t1);
+    border: 1px solid var(--line-3);
+    transition:
+      border-color var(--dur-hover) linear,
+      background-color var(--dur-hover) linear;
+  }
+  .act:hover {
+    border-color: rgba(220, 236, 240, 0.5);
+  }
+  .act-primary {
+    background: var(--mist);
+    border-color: var(--mist);
+    color: var(--ink);
+  }
+  .act-primary:hover {
+    background: #eef6f8;
+    border-color: #eef6f8;
+  }
+  .soon {
+    padding: 18px;
+    font-size: var(--fs-small);
+    color: var(--t2);
+    text-align: center;
+  }
+  @media (max-width: 560px) {
+    .tabs {
+      width: 100%;
+    }
+    .tabs button {
+      flex: 1;
+      min-width: 0;
+      padding-inline: 8px;
+    }
+    .row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px 12px;
+      padding: 12px 8px 12px 14px;
+    }
+    .label {
+      grid-column: 1;
+    }
+    .cmd,
+    .note {
+      grid-column: 1;
+      grid-row: 2;
+    }
+    .act {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+    }
+  }
+</style>

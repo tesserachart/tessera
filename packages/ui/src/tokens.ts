@@ -1,0 +1,120 @@
+export const TOKENS = {
+  ink: '#05080b',
+  ink2: '#0b1116',
+  panel: '#0b1116',
+  raise: '#0d1319',
+  line: '#1b2730',
+  line2: 'rgba(232, 238, 243, 0.12)',
+  line3: 'rgba(232, 238, 243, 0.22)',
+  lineField: 'rgba(232, 238, 243, 0.38)',
+  ink86: 'rgba(5, 8, 11, 0.86)',
+  petrol: '#073f4f',
+  petrol2: 'rgba(142, 209, 252, 0.16)',
+  teal: '#0071a9',
+  mist: '#e8eef3',
+  t1: '#e8eef3',
+  t2: '#aebcc8',
+  t3: '#7c8b99',
+  t3Raised: '#7c8b99',
+  t4Fig: '#7c8b99',
+  t4: '#7c8b99',
+  aqua: '#8ed1fc',
+  up: '#2fd3b4',
+  down: '#e0523f',
+  brass: '#d8b26a',
+  active: '#d8b26a',
+  aqua60: 'rgba(142, 209, 252, 0.6)',
+  aqua40: 'rgba(142, 209, 252, 0.4)',
+  aqua25: 'rgba(142, 209, 252, 0.25)',
+  aqua12: 'rgba(142, 209, 252, 0.12)',
+  up60: 'rgba(47, 211, 180, 0.6)',
+  down60: 'rgba(224, 82, 63, 0.6)',
+  brass60: 'rgba(216, 178, 106, 0.6)',
+  mist70: 'rgba(232, 238, 243, 0.7)',
+  mist55: 'rgba(232, 238, 243, 0.55)',
+  mist45: 'rgba(232, 238, 243, 0.45)',
+  mist25: 'rgba(232, 238, 243, 0.25)',
+  mist12: 'rgba(232, 238, 243, 0.12)',
+  mist10: 'rgba(232, 238, 243, 0.1)',
+  serif: "'Instrument Serif', 'Tessera Keys', serif",
+  sans: "'Instrument Sans', 'Tessera Keys', sans-serif",
+  fig: "'Instrument Sans', 'Tessera Keys', sans-serif",
+} as const;
+
+export type TokenName = keyof typeof TOKENS;
+
+export const TOKEN_VARS: Record<TokenName, string> = {
+  ink: '--color-ink',
+  ink2: '--color-ink-2',
+  panel: '--color-panel',
+  raise: '--color-raise',
+  line: '--color-line',
+  line2: '--color-line-2',
+  line3: '--color-line-3',
+  lineField: '--color-line-field',
+  ink86: '--color-ink-86',
+  petrol: '--color-petrol',
+  petrol2: '--color-petrol-2',
+  teal: '--color-teal',
+  mist: '--color-mist',
+  t1: '--color-t1',
+  t2: '--color-t2',
+  t3: '--color-t3',
+  t3Raised: '--color-t3-raised',
+  t4Fig: '--color-t4-fig',
+  t4: '--color-t4',
+  aqua: '--color-aqua',
+  up: '--color-up',
+  down: '--color-down',
+  brass: '--color-brass',
+  active: '--color-active',
+  aqua60: '--color-aqua-60',
+  aqua40: '--color-aqua-40',
+  aqua25: '--color-aqua-25',
+  aqua12: '--color-aqua-12',
+  up60: '--color-up-60',
+  down60: '--color-down-60',
+  brass60: '--color-brass-60',
+  mist70: '--color-mist-70',
+  mist55: '--color-mist-55',
+  mist45: '--color-mist-45',
+  mist25: '--color-mist-25',
+  mist12: '--color-mist-12',
+  mist10: '--color-mist-10',
+  serif: '--font-serif',
+  sans: '--font-sans',
+  fig: '--font-fig',
+};
+
+export const MOTION = {
+  armMs: 600,
+  riseMs: 240,
+  seamMs: 240,
+  litMs: 200,
+  drainMs: 400,
+  fadeMs: 160,
+  panelInMs: 220,
+  panelOutMs: 150,
+  menuMs: 160,
+  menuOutMs: 110,
+  pressMs: 120,
+  tipMs: 125,
+  tooltipDelayMs: 400,
+  tooltipSkipMs: 300,
+} as const;
+
+export const EASE = {
+  out: 'cubic-bezier(0.2, 0, 0, 1)',
+  outStrong: 'cubic-bezier(0.23, 1, 0.32, 1)',
+  inOut: 'cubic-bezier(0.77, 0, 0.175, 1)',
+} as const;
+
+export function readTokens(el: Element = document.documentElement): Record<TokenName, string> {
+  const cs = getComputedStyle(el);
+  const out = {} as Record<TokenName, string>;
+  for (const name of Object.keys(TOKEN_VARS) as TokenName[]) {
+    const v = cs.getPropertyValue(TOKEN_VARS[name]).trim();
+    out[name] = v || TOKENS[name];
+  }
+  return out;
+}

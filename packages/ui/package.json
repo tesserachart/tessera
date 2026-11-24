@@ -1,0 +1,49 @@
+{
+  "name": "@tessera/ui",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Tessera design system (v5, tessera-lab v5/system): tokens, bundled OFL fonts, the icon sprite and keyed T, and React primitives.",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./format": "./src/format.ts",
+    "./downloads": "./src/downloads.ts",
+    "./first-open": "./src/firstOpen.ts",
+    "./legal": "./src/legal.ts",
+    "./tokens": "./src/tokens.ts",
+    "./styles.css": "./src/styles/index.css",
+    "./tokens.css": "./src/styles/tokens.css",
+    "./fonts/*": "./fonts/*",
+    "./icons/*": "./icons/*",
+    "./brand/*": "./brand/*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "icons": "bun scripts/build-icons.mjs",
+    "icons:check": "bun scripts/build-icons.mjs --check"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "radix-ui": "1.6.7",
+    "skullet": "0.0.3",
+    "tailwind-merge": "3.7.0",
+    "tailwindcss": "4.3.3"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "happy-dom": "20.14.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}

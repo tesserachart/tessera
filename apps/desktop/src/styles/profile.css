@@ -1,0 +1,58 @@
+.pf-page {
+  color: var(--t1);
+  font: var(--fw-body) var(--fs-body) / var(--lh-body) var(--sans);
+}
+.pf-body {
+  flex: 1;
+  min-height: 0;
+}
+.pf-col {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-8);
+  width: 100%;
+  max-width: 720px;
+  padding: var(--sp-8) var(--sp-8) var(--sp-16);
+}
+
+.pf-who {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+.pf-names,
+.pf-sign-in {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pf-name {
+  margin: 0;
+  font: var(--fw-nav) var(--fs-nav) / var(--lh-nav) var(--serif);
+  color: var(--t1);
+  overflow-wrap: anywhere;
+}
+.pf-email {
+  margin: 0;
+  color: var(--t2);
+  overflow-wrap: anywhere;
+}
+.pf-note {
+  margin: var(--sp-2) 0 0;
+  color: var(--t1);
+}
+.pf-acts {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+
+.pf-value {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.pf-fact {
+  color: var(--t2);
+}

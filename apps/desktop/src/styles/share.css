@@ -1,0 +1,46 @@
+.sh-dialog {
+  width: 520px;
+}
+.sh-body {
+  display: grid;
+  gap: var(--sp-3);
+}
+.sh-preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border: var(--rule) solid var(--line);
+  background: var(--ink-2);
+}
+.sh-preview.is-taking {
+  animation: sh-wait 1.2s ease-in-out infinite alternate;
+}
+.sh-line {
+  margin: 0;
+  color: var(--t2);
+}
+.sh-link {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.sh-link > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.sh-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+@keyframes sh-wait {
+  to {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sh-preview.is-taking {
+    animation: none;
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreBinaries": ["sccache", "rustc", "clang", "plutil", "screencapture", "ffmpeg", "xdotool", "wmctrl", "ss"],
+  "workspaces": {
+    ".": {
+      "entry": [
+        "scripts/*.ts",
+        "e2e.config.ts",
+        "e2e/agent/**/*.e2e.ts",
+        "e2e/agent/support/serve.ts",
+        "e2e/tauri/**/*.tauri.ts",
+        "e2e/tauri/vitest.config.ts",
+        ".agents/skills/*/scripts/**/*.{ts,mjs}",
+        "fixtures/research/*.js",
+        "crates/tessera-indicators/js/*.js",
+        "crates/tessera-script/src/prelude.js"
+      ],
+      "project": [
+        "*.ts",
+        "scripts/**/*.ts",
+        "e2e/**/*.ts",
+        ".agents/skills/*/scripts/**/*.{ts,mjs}",
+        "fixtures/**/*.js",
+        "crates/**/*.js"
+      ]
+    },
+    "apps/desktop": {
+      "entry": ["src/kit/main.tsx", "bench/*.ts", "scripts/*.ts", "test/**/*.perf.ts"],
+      "ignoreIssues": {
+        "src/workspace/tiles/{Alerts,Copy,Indicators,Journal,Tape,Unknown}Tile.tsx": ["exports"]
+      }
+    },
+    "apps/cloud": {},
+    "apps/site": {},
+    "packages/bridge": {},
+    "packages/chart": {
+      "entry": ["test/**/*.perf.ts"]
+    },
+    "packages/protocol": {
+      "entry": ["scripts/*.{ts,mjs}"]
+    },
+    "packages/ui": {
+      "entry": ["scripts/*.mjs"]
+    }
+  }
+}

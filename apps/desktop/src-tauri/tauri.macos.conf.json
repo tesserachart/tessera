@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Tessera",
+        "width": 1600,
+        "height": 1000,
+        "minWidth": 1100,
+        "minHeight": 680,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 11,
+          "y": 12
+        },
+        "resizable": true,
+        "center": true,
+        "visible": false,
+        "backgroundColor": "#05080b",
+        "dragDropEnabled": false,
+        "backgroundThrottling": "disabled"
+      }
+    ]
+  },
+  "bundle": {
+    "targets": ["app", "dmg"],
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "signingIdentity": "-",
+      "dmg": {
+        "background": "dmg/background.tiff",
+        "windowSize": { "width": 660, "height": 428 },
+        "appPosition": { "x": 170, "y": 170 },
+        "applicationFolderPosition": { "x": 490, "y": 170 }
+      }
+    }
+  }
+}

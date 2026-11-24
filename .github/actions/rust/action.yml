@@ -1,0 +1,49 @@
+name: Rust
+description: Updates Rust's stable toolchain (installing rustup on a runner without one on its PATH) and gives cargo warm target directories, the Windows runner's kept one or the dependencies' builds from rust-cache in both workspaces (docs/dev.md §8)
+
+inputs:
+  cache-key:
+    description: rust-cache's key, for a job whose builds differ from the others'
+    default: ''
+  save-cache:
+    description: Whether this run saves the rust-cache
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Rust toolchain
+      shell: bash
+      run: |
+        if ! command -v rustup >/dev/null 2>&1; then
+          if [ -f "$HOME/.cargo/env" ]; then . "$HOME/.cargo/env"; fi
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal --no-modify-path
+            . "$HOME/.cargo/env"
+          fi
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        fi
+        rustup update --no-self-update stable
+        rustup show active-toolchain
+
+    - name: Cargo target directory
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        target="${CI_TARGET_DIR:-$HOME/ci/target}"
+        floor="${CI_FREE_DISK_MIN_GB:-12}"
+        mkdir -p "$target"
+        free=$(df -BG --output=avail "$target" | tail -1 | tr -dc 0-9)
+        echo "$target: $free GB free on its disk (floor $floor GB)"
+        if [ "$free" -lt "$floor" ]; then rm -rf "$target"; fi
+        echo "CARGO_TARGET_DIR=$(cygpath -m "$target")" >> "$GITHUB_ENV"
+
+    - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      if: runner.os != 'Windows'
+      with:
+        key: ${{ inputs.cache-key }}
+        workspaces: |
+          . -> target
+          apps/desktop/src-tauri -> target
+        save-if: ${{ inputs.save-cache }}
+        cache-on-failure: true

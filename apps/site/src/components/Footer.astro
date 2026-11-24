@@ -1,0 +1,114 @@
+---
+import wordmarkUrl from '@tessera/ui/brand/wordmark.svg?url';
+import { DOWNLOAD_META, ENTITY_FULL } from '../config';
+
+const year = 2026;
+---
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="top">
+      <a href="/" class="mark" aria-label="Tessera, home">
+        <img src={wordmarkUrl} alt="" width="200" height="63" loading="lazy" decoding="async" />
+      </a>
+      <nav class="cols" aria-label="Footer">
+        <div>
+          <p class="h">Product</p>
+          <a href="/download">Download</a>
+          <a href="/#chart">The chart</a>
+          <a href="/#order-flow">Order flow</a>
+          <a href="/#agent">The agent</a>
+          <a href="/#your-ai">Your AI and data</a>
+        </div>
+        <div>
+          <p class="h">Legal</p>
+          <a href="/terms">Terms of service</a>
+          <a href="/privacy">Privacy policy</a>
+          <a href="/risk">Risk disclaimer</a>
+        </div>
+      </nav>
+    </div>
+    <div class="fine">
+      <p>
+        Futures trading involves substantial risk of loss and is not suitable for every investor. You can lose more than
+        you deposit. Tessera is software: it is not a broker, an exchange or an investment adviser, and nothing on this
+        site is investment advice or a recommendation to trade. Charts, prices, orders and statistics shown here are
+        demo data. Past results, simulated or real, do not predict future results. The analyst is a language model that
+        runs on your own Claude or ChatGPT subscription; it can be wrong. Read the{' '}
+        <a class="link" href="/risk">
+          risk disclaimer
+        </a>
+        .
+      </p>
+      <p>
+        Claude Code is a product of Anthropic. Codex and ChatGPT are products of OpenAI. Rithmic is a trademark of its
+        owner. Tessera is not affiliated with or endorsed by them.
+      </p>
+      <p class="base">
+        <span>
+          © {year} Tessera · {ENTITY_FULL}
+        </span>
+        <span>{DOWNLOAD_META}</span>
+      </p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    border-top: 1px solid var(--line);
+    padding-block: clamp(64px, 8vw, 112px) 40px;
+    background: var(--ink);
+  }
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 48px;
+  }
+  .mark img {
+    width: clamp(160px, 16vw, 220px);
+    height: auto;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(160px, auto));
+    gap: 32px clamp(40px, 8vw, 120px);
+  }
+  .cols div {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+  }
+  .cols a {
+    color: var(--t2);
+    font-size: 0.9375rem;
+    transition: color var(--dur-hover) linear;
+  }
+  .cols a:hover {
+    color: var(--t1);
+  }
+  .h {
+    font-family: var(--serif);
+    font-size: 1.25rem;
+    color: var(--t1);
+    margin-bottom: 4px;
+  }
+  .fine {
+    margin-top: clamp(56px, 7vw, 96px);
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+    display: grid;
+    gap: 14px;
+    max-width: 920px;
+    font-size: var(--fs-meta);
+    line-height: 1.6;
+    color: var(--t3);
+  }
+  .base {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 32px;
+    margin-top: 12px;
+  }
+</style>

@@ -1,0 +1,59 @@
+name: Rerun what a runner dropped
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rerun-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  rerun:
+    name: Rerun what a runner dropped
+    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.event != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    permissions:
+      actions: write
+      checks: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+      - name: What the runner dropped
+        id: dropped
+        run: bun scripts/runner-dropped.ts --run "$RUN_ID" --attempt "$ATTEMPT" >> "$GITHUB_OUTPUT"
+
+      - name: Rerun it while it is main's head
+        if: steps.dropped.outputs.rerun == 'true'
+        env:
+          WAIT: ${{ steps.dropped.outputs.wait }}
+        run: |
+          until=$(( $(date +%s) + WAIT ))
+          while :; do
+            head=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+            if [ "$head" != "$HEAD_SHA" ]; then
+              echo "main moved on to ${head::8}; its own run decides."
+              exit 0
+            fi
+            left=$(( until - $(date +%s) ))
+            [ "$left" -gt 0 ] || break
+            sleep $(( left < 300 ? left : 300 ))
+          done
+          gh run rerun "$RUN_ID" --failed --repo "$GITHUB_REPOSITORY"

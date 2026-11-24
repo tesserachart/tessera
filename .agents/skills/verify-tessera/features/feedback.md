@@ -1,0 +1,32 @@
+# Feedback
+
+A tester writes a bug, an idea or anything else in the app. Before it goes, the sheet shows everything Tessera attaches, each line removable: a picture of the window with broker account numbers hidden, the app's version and commit, the system, the focused account's broker and kind (never its number), the protect mode, any trading lock with its cause and end (`trading-lock.md`), the focused chart, the last order and protect events on its instrument, and the runtime's recent errors. With the user's agent connected, Write it up for me turns the note into a title, steps, expected and actual the user edits. Send files it through Tessera Cloud as an issue labelled `feedback`; offline or signed out it waits and goes by itself. Either way the user gets the report's id.
+
+## Sub-features
+
+- `entry` is the four ways in: the rail's `button "Feedback"` above Settings, the Tessera menu's `menuitem "Send feedback…"`, ⌘K `Send feedback…` and Settings › App › Report a problem's `button "Send feedback…"`, all on ⌘⇧/ (Ctrl+Shift+/). It is the only report path: nothing goes through PostHog.
+- `sheet` is `dialog "Send feedback"`: `group "Kind"` (Bug, Idea, Other), `textbox "Your note"`, and `region "Sent with it"` listing each attached line with `button "Remove <label>"` (then `Put back <label>`); event and error lines open under `Show what is sent`. Send is off until the note has words.
+- `opening` is how the sheet arrives: its whole layout on the click's next frame, then the details asked for and the picture started once that frame is drawn (`useLoadOnceShown` in `apps/desktop/src/app/onceShown.ts`). Until each lands its rows are skeletons sized like what replaces them.
+- `picture` is the screenshot line, `This window, 1600×1000, <size>. Account numbers are hidden.` with a preview of the picture that is sent. The sheet itself is never in it. The picture is the window at the moment the sheet first painted: `apps/desktop/src/feedback/freeze.ts` copies it off-screen in one step, and the rest is done in slices of a frame each (styles in `slim.ts`, drawing in `tiles.ts`), so typing never waits on it. It is taken once per opening; Send pressed before it lands waits for it.
+- `write-up` is `button "Write it up for me with <agent>"`, shown only while an agent is connected (`feedback.context` `writer`). It runs a hidden turn of that agent with no tools, sends nothing, and fills `textbox "Title"`, `Steps, one a line`, `Expected` and `Actual`. `Drop the write-up` removes it.
+- `sent` is the got-it: `Got it. Thank you.`, `Report fb-<12 hex>` with Copy and `The team has it as issue <n>.`
+- `queued` is the got-it offline or signed out: `Got it. It’s saved and goes by itself.` and why it waits. `feedback.outbox` lists it until Cloud takes it; the runtime tries every 15 s, backing off from 30 s to 15 min after a failure, and at once on a restart.
+
+## How to get to it (user POV)
+
+Press ⌘⇧/ anywhere, or click Feedback at the rail's foot.
+
+## Driving it
+
+`../scripts/feedback.ts [evidence dir] [ui dir] [pr|main]` proves it end to end without a login or a GitHub token. It starts `feedback-cloud.ts` (run by Bun): the real Cloud app (`apps/cloud/src/app.ts`) and its GitHub App client on a Miniflare D1, with an identity that signs in at once and grants `early_access`, filing into a recording stand-in of GitHub's API that writes each issue (`github/issue-<n>.json`, `.md`) and attachment (`github/feedback_<id>_screenshot.png`) to the evidence dir. The sim runtime runs with `TESSERA_TEST_ACCOUNTS=1` and `TESSERA_CLOUD_URL` at it, signs in through `account.sign_in`, trades on Paper (a bracketed market buy, a buy limit then its cancel, an oversized market), turns on the stand-in Claude CLI, and opens the window as the desktop app. It shoots `pr-desk.png`, `pr-app-menu.png`, `pr-dialog.png`, `pr-written-up.png`, `pr-events.png`, `pr-got-it.png` and `pr-queued.png`, and checks the issue's label, title, events, screenshot and that no account id or email is in it. Then it stops the Cloud, sends an idea (queued), starts the Cloud again on the same port and waits for the report to land. `main` with main's `dist` shoots the desk and the Tessera menu only.
+
+`../scripts/feedback-typing.ts [evidence dir] [ui dir] [pr|main]` proves typing stays quick while the picture is taken: it starts its own sim runtime on the busy market, builds a busy desk (two 1m charts with a footprint, DOM and T&S), opens Feedback and types the note at once, then has the stand-in Claude write it up and types the title and steps. It records every main-thread task over 50 ms and every input event over 16 ms per phase (`<scene>-phases.json`, a CPU profile per phase), counts the pictures shown, presses Send and saves the picture the runtime queued (`<scene>-sent.png`). Long tasks it lists can be the busy desk's own frames: run it on main's `dist` with `main` to see that floor.
+
+`../scripts/feedback-open.ts [evidence dir] [ui dir] [pr|main] [rounds]` proves `opening` with no Cloud: it starts its own sim runtime, clicks the rail's Feedback a few times and reads, frame by frame in the page, when the sheet is in the page, visible and fully in, and when the details and the picture land, with the longest frame after the click. It saves the screencast's frames 100, 150, 300, 1000 and 7000 ms after a click (`<scene>-at-<ms>ms.png`) and `<scene>-openings.json`. Pass main's `dist` and `main` to film main the same way.
+
+## Gotchas
+
+- The stand-in Claude CLI answers a write-up prompt (one with `The trader's note:`) with fixed JSON built from the note; it proves the hidden turn, the parsing and the fields, never a model's words.
+- The stand-in GitHub keeps nothing between runs; real filing needs the GitHub App's secrets on the Worker (`docs/dev.md` §15).
+- A Paper account's name (`Paper`) is not hidden: only broker accounts carry numbers.
+- The picture takes a while to land on a busy desk (15 to 40 s on the busy sim desk in a cloud container) because it yields every frame. That is expected; the line shows its skeleton until then.

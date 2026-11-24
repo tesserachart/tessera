@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-04T01:28:30.925Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Account\"",
+        "target": {
+          "role": "button",
+          "name": "Account"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap menuitem \"Settings Ctrl+,\"",
+        "target": {
+          "role": "menuitem",
+          "name": "Settings Ctrl+,",
+          "text": "Settings"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/agent/areas.e2e.ts::the%20agent%20opens%20the%20Settings%20area",
+      "targetId": "web",
+      "instructionDigest": "0a7015967334ff502a30ed2510efe41710d4211ac5767b3336bed8c17b73905f"
+    },
+    "summary": "Opened Settings from the Account menu. The Settings area is displayed with Appearance and About sections.",
+    "startPath": "/",
+    "endPath": "/",
+    "endAnchors": [
+      {
+        "role": "heading",
+        "name": "Appearance"
+      },
+      {
+        "text": "Up / down colours"
+      },
+      {
+        "role": "button",
+        "name": "Aqua / coral"
+      },
+      {
+        "role": "button",
+        "name": "Green / red"
+      },
+      {
+        "text": "Row density"
+      },
+      {
+        "role": "button",
+        "name": "Compact 20"
+      },
+      {
+        "role": "button",
+        "name": "Default 24"
+      },
+      {
+        "role": "button",
+        "name": "Comfortable 28"
+      }
+    ],
+    "endWaitMs": 12429
+  }
+}

@@ -1,0 +1,204 @@
+---
+import Legal from '../layouts/Legal.astro';
+import { CONTACT_EMAIL, ENTITY, ENTITY_ADDRESS, ENTITY_FULL } from '../config';
+
+const sections = [
+  { id: 'agreement', title: 'This agreement' },
+  { id: 'alpha', title: 'The alpha' },
+  { id: 'what', title: 'What Tessera is and is not' },
+  { id: 'decisions', title: 'Your orders and decisions' },
+  { id: 'analyst', title: 'The analyst and your AI provider' },
+  { id: 'connections', title: 'Brokers, prop firms and data' },
+  { id: 'risk', title: 'Trading risk' },
+  { id: 'licence', title: 'Your licence to use Tessera' },
+  { id: 'content', title: 'Your content' },
+  { id: 'fees', title: 'Fees' },
+  { id: 'warranty', title: 'No warranty' },
+  { id: 'liability', title: 'Limitation of liability' },
+  { id: 'indemnity', title: 'Indemnity' },
+  { id: 'ending', title: 'Ending this agreement' },
+  { id: 'changes', title: 'Changes to these terms' },
+  { id: 'law', title: 'Governing law and disputes' },
+  { id: 'contact', title: 'Contact' },
+];
+---
+
+<Legal
+  title="Terms of service"
+  description="The terms for using Tessera, a trading desk in a free, private, invite-only alpha: what it is and is not, your responsibility for your orders, the analyst, and the limits of our liability."
+  sections={sections}
+>
+  <h2 id="agreement">This agreement</h2>
+  <p>
+    These terms are an agreement between you and {ENTITY_FULL} ("Tessera", "we", "us") for your use of the Tessera
+    desktop application, its runtime, this website and any related services (together, "Tessera"). By downloading,
+    installing or using Tessera you accept these terms. The app also asks you to accept them the first time it opens,
+    and again whenever they change. If you do not accept them, do not use Tessera.
+  </p>
+  <p>
+    The <a href="/privacy">privacy policy</a> explains how we handle personal data, and the
+    <a href="/risk">risk disclaimer</a> is part of these terms.
+  </p>
+  <p>
+    Tessera is run by an individual entrepreneur registered in Georgia, not by a company or any other separate legal
+    entity. "We" and "us" in these terms mean that individual entrepreneur.
+  </p>
+  <p>
+    You must be at least 18 years old and able to enter a binding contract where you live. If you use Tessera for a
+    company, you accept these terms for that company and confirm you may do so.
+  </p>
+
+  <h2 id="alpha">The alpha</h2>
+  <p>
+    Tessera is in a free, private, invite-only alpha. Only people we invite can use it, and your invitation and account
+    are for you alone.
+  </p>
+  <p>
+    It is unfinished software: features may change, break or be removed, data formats may change between versions, and
+    the alpha may end. Use a paper account while you learn it, and keep another way to see and manage your positions,
+    such as your broker's own platform.
+  </p>
+
+  <h2 id="what">What Tessera is and is not</h2>
+  <p>
+    Tessera is software. It displays market data from connections you set up, helps you research and journal, and sends
+    the orders you place or approve to the broker or trading system you connect.
+  </p>
+  <p>
+    You bring your own data and your own AI. Tessera does not sell or include market data, and it does not include an AI
+    model: you connect your own broker or data vendor, and your own AI agent, each under your own account with them.
+  </p>
+  <p>
+    Tessera is <strong>not</strong> a broker, a futures commission merchant, an introducing broker, an exchange, a
+    commodity trading advisor or an investment adviser. We do not hold your money, execute or clear your trades, or act
+    on your behalf. Nothing in Tessera or on this website, including anything the analyst writes, is investment advice,
+    a recommendation or an offer to buy or sell any financial instrument. Tessera does not know your circumstances and
+    gives no financial, tax or legal advice.
+  </p>
+
+  <h2 id="decisions">Your orders and decisions</h2>
+  <p>
+    Every trading decision is yours. The analyst drafts orders; you approve them. A draft is not sent until you approve
+    it in the app, unless you have switched that analyst session to Full access yourself. You are responsible for every
+    order sent from Tessera on your accounts: the orders you place yourself, the drafts you approve, and any order the
+    analyst places while you have given it Full access. You are responsible for checking each order's instrument, side,
+    size, price, type and bracket before you send or approve it, and for the result.
+  </p>
+  <p>
+    Risk limits, hotkeys, brackets, breakeven, the trade copier and alerts are tools you configure. They can fail, act
+    later than you expect or behave differently from what you intended, for example when a connection drops or a fill
+    differs between accounts. Do not rely on them as your only protection.
+  </p>
+
+  <h2 id="analyst">The analyst and your AI provider</h2>
+  <p>
+    The analyst runs on an AI agent you provide, such as Claude Code or Codex, signed in to your own account with that
+    provider. Your use of that agent is governed by your agreement with its provider, including its fees, limits and
+    data terms. We are not responsible for the provider's service, availability or handling of your data.
+  </p>
+  <p>
+    AI output can be wrong, incomplete or out of date, and it can misread charts, levels or data. Treat what the analyst
+    says as a draft for your judgment. Every order it prepares is a draft that waits for your approval, in every mode
+    but one: if you switch a session to Full access, the analyst can place, change and close orders on your accounts
+    without asking, including live accounts. That mode is never on unless you turn it on, and when you do you accept the
+    risk of it.
+  </p>
+
+  <h2 id="connections">Brokers, prop firms and data</h2>
+  <p>
+    You connect your own brokers, prop-firm accounts, market-data and level vendors. Their terms, fees, rules and
+    exchange data agreements apply to you, and you are responsible for meeting them, including any rules of an
+    evaluation or funded account and your professional or non-professional data status. Market data may be delayed,
+    incomplete or wrong. Demo data in Tessera is simulated and does not reflect any real market.
+  </p>
+  <p>
+    Your connection credentials are stored on your computer, in your operating system's keychain. You are responsible
+    for keeping your computer and your accounts secure.
+  </p>
+
+  <h2 id="risk">Trading risk</h2>
+  <p>
+    Trading futures and other leveraged instruments carries substantial risk of loss, and you can lose more than you
+    deposited. Past results, whether real, simulated or from a backtest, do not predict future results. Read the
+    <a href="/risk">risk disclaimer</a> before you trade with Tessera; you accept those risks by using it.
+  </p>
+
+  <h2 id="licence">Your licence to use Tessera</h2>
+  <p>
+    Tessera is open source under the
+    <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>. That licence, not these
+    terms, sets what you may do with Tessera's code and the builds made from it: use, copy, change and redistribute them
+    under its conditions. These terms cover your use of Tessera and of the services we run for it. You may not use
+    Tessera to break the law or the terms of a broker, exchange or data vendor, or interfere with the security of our
+    services. The Tessera name and logo remain ours. Third-party components and marks, Rithmic's among them, are
+    licensed under their own terms.
+  </p>
+
+  <h2 id="content">Your content</h2>
+  <p>
+    Your journal, notes, layouts, indicators, research and conversations are yours. They are kept on your computer. If
+    we later offer an optional cloud account to sync them, its terms will be added here before it launches, and it will
+    never sync your credentials.
+  </p>
+
+  <h2 id="fees">Fees</h2>
+  <p>
+    The alpha is free of charge. If we introduce paid plans, we will publish their prices and terms before charging you
+    anything. Fees charged by your broker, data vendors, prop firm or AI provider are between you and them.
+  </p>
+
+  <h2 id="warranty">No warranty</h2>
+  <p class="caps">
+    Tessera is provided "as is" and "as available". To the fullest extent the law allows, we disclaim all warranties,
+    express or implied, including merchantability, fitness for a particular purpose, accuracy and non-infringement. We
+    do not warrant that Tessera will be uninterrupted, timely, secure or free of errors, that data shown in it is
+    accurate, or that any order will be sent, accepted or filled as you intend.
+  </p>
+
+  <h2 id="liability">Limitation of liability</h2>
+  <p class="caps">
+    To the fullest extent the law allows, we are not liable for any trading losses, lost profits, missed trades,
+    slippage, or indirect, incidental, special or consequential damages arising from your use of Tessera, including
+    losses caused by software errors, connection failures, data errors, the behaviour of an AI agent, or the actions of
+    a broker, exchange or vendor. Our total liability for any claim relating to Tessera is limited to the greater of the
+    amount you paid us in the twelve months before the claim and EUR 100. During the free alpha you pay us nothing, so
+    the limit is EUR 100.
+  </p>
+  <p>
+    Nothing in these terms limits liability that cannot be limited by law, such as liability for fraud, gross negligence
+    or wilful misconduct or, where applicable, death or personal injury caused by negligence. If you are a consumer,
+    these terms do not take away any right that the law of the country where you live gives you and that a contract
+    cannot exclude.
+  </p>
+
+  <h2 id="indemnity">Indemnity</h2>
+  <p>
+    To the extent the law allows, you agree to indemnify us against claims by third parties arising from your trading,
+    your breach of these terms, or your breach of the terms of a broker, prop firm, exchange or vendor.
+  </p>
+
+  <h2 id="ending">Ending this agreement</h2>
+  <p>
+    You can stop using Tessera at any time by uninstalling it. We may suspend or end your licence if you breach these
+    terms or if we end the alpha. The sections on your orders, the analyst, no warranty, limitation of liability,
+    indemnity and governing law survive the end of this agreement.
+  </p>
+
+  <h2 id="changes">Changes to these terms</h2>
+  <p>
+    We may update these terms. We will post the new version here with its date, and the app will show you the new
+    version and ask you to accept it before you go on using Tessera. If you do not accept it, stop using Tessera.
+  </p>
+
+  <h2 id="law">Governing law and disputes</h2>
+  <p>
+    These terms are governed by the law of Georgia (the country), and disputes will be resolved by the courts of
+    Tbilisi, Georgia, except where the law where you live gives you the right to bring a claim locally.
+  </p>
+
+  <h2 id="contact">Contact</h2>
+  <p>
+    Questions about these terms: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>, or by post to {ENTITY},{' '}
+    {ENTITY_ADDRESS}.
+  </p>
+</Legal>

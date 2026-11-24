@@ -1,0 +1,157 @@
+{
+  "about": "Prints joined into aggressor events, checked by the runtime (tessera-market orderflow::big_trades) and the desk alike. A print is [t, price, size, side, order?] as on the wire (t in UTC nanoseconds, side 1 buy / -1 sell / 0 unknown, order the aggressor order's key when the feed names it). An event is [t, vwap, size, side, prints, levels, orders]. Consecutive prints join when they are the same order (the same key when both name one; without keys, the same time and side, and without a side also the same price), or when another order on the same side continues the event: at most 5 ms after its last print, at a price that does not retreat and is at most 2 ticks beyond its extreme. Those events are the default grouping, both settings on. A case's settings list the events under the other groupings: joinOrders off joins prints only by the 5 ms chain, reachLimit off lets a continuation reach any number of ticks, and both off joins by the chain alone. Prints without a side join only at one price and time under every grouping.",
+  "cases": [
+    {
+      "name": "one exchange time without keys is one event (a sweep); the other side starts another",
+      "tick": 0.25,
+      "prints": [
+        [1000000000, 5000.0, 10, 1],
+        [1000000000, 5000.25, 15, 1],
+        [1000000000, 5000.5, 5, 1],
+        [1000000000, 4999.75, 4, -1]
+      ],
+      "events": [
+        [1000000000, 5000.208333333333, 30, 1, 3, 3, 1],
+        [1000000000, 4999.75, 4, -1, 1, 1, 1]
+      ]
+    },
+    {
+      "name": "named orders: one order's fills join, another order continues it within 5 ms, later is someone else",
+      "tick": 0.25,
+      "prints": [
+        [10000000000, 20641.25, 3, -1, 7],
+        [10000000000, 20641.25, 2, -1, 7],
+        [10000400000, 20641.0, 1, -1, 9],
+        [10000400000, 20641.0, 4, -1, 9],
+        [10020000000, 20641.0, 6, -1, 11],
+        [10020000000, 20641.5, 6, 1, 12]
+      ],
+      "events": [
+        [10000000000, 20641.125, 10, -1, 4, 2, 2],
+        [10020000000, 20641.0, 6, -1, 1, 1, 1],
+        [10020000000, 20641.5, 6, 1, 1, 1, 1]
+      ]
+    },
+    {
+      "name": "a continuation never retreats and reaches at most two ticks beyond the extreme",
+      "tick": 0.25,
+      "prints": [
+        [20000000000, 101.0, 1, 1],
+        [20001000000, 100.75, 2, 1],
+        [20002000000, 100.75, 1, 1],
+        [20003000000, 101.5, 1, 1],
+        [20003500000, 101.75, 1, 1]
+      ],
+      "events": [
+        [20000000000, 101.0, 1, 1, 1, 1, 1],
+        [20001000000, 100.75, 3, 1, 2, 1, 2],
+        [20003000000, 101.625, 2, 1, 2, 2, 2]
+      ]
+    },
+    {
+      "name": "a print without an order key joins by time and side",
+      "tick": 0.01,
+      "prints": [
+        [30000000000, 101.0, 1, 1, 3],
+        [30000000000, 101.01, 2, 1],
+        [30010000000, 101.01, 1, 1, 4]
+      ],
+      "events": [
+        [30000000000, 101.00666666666666, 3, 1, 2, 2, 1],
+        [30010000000, 101.01, 1, 1, 1, 1, 1]
+      ]
+    },
+    {
+      "name": "prints without a side join only at one price and time",
+      "tick": 0.01,
+      "prints": [
+        [40000000000, 10.0, 1, 0],
+        [40000000000, 10.0, 2, 0],
+        [40000000000, 10.01, 3, 0],
+        [40001000000, 10.01, 1, 0]
+      ],
+      "events": [
+        [40000000000, 10.0, 3, 0, 2, 1, 1],
+        [40000000000, 10.01, 3, 0, 1, 1, 1],
+        [40001000000, 10.01, 1, 0, 1, 1, 1]
+      ]
+    },
+    {
+      "name": "the window is 5 ms from the last print, inclusive",
+      "tick": 0.25,
+      "prints": [
+        [50000000000, 5000.0, 2, 1],
+        [50005000000, 5000.0, 1, 1],
+        [50010000001, 5000.0, 1, 1]
+      ],
+      "events": [
+        [50000000000, 5000.0, 3, 1, 2, 1, 2],
+        [50010000001, 5000.0, 1, 1, 1, 1, 1]
+      ]
+    },
+    {
+      "name": "each grouping setting decides its own joins: the reach past two ticks, an order's fills after a gap, one time without keys",
+      "tick": 0.25,
+      "prints": [
+        [60000000000, 5000.0, 2, 1],
+        [60004000000, 5000.25, 1, 1],
+        [60005000000, 5001.25, 3, 1],
+        [61000000000, 4999.0, 5, -1, 7],
+        [61050000000, 4998.75, 3, -1, 7],
+        [62000000000, 4990.0, 2, -1],
+        [62000000000, 4990.25, 2, -1],
+        [62006000000, 4990.25, 1, -1],
+        [63000000000, 5003.0, 2, 0],
+        [63000000000, 5003.0, 1, 0]
+      ],
+      "events": [
+        [60000000000, 5000.083333333333, 3, 1, 2, 2, 2],
+        [60005000000, 5001.25, 3, 1, 1, 1, 1],
+        [61000000000, 4998.90625, 8, -1, 2, 2, 1],
+        [62000000000, 4990.125, 4, -1, 2, 2, 1],
+        [62006000000, 4990.25, 1, -1, 1, 1, 1],
+        [63000000000, 5003.0, 3, 0, 2, 1, 1]
+      ],
+      "settings": [
+        {
+          "joinOrders": false,
+          "reachLimit": true,
+          "events": [
+            [60000000000, 5000.083333333333, 3, 1, 2, 2, 2],
+            [60005000000, 5001.25, 3, 1, 1, 1, 1],
+            [61000000000, 4999.0, 5, -1, 1, 1, 1],
+            [61050000000, 4998.75, 3, -1, 1, 1, 1],
+            [62000000000, 4990.0, 2, -1, 1, 1, 1],
+            [62000000000, 4990.25, 2, -1, 1, 1, 1],
+            [62006000000, 4990.25, 1, -1, 1, 1, 1],
+            [63000000000, 5003.0, 3, 0, 2, 1, 1]
+          ]
+        },
+        {
+          "joinOrders": true,
+          "reachLimit": false,
+          "events": [
+            [60000000000, 5000.666666666667, 6, 1, 3, 3, 3],
+            [61000000000, 4998.90625, 8, -1, 2, 2, 1],
+            [62000000000, 4990.125, 4, -1, 2, 2, 1],
+            [62006000000, 4990.25, 1, -1, 1, 1, 1],
+            [63000000000, 5003.0, 3, 0, 2, 1, 1]
+          ]
+        },
+        {
+          "joinOrders": false,
+          "reachLimit": false,
+          "events": [
+            [60000000000, 5000.666666666667, 6, 1, 3, 3, 3],
+            [61000000000, 4999.0, 5, -1, 1, 1, 1],
+            [61050000000, 4998.75, 3, -1, 1, 1, 1],
+            [62000000000, 4990.0, 2, -1, 1, 1, 1],
+            [62000000000, 4990.25, 2, -1, 1, 1, 1],
+            [62006000000, 4990.25, 1, -1, 1, 1, 1],
+            [63000000000, 5003.0, 3, 0, 2, 1, 1]
+          ]
+        }
+      ]
+    }
+  ]
+}

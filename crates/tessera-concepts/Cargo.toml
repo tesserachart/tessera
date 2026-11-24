@@ -1,0 +1,32 @@
+[package]
+name = "tessera-concepts"
+description = "Tessera concepts: the versioned Concept trait, registry and built-ins (VWAP, ATR, volume-profile levels)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tessera-core.workspace = true
+tessera-host.workspace = true
+tessera-market.workspace = true
+tessera-protocol.workspace = true
+tessera-tools.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["sync", "time", "rt", "macros"] }
+ts-rs = { workspace = true, features = ["serde-json-impl", "chrono-impl"] }
+
+[dev-dependencies]
+tessera-core = { workspace = true, features = ["test-support"] }
+tessera-market = { workspace = true, features = ["test-support"] }
+tokio = { workspace = true, features = ["full", "test-util"] }
+
+[lints]
+workspace = true

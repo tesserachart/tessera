@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-05T15:43:29.469Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Research\"",
+        "target": {
+          "role": "button",
+          "name": "Research"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/agent/areas.e2e.ts::the%20agent%20opens%20the%20Research%20area",
+      "targetId": "web",
+      "instructionDigest": "0a7015967334ff502a30ed2510efe41710d4211ac5767b3336bed8c17b73905f"
+    },
+    "summary": "Research is already open: the document title is “Tessera — PAPER — Research” and the Research workspace panel is visible.",
+    "startPath": "/",
+    "endPath": "/",
+    "endAnchors": [
+      {
+        "text": "Ask the analyst for an event study or a backtest"
+      },
+      {
+        "role": "document",
+        "name": "Tessera — PAPER — Research"
+      },
+      {
+        "name": "Exchange time",
+        "text": "· Regular · closes in"
+      },
+      {
+        "role": "region",
+        "name": "Research"
+      },
+      {
+        "role": "tabpanel",
+        "name": "Research"
+      }
+    ],
+    "endWaitMs": 72798
+  }
+}

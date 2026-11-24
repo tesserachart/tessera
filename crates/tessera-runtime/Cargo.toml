@@ -1,0 +1,75 @@
+[package]
+name = "tessera-runtime"
+description = "The Tessera runtime process: HTTP/WebSocket JSON-RPC server, module composition, settings, layouts, connections and TypeScript generation."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+default-run = "tessera-runtime"
+
+[[bin]]
+name = "tessera-runtime"
+path = "src/main.rs"
+
+[[bin]]
+name = "tessera-gen"
+path = "src/bin/tessera-gen.rs"
+
+[dependencies]
+tessera-core.workspace = true
+tessera-protocol.workspace = true
+tessera-tools.workspace = true
+tessera-host.workspace = true
+tessera-store.workspace = true
+tessera-market.workspace = true
+tessera-intel.workspace = true
+tessera-broker.workspace = true
+tessera-research.workspace = true
+tessera-journal.workspace = true
+tessera-agent.workspace = true
+tessera-concepts.workspace = true
+tessera-indicators.workspace = true
+tessera-alerts.workspace = true
+tessera-mcp.workspace = true
+tessera-rithmic.workspace = true
+tessera-cloud.workspace = true
+tessera-http.workspace = true
+anyhow.workspace = true
+async-trait.workspace = true
+axum.workspace = true
+base64.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+clap.workspace = true
+futures.workspace = true
+keyring.workspace = true
+parking_lot.workspace = true
+posthog-rs.workspace = true
+regex-automata.workspace = true
+rust_decimal.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json = { workspace = true, features = ["raw_value"] }
+sha2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+ts-rs = { workspace = true, features = ["serde-json-impl", "chrono-impl"] }
+
+[dev-dependencies]
+tessera-broker = { workspace = true, features = ["test-support"] }
+tessera-core = { workspace = true, features = ["test-support"] }
+tessera-intel = { workspace = true, features = ["test-support"] }
+tessera-market = { workspace = true, features = ["test-support"] }
+tessera-testkit.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["full", "test-util"] }
+tokio-tungstenite.workspace = true
+
+[lints]
+workspace = true

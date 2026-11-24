@@ -1,0 +1,249 @@
+---
+import appIcon from '@tessera/ui/brand/appicon.svg?url';
+import { downloads, LINUX_DEB_PATH, PLATFORM_NAMES } from '@tessera/ui/downloads';
+import Words from '../components/Words.astro';
+import { APPLY_URL, ON_PLATFORMS, PLATFORMS, UPDATES_URL } from '../config';
+import Base from '../layouts/Base.astro';
+
+const builds = downloads(UPDATES_URL, PLATFORMS);
+const debUrl = `${UPDATES_URL.replace(/\/+$/, '')}/${LINUX_DEB_PATH}`;
+const needs: { title: string; text: string; link?: { href: string; label: string } }[] = [
+  {
+    title: 'A Tessera alpha account',
+    text: 'Tessera asks you to sign in when it opens. We email you when your account is ready.',
+    link: { href: APPLY_URL, label: 'Request access' },
+  },
+  {
+    title: 'A computer it runs on',
+    text: `${builds.map((b) => `${PLATFORM_NAMES[b.platform]}: ${b.meta}`).join('. ')}.`,
+  },
+  {
+    title: 'Claude Code or Codex, for the analyst',
+    text: 'Installed and signed in to your own Claude or ChatGPT plan. Tessera finds the CLI on your computer. Without one, everything else works.',
+  },
+  {
+    title: 'A Rithmic login, for live data and trading',
+    text: 'From your broker or prop firm. Your charts and orders run on it.',
+  },
+];
+const before: Partial<Record<keyof typeof PLATFORM_NAMES, string>> = {
+  mac: 'Open the downloaded .dmg and drag Tessera into Applications.',
+};
+---
+
+<Base
+  title="Download"
+  description={`Download the Tessera alpha for ${ON_PLATFORMS}. What you need, how to install it, and how to start.`}
+  compactNav
+>
+  <section class="dl wrap">
+    <div class="hero">
+      <img class="icon" src={appIcon} alt="" width="168" height="168" data-reveal />
+      <Words as="h1" class="display" text="Download *Tessera*" />
+      <p class="lede" data-reveal style="--d:3">
+        Charts and order flow, Rithmic execution, custom indicators, research, a journal and your own Claude Code or
+        Codex as an analyst, built as one.
+      </p>
+      <div class="cta" data-reveal style="--d:4">
+        <ul class="builds">
+          {builds.map((b) => (
+            <li>
+              <a class="btn btn-primary" href={b.url}>
+                Download for {PLATFORM_NAMES[b.platform]}
+              </a>
+              <p class="meta">{b.meta}</p>
+            </li>
+          ))}
+        </ul>
+        <p class="meta">
+          Alpha. Signing in needs an alpha account.{' '}
+          <a class="link" href={APPLY_URL}>
+            Request access
+          </a>
+        </p>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div data-reveal>
+        <h2 class="serif">What you need</h2>
+        <ul class="list">
+          {needs.map((n) => (
+            <li>
+              <strong>{n.title}</strong>
+              <span>
+                {n.text}
+                {n.link && (
+                  <>
+                    {' '}
+                    <a class="link" href={n.link.href}>
+                      {n.link.label}
+                    </a>
+                  </>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div data-reveal style="--d:1">
+        <h2 class="serif">Install</h2>
+        <ol class="list steps">
+          {builds.map((b, i) => (
+            <li id={`first-open-${b.platform}`}>
+              <span class="n">{String(i + 1).padStart(2, '0')}</span>
+              <strong>On {PLATFORM_NAMES[b.platform]}</strong>
+              {before[b.platform] && <span>{before[b.platform]}</span>}
+              <span>{b.firstOpen.intro}</span>
+              <ol class="sub">
+                {b.firstOpen.steps.map((step) => (
+                  <li>{step}</li>
+                ))}
+              </ol>
+              {b.firstOpen.alternative && <span>{b.firstOpen.alternative}</span>}
+              {b.platform === 'linux' && (
+                <span>
+                  <a class="link" href={debUrl}>
+                    Download the .deb
+                  </a>
+                </span>
+              )}
+            </li>
+          ))}
+          <li>
+            <span class="n">{String(builds.length + 1).padStart(2, '0')}</span>
+            <strong>Sign in and connect</strong>
+            <span>
+              Sign in with your alpha account, then add your Rithmic login under Connections (it is stored in your
+              system’s keychain). The analyst column picks up Claude Code or Codex if it is installed.
+            </span>
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="note" data-reveal>
+      <p>
+        <strong>This is an alpha.</strong> Expect rough edges and changes between versions. Trading futures involves
+        substantial risk of loss; Tessera is software, not advice. Read the{' '}
+        <a class="link" href="/risk">
+          risk disclaimer
+        </a>
+        , the{' '}
+        <a class="link" href="/terms">
+          terms of service
+        </a>{' '}
+        and the{' '}
+        <a class="link" href="/privacy">
+          privacy policy
+        </a>{' '}
+        before you start.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .dl {
+    padding-top: clamp(132px, 15vw, 196px);
+    padding-bottom: clamp(96px, 10vw, 160px);
+  }
+  .hero {
+    display: grid;
+    justify-items: center;
+    text-align: center;
+    gap: clamp(20px, 2.4vw, 32px);
+  }
+  .icon {
+    width: clamp(120px, 12vw, 168px);
+    height: auto;
+    margin-bottom: 8px;
+  }
+  .cta {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+  }
+  .builds {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px 28px;
+  }
+  .builds li {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(40px, 6vw, 96px);
+    margin-top: clamp(80px, 10vw, 144px);
+    padding-top: clamp(40px, 5vw, 64px);
+    border-top: 1px solid var(--line);
+  }
+  .cols h2 {
+    font-size: var(--fs-title);
+    line-height: 1.1;
+    margin-bottom: 24px;
+  }
+  .list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0;
+  }
+  .list > li {
+    display: grid;
+    gap: 6px;
+    padding-block: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .list strong {
+    font-weight: 600;
+    color: var(--t1);
+  }
+  .list span {
+    color: var(--t2);
+    line-height: 1.6;
+  }
+  .sub {
+    display: grid;
+    gap: 8px;
+    margin: 4px 0;
+    padding-left: 1.25em;
+    color: var(--t2);
+    line-height: 1.6;
+  }
+  .sub li::marker {
+    color: var(--t3);
+    font-variant-numeric: tabular-nums;
+  }
+  .steps .n {
+    font-size: var(--fs-meta);
+    color: var(--t3);
+    font-variant-numeric: tabular-nums;
+  }
+  .note {
+    margin-top: clamp(64px, 8vw, 112px);
+    padding: clamp(20px, 3vw, 32px);
+    border: 1px solid var(--line-2);
+    background: var(--ink-2);
+    color: var(--t2);
+    line-height: 1.6;
+    max-width: 56rem;
+  }
+  .note strong {
+    color: var(--t1);
+  }
+  @media (max-width: 899px) {
+    .cols {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

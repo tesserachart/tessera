@@ -1,0 +1,26 @@
+name: Bun and the packages
+description: Sets up Bun (package.json packageManager) and Node 24, then runs bun install --frozen-lockfile with Bun's package cache from the Actions cache, keyed on bun.lock; our own Windows runner keeps its own Bun and package cache
+
+runs:
+  using: composite
+  steps:
+    # NetworkService, the Windows runner's account, may not create the symlink setup-bun makes.
+    - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      if: runner.os != 'Windows' || runner.environment == 'github-hosted'
+
+    # Node runs the tools themselves: `bun run` starts their bins through the `node` shebang.
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24
+
+    - name: Bun package cache
+      if: runner.os != 'Windows' || runner.environment == 'github-hosted'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.bun/install/cache
+        key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+        restore-keys: bun-${{ runner.os }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: bun install --frozen-lockfile

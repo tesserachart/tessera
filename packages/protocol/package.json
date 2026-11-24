@@ -1,0 +1,29 @@
+{
+  "name": "@tessera/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Tessera runtime protocol: JSON-RPC 2.0 WebSocket client, typed payloads, their zod schemas and tool helpers.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/gen/index.ts",
+    "./schemas": "./src/schemas.gen.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "gen": "bun scripts/gen.mjs",
+    "gen:check": "bun scripts/gen.mjs --check",
+    "gen:schemas": "bun scripts/schemas.ts",
+    "gen:schemas:check": "bun scripts/schemas.ts --check"
+  },
+  "devDependencies": {
+    "@types/ws": "8.18.2",
+    "ws": "8.22.0"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  }
+}

@@ -1,0 +1,88 @@
+name: Build from main
+
+on:
+  schedule:
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Build even if main has not changed since the last published build
+        type: boolean
+        default: false
+      mac:
+        description: Off main, dry-run the Mac build too (nothing is published from a branch)
+        type: boolean
+        default: false
+      windows:
+        description: Off main, dry-run the Windows build too (nothing is published from a branch)
+        type: boolean
+        default: false
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: updates-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: What to build
+    runs-on: ${{ vars.HOSTED_RUNNERS == 'true' && 'ubuntu-latest' || 'tessera-vm' }}
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      platforms: ${{ steps.plan.outputs.platforms }}
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Plan
+        id: plan
+        env:
+          UPDATES_URL: ${{ vars.UPDATES_URL }}
+          FORCE: ${{ inputs.force }}
+          MAC: ${{ inputs.mac }}
+          WINDOWS: ${{ inputs.windows }}
+        run: |
+          echo "version=$(node scripts/channel.ts next)" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            platforms=(linux)
+            if [ "$MAC" = true ]; then platforms+=(mac); fi
+            if [ "$WINDOWS" = true ]; then platforms+=(windows); fi
+            echo "$GITHUB_REF is not main: a dry run of ${platforms[*]}, nothing published"
+            publish=false
+          else
+            platforms=()
+            for platform in linux mac windows; do
+              if [ "$FORCE" = true ] || [ "$(node scripts/channel.ts changed --platform "$platform" --commit "$GITHUB_SHA")" = true ]; then
+                platforms+=("$platform")
+                echo "$platform: build"
+              else
+                echo "$platform: unchanged since its last published build"
+              fi
+            done
+            publish=true
+          fi
+          echo "platforms=$(node -p 'JSON.stringify(process.argv.slice(1))' "${platforms[@]}")" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.platforms != '[]'
+    uses: ./.github/workflows/build.yml
+    permissions:
+      actions: write
+      contents: read
+    secrets: inherit
+    with:
+      version: ${{ needs.plan.outputs.version }}
+      platforms: ${{ needs.plan.outputs.platforms }}
+      publish: ${{ needs.plan.outputs.publish == 'true' }}

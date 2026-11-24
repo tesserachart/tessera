@@ -1,0 +1,244 @@
+.chart-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.chart-body > .chart-canvas {
+  min-width: 0;
+}
+
+.chart-canvas {
+  --dt-rail-inset: var(--sp-1-5);
+  --dt-rail-w: 36px;
+}
+.chart-canvas > .dt-rail {
+  position: absolute;
+  z-index: 6;
+  left: var(--dt-rail-inset);
+  background: var(--panel);
+  border-right: 0;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.dt-rail.is-tight .dt-tool {
+  height: 24px;
+}
+.dt-rail.is-tight .dt-sep {
+  margin: 1px 0;
+}
+.dt-rail {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: var(--dt-rail-w);
+  padding: var(--sp-1) 0;
+  border-right: 1px solid var(--line);
+  overflow: hidden auto;
+  scrollbar-width: none;
+}
+.dt-rail::-webkit-scrollbar {
+  display: none;
+}
+.dt-group {
+  position: relative;
+  flex: none;
+}
+.dt-tool {
+  position: relative;
+  flex: none;
+}
+.dt-tool:disabled {
+  color: var(--t4);
+  background: transparent;
+}
+.dt-tool.is-on {
+  box-shadow: inset 2px 0 0 var(--mist);
+  background: var(--raise);
+}
+.dt-tool.is-sticky::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 3px;
+  height: 3px;
+  background: var(--mist);
+}
+.dt-tool.has-more::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  border-left: 4px solid transparent;
+  border-bottom: 4px solid currentColor;
+  opacity: 0.6;
+}
+.dt-anchor {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 100%;
+  pointer-events: none;
+}
+.dt-sep {
+  flex: none;
+  width: 18px;
+  height: 1px;
+  margin: var(--sp-1) 0;
+  background: var(--line-2);
+}
+.dt-fill {
+  flex: 1;
+  min-height: var(--sp-2);
+}
+.dt-reveal {
+  position: absolute;
+  z-index: 6;
+  top: 50%;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 40px;
+  margin-top: -20px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--t3);
+  opacity: 0;
+  transition: opacity var(--dur-press) var(--ease-out);
+}
+.dt-reveal .t-icon {
+  --icon: 14px;
+}
+.chart-canvas:hover .dt-reveal,
+.dt-reveal:focus-visible {
+  opacity: 1;
+}
+.dt-reveal:hover {
+  color: var(--t1);
+}
+
+.dsb {
+  position: absolute;
+  z-index: 7;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  height: 34px;
+  padding: 0 3px;
+  background: var(--menu);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--fall-off);
+  visibility: hidden;
+  animation: t-overlay-in var(--dur-menu) var(--ease-out-strong);
+}
+.dsb .ind-swatch-btn,
+.dsb .ind-line-btn {
+  height: 28px;
+}
+.dsb-sep {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  margin: 0 3px;
+  background: var(--line-2);
+}
+.t-popover.dsb-levels {
+  width: auto;
+  padding: var(--sp-3);
+}
+.dsb-level-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 72px);
+  gap: var(--sp-1) var(--sp-2);
+}
+.dsb-level-grid .ind-check {
+  font-variant-numeric: tabular-nums;
+}
+.t-input.dsb-level-add {
+  height: var(--control-h-s);
+  margin-top: var(--sp-3);
+  padding: 0 var(--sp-2);
+}
+.t-input.dsb-level-add input:focus-visible {
+  box-shadow: none;
+}
+.t-popover.dsb-profile {
+  width: 344px;
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.t-popover.dsb-label {
+  display: grid;
+  gap: var(--sp-2);
+  width: 312px;
+  padding: var(--sp-3);
+}
+.t-textarea.dsb-label-text {
+  min-height: 52px;
+  resize: vertical;
+}
+.dsb-label-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1-5);
+}
+.dsb-label-row .ind-swatch-btn {
+  height: var(--control-h-s);
+}
+.dsb-label-row .dsb-label-size {
+  width: 84px;
+}
+.dsb-label-row .t-toggles.dsb-label-face {
+  flex-wrap: nowrap;
+  gap: 0;
+  margin-left: auto;
+}
+.dsb-label-face .t-toggle {
+  min-width: 28px;
+}
+.dsb-label-face .t-toggle + .t-toggle {
+  margin-left: -1px;
+}
+.dsb-label-place .t-form-row {
+  min-height: 32px;
+}
+.dsb-label-checks {
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.dt-note {
+  position: absolute;
+  z-index: 8;
+  top: 0;
+  left: 0;
+  min-width: 160px;
+  max-width: 420px;
+  padding: 3px 6px;
+  font: 500 13.5px / 20px var(--sans);
+  background: var(--panel);
+  border: 1px solid var(--teal);
+  outline: none;
+  resize: none;
+  field-sizing: content;
+  overflow: hidden;
+}
+.dt-note::placeholder {
+  color: var(--t4);
+}
+.dt-note.is-label {
+  min-width: 120px;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dt-reveal {
+    transition: none;
+  }
+}

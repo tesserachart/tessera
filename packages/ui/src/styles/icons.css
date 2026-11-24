@@ -1,0 +1,57 @@
+@property --icon {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 20px;
+}
+
+.t-icon {
+  width: var(--icon);
+  height: var(--icon);
+}
+
+.t-icon-cut {
+  display: none;
+}
+
+@media (max-resolution: 1dppx) {
+  @container style(--icon: 20px) {
+    .t-icon-cut[data-cut='20'] {
+      display: inline;
+    }
+    .t-icon-vec {
+      display: none;
+    }
+  }
+  @container style(--icon: 16px) {
+    .t-icon-cut[data-cut='16'] {
+      display: inline;
+    }
+    .t-icon-vec {
+      display: none;
+    }
+  }
+  @container style(--icon: 14px) {
+    .t-icon-cut[data-cut='14'] {
+      display: inline;
+    }
+    .t-icon-vec {
+      display: none;
+    }
+  }
+  @container style(--icon: 12px) {
+    .t-icon-cut[data-cut='12'] {
+      display: inline;
+    }
+    .t-icon-vec {
+      display: none;
+    }
+  }
+  @container style(--icon: 11px) {
+    .t-icon-cut[data-cut='11'] {
+      display: inline;
+    }
+    .t-icon-vec {
+      display: none;
+    }
+  }
+}

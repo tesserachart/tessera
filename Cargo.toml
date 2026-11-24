@@ -1,0 +1,98 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "Apache-2.0"
+publish = false
+repository = "https://github.com/tesserachart/tessera"
+
+[workspace.dependencies]
+tessera-core = { path = "crates/tessera-core" }
+tessera-protocol = { path = "crates/tessera-protocol" }
+tessera-tools = { path = "crates/tessera-tools" }
+tessera-host = { path = "crates/tessera-host" }
+tessera-store = { path = "crates/tessera-store" }
+tessera-market = { path = "crates/tessera-market" }
+tessera-intel = { path = "crates/tessera-intel" }
+tessera-broker = { path = "crates/tessera-broker" }
+tessera-concepts = { path = "crates/tessera-concepts" }
+tessera-research = { path = "crates/tessera-research" }
+tessera-journal = { path = "crates/tessera-journal" }
+tessera-agent = { path = "crates/tessera-agent" }
+tessera-mcp = { path = "crates/tessera-mcp" }
+tessera-rithmic = { path = "crates/tessera-rithmic" }
+tessera-script = { path = "crates/tessera-script" }
+tessera-indicators = { path = "crates/tessera-indicators" }
+tessera-alerts = { path = "crates/tessera-alerts" }
+tessera-testkit = { path = "crates/tessera-testkit" }
+tessera-cloud = { path = "crates/tessera-cloud" }
+tessera-http = { path = "crates/tessera-http" }
+
+anyhow = "1.0.104"
+async-trait = "0.1.92"
+base64 = "0.22.1"
+axum = { version = "0.8.9", features = ["ws"] }
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock", "serde"] }
+chrono-tz = "0.10.4"
+flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
+clap = { version = "4.6.7", features = ["derive", "env"] }
+futures = "0.3.34"
+getrandom = "0.4.3"
+hex = "0.4.3"
+iana-time-zone = "0.1.65"
+keyring = { version = "=3.6.3", features = ["async-secret-service", "tokio", "crypto-rust", "apple-native", "windows-native"] }
+parking_lot = "0.12.5"
+posthog-rs = "0.27.1"
+r2d2 = "0.8.10"
+r2d2_sqlite = "0.35.0"
+regex-automata = "0.4.18"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "http2", "query"] }
+prost = "0.14.4"
+rithmic-rs = "=3.2.0"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+rust_decimal = { version = "1.43.0", features = ["maths"] }
+rustls = { version = "0.23.45", default-features = false, features = ["ring", "std", "tls12"] }
+schemars = { version = "1.2.2", features = ["chrono04"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+tempfile = "3"
+thiserror = "2.0.21"
+tokio = { version = "1.53.1", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tokio-tungstenite = "0.29.0"
+tokio-tungstenite-rithmic = { package = "tokio-tungstenite", version = "0.30.0", features = ["native-tls"] }
+tower-http = { version = "0.7.1", features = ["fs", "trace", "set-header"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json", "fmt"] }
+ts-rs = "12.0.1"
+uuid = { version = "1.27.0", features = ["v7", "serde"] }
+zstd = "0.14.0"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 1
+debug = false
+
+[profile.dev.package.tessera-core]
+opt-level = 2
+
+[profile.dev.package.tessera-market]
+opt-level = 2
+
+[profile.release]
+lto = "thin"
+codegen-units = 4

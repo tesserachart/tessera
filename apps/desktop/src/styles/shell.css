@@ -1,0 +1,530 @@
+#root {
+  height: 100%;
+}
+
+.t-app.t-shell {
+  --area-rail-w: 72px;
+  --wc-w: 0px;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--area-rail-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) var(--control-h);
+  width: 100vw;
+  height: 100vh;
+  /* clip, not hidden: an overflow: hidden box still scrolls to a focus or a scroll-into-view inside it */
+  overflow: clip;
+}
+.t-app.t-shell[data-chrome='custom'] {
+  --wc-w: 88px;
+}
+.t-app.t-shell[data-chrome='mac'] {
+  --area-rail-w: 76px;
+}
+.t-shell > .ar-rail {
+  grid-column: 1;
+  grid-row: 1 / -1;
+}
+.t-shell-body {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+}
+.t-shell-footer {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  height: var(--control-h);
+  background: var(--ink);
+  border-top: 1px solid var(--line);
+}
+.t-shell-footer:empty {
+  border-color: transparent;
+}
+.t-shell-footer > .t-annun-slot {
+  flex: 3 1 0;
+  min-width: 0;
+  border: 0;
+}
+.t-shell-footer .t-annun-message {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.t-shell-footer .t-annun-slot + .desk-toasts {
+  flex: 2 1 0;
+  border-left: 1px solid var(--line);
+}
+.t-shell-body > .t-palette-v5 {
+  left: 50%;
+  width: var(--palette-w, 600px);
+  transform: translateX(-50%);
+}
+
+.shell-wc {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: var(--z-sheet);
+  display: flex;
+  justify-content: flex-end;
+  width: var(--wc-w);
+  height: var(--tab-h);
+}
+
+.t-shell .t-halftile {
+  width: var(--sp-2);
+  height: var(--sp-2);
+  background: linear-gradient(90deg, transparent 0 50%, var(--aqua) 50% 100%);
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+.t-shell .t-halftile.is-closed {
+  background: var(--mist);
+  box-shadow: none;
+}
+.t-shell[data-link='down'] .m-row .t-price,
+.t-shell[data-link='down'] .m-row .chg {
+  color: var(--t4-fig);
+}
+
+:is(.t-app, .t-home, .t-popover) .t-switch {
+  --switch-tile: calc(var(--switch-h) - 4px);
+  --spacing-switch-tile: calc(var(--switch-h) - 4px);
+  border-color: var(--line-2);
+  border-radius: calc(var(--switch-h) / 2);
+  background: var(--line-2);
+}
+:is(.t-app, .t-home, .t-popover) .t-switch .thumb {
+  border-radius: 50%;
+  background: var(--t2);
+}
+:is(.t-app, .t-home, .t-popover) .t-switch:hover .thumb {
+  background: var(--t1);
+}
+:is(.t-app, .t-home, .t-popover) .t-switch[data-state='checked'] {
+  border-color: var(--petrol);
+  background: var(--petrol);
+}
+:is(.t-app, .t-home, .t-popover) .t-switch[data-state='checked'] .thumb {
+  background: var(--mist);
+}
+:is(.t-app, .t-home, .t-popover) .t-switch:disabled {
+  opacity: 0.4;
+}
+:is(.t-app, .t-home, .t-popover) .t-switch:disabled .thumb {
+  background: var(--t2);
+}
+:is(.t-app, .t-home, .t-popover) .t-switch[data-state='checked']:disabled .thumb {
+  background: var(--mist);
+}
+
+.t-cmd input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--t1);
+  font: inherit;
+  outline: none;
+}
+
+.t-sh-splash {
+  position: fixed;
+  inset: 0;
+  --sp-t: clamp(128px, 21vh, 224px);
+}
+.t-sh-splash .lock {
+  gap: 0;
+}
+.t-sh-splash .wm {
+  height: calc(var(--sp-t) * 0.3);
+  margin-top: calc(var(--sp-t) * 0.16);
+}
+.t-sh-splash .meet,
+.t-sh-splash .say {
+  margin-top: var(--sp-10);
+}
+.t-sh-splash .meet {
+  height: 40px;
+  grid-template-columns: minmax(0, 1fr) 13px minmax(0, 1fr);
+  column-gap: var(--sp-5);
+}
+.t-sh-splash .meet > span:first-child {
+  text-align: right;
+}
+.t-sh-splash .meet .t-seam {
+  height: 40px;
+  --jog: 19px;
+}
+.t-sh-splash .say {
+  line-height: 40px;
+  text-align: center;
+}
+
+#boot.t-sh-splash {
+  display: grid;
+}
+.t-intro .a {
+  fill: currentColor;
+}
+.t-intro .seam {
+  stroke: var(--aqua);
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+}
+.t-intro .h {
+  animation: t-intro-in 200ms var(--ease-out) calc(var(--intro-at, 0ms) + 0ms) both;
+}
+.t-intro .a {
+  animation:
+    t-intro-in 240ms var(--ease-out) calc(var(--intro-at, 0ms) + 120ms) both,
+    t-intro-rise var(--dur-rise) var(--ease-out) calc(var(--intro-at, 0ms) + 360ms) both,
+    t-intro-drain var(--dur-drain) var(--ease-out) calc(var(--intro-at, 0ms) + 1040ms) both;
+}
+.t-intro .seam:not(.loop) {
+  animation:
+    t-intro-seam var(--dur-seam) linear calc(var(--intro-at, 0ms) + 600ms) both,
+    t-intro-out var(--dur-drain) var(--ease-out) calc(var(--intro-at, 0ms) + 1040ms) both;
+}
+.t-intro .seam.loop {
+  display: none;
+}
+.t-sh-splash .wm {
+  animation: t-intro-in 400ms var(--ease-out) calc(var(--intro-at, 0ms) + 600ms) both;
+}
+.t-sh-splash .lock > :is(.say, .doc, .acts) {
+  animation: t-intro-in 300ms var(--ease-out) calc(var(--intro-at, 0ms) + 900ms) both;
+}
+@keyframes t-intro-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes t-intro-rise {
+  from {
+    transform: translateY(var(--drop));
+  }
+}
+@keyframes t-intro-drain {
+  from {
+    fill: var(--aqua);
+  }
+  to {
+    fill: var(--mist);
+  }
+}
+@keyframes t-intro-seam {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes t-intro-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.t-split {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-splash);
+  pointer-events: none;
+}
+.t-split > .t-sh-splash {
+  transform-origin: var(--cut-o);
+  will-change: transform;
+}
+.t-split .cut {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.t-split .cut polyline {
+  fill: none;
+  stroke: var(--aqua);
+  stroke-width: 4;
+  opacity: 0;
+}
+.t-split.is-parting .cut polyline {
+  animation: t-split-edge var(--dur-split) linear both;
+}
+.t-split.is-parting > .is-left {
+  animation: t-split-left var(--dur-split) both;
+}
+.t-split.is-parting > .is-right {
+  animation: t-split-right var(--dur-split) both;
+}
+.t-arriving #root {
+  animation: t-arrive var(--dur-split) both;
+}
+@keyframes t-split-left {
+  0% {
+    transform: none;
+    animation-timing-function: var(--ease-out);
+  }
+  38% {
+    transform: translateX(-5vw) scale(1.1);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.45);
+  }
+  100% {
+    transform: translateX(-70vw) scale(2.6);
+  }
+}
+@keyframes t-split-right {
+  0% {
+    transform: none;
+    animation-timing-function: var(--ease-out);
+  }
+  38% {
+    transform: translateX(5vw) scale(1.1);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.45);
+  }
+  100% {
+    transform: translateX(70vw) scale(2.6);
+  }
+}
+@keyframes t-split-edge {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes t-arrive {
+  0% {
+    transform: scale(0.94);
+    opacity: 0.5;
+  }
+  38% {
+    transform: scale(0.94);
+    opacity: 0.5;
+    animation-timing-function: var(--ease-out);
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-intro *,
+  .t-sh-splash .wm,
+  .t-sh-splash .lock > * {
+    animation: none !important;
+  }
+}
+:is([data-motion='reduced'], [data-intro='played']) :is(.t-intro *, .t-sh-splash .wm, .t-sh-splash .lock > *) {
+  animation: none !important;
+}
+.t-sh-splash .doc {
+  width: min(560px, calc(100vw - 2 * var(--pad)));
+  margin-top: var(--sp-2);
+  font: 400 var(--fs-meta) / var(--lh-meta) var(--sans);
+  color: var(--on-petrol-2);
+  text-align: left;
+  white-space: normal;
+}
+.t-sh-splash .doc p {
+  margin: 0 0 var(--sp-3);
+}
+.t-sh-splash .doc code {
+  font: inherit;
+  color: var(--on-petrol);
+  overflow-wrap: anywhere;
+}
+.t-sh-splash .acts {
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-5);
+  margin-top: var(--sp-4);
+}
+.t-sh-splash .acts button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-1-5);
+  height: var(--hit);
+  font: 500 var(--fs-body) / var(--hit) var(--sans);
+  color: var(--on-petrol);
+}
+.t-sh-splash .acts button:disabled {
+  color: var(--on-petrol-2);
+}
+.t-sh-splash .kv {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--sp-4);
+  row-gap: var(--sp-1);
+  margin: var(--sp-4) 0 0;
+}
+.t-sh-splash .kv > div {
+  display: contents;
+}
+.t-sh-splash .kv dt {
+  color: var(--on-petrol-2);
+}
+.t-sh-splash .kv dd {
+  margin: 0;
+  color: var(--on-petrol);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.t-sh-splash.is-exit {
+  pointer-events: none;
+}
+
+.t-sh-onboard {
+  --sp-t: clamp(64px, 9vh, 88px);
+  --t1: var(--on-petrol);
+  --color-t1: var(--on-petrol);
+  --t2: var(--on-petrol-2);
+  --color-t2: var(--on-petrol-2);
+  --t3: var(--on-petrol-2);
+  --color-t3: var(--on-petrol-2);
+  --t4: var(--on-petrol-line);
+  --color-t4: var(--on-petrol-line);
+  --panel: transparent;
+  --color-panel: transparent;
+  --raise: var(--mist-12);
+  --color-raise: var(--mist-12);
+  --line-2: var(--mist-12);
+  --color-line-2: var(--mist-12);
+  --line-field: var(--on-petrol-line);
+  --color-line-field: var(--on-petrol-line);
+  overflow-y: auto;
+}
+.t-sh-onboard .lock {
+  position: relative;
+}
+.t-sh-onboard .lock > .say {
+  margin: var(--sp-8) 0 0;
+  font: 400 var(--fs-nav) / var(--lh-nav) var(--sans);
+  color: var(--on-petrol);
+  animation-delay: max(0ms, calc(var(--intro-at, 0ms) + 900ms));
+}
+.t-sh-onboard .ob-form {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
+  width: min(480px, calc(100vw - 2 * var(--pad)));
+  padding: var(--sp-4) 0 var(--sp-4);
+  animation: t-intro-in 300ms var(--ease-out) max(120ms, calc(var(--intro-at, 0ms) + 1020ms)) both;
+}
+.t-sh-onboard .ob-offer {
+  display: grid;
+  gap: var(--sp-3);
+}
+.t-sh-onboard .ob-lede,
+.t-sh-onboard .ob-label {
+  margin: 0;
+  font: 400 var(--fs-body) / var(--lh-body) var(--sans);
+  color: var(--on-petrol-2);
+}
+.t-sh-onboard .ob-label {
+  color: var(--on-petrol);
+}
+.t-sh-onboard .mk-cn-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--sp-3) var(--sp-4);
+}
+.t-sh-onboard .mk-cn-form > :is(.mk-cn-back, .cn-acts) {
+  grid-column: 1 / -1;
+}
+.t-sh-onboard .mk-cn-form .cn-acts {
+  padding-top: var(--sp-1);
+}
+body:has(.t-sh-onboard) :is(.t-menu, .t-popover, .t-tip) {
+  z-index: calc(var(--z-splash) + 1);
+}
+
+.t-sh-account .ac-gate {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-3);
+  text-align: center;
+  font: 400 var(--fs-body) / var(--lh-body) var(--sans);
+  color: var(--on-petrol-2);
+  white-space: normal;
+}
+.t-sh-account .ac-gate p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.t-sh-account .ac-note {
+  font-size: var(--fs-meta);
+  line-height: var(--lh-meta);
+}
+.t-sh-account .ac-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-1);
+}
+.t-sh-account .ac-ask {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-1);
+  padding-top: var(--sp-2);
+}
+.t-sh-account .ac-ask > b {
+  font-weight: 500;
+  color: var(--on-petrol);
+}
+.t-sh-account .ac-acts {
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding-top: var(--sp-2);
+}
+
+.t-conns {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+  align-items: stretch;
+  min-width: 0;
+  border-left: 1px solid var(--line);
+}
+.t-conn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1-5);
+  padding: 0 var(--sp-3);
+  color: var(--t2);
+  font: 500 var(--fs-meta) / 1 var(--sans);
+  white-space: nowrap;
+  transition: color var(--dur-press) linear;
+}
+.t-conn:hover,
+.t-conn:focus-visible {
+  color: var(--t1);
+}
+.t-conn + .t-conn {
+  padding-left: 0;
+}
+.t-conn .ms {
+  color: var(--t3);
+  font-variant-numeric: tabular-nums;
+}
+
+.t-history-lines {
+  display: grid;
+  gap: var(--sp-1);
+  white-space: nowrap;
+}

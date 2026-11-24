@@ -1,0 +1,199 @@
+{
+  "about": "Diagonal footprint imbalances and stacks, checked by the runtime (tessera-market orderflow::imbalance, market.get_footprint's stackedImbalances) and the chart (packages/chart flow/imbalance.ts) alike. rows are [bid, ask] volumes, lowest row first, on the rows imbalances are found on. Buy at row r: ask[r] >= ratio * bid[r-1], ask[r] >= minVolume and ask[r] - bid[r-1] >= minDifference; sell at row r: bid[r] >= ratio * ask[r+1], bid[r] >= minVolume and bid[r] - ask[r+1] >= minDifference. An empty side across the diagonal (N against 0) is an imbalance only when includeZero is on; rows outside the bar are never compared. buy and sell list the imbalanced rows; stacks are [side, lowRow, highRow] runs of at least stackRows rows, lowest first.",
+  "cases": [
+    {
+      "name": "the ask is compared with the bid one row below",
+      "rows": [
+        [10, 5],
+        [2, 40],
+        [3, 9]
+      ],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 0,
+      "includeZero": false,
+      "stackRows": 3,
+      "buy": [1, 2],
+      "sell": [],
+      "stacks": []
+    },
+    {
+      "name": "an empty side across the diagonal is not an imbalance by default",
+      "rows": [
+        [0, 3],
+        [0, 4],
+        [7, 6]
+      ],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 0,
+      "includeZero": false,
+      "stackRows": 3,
+      "buy": [],
+      "sell": [],
+      "stacks": []
+    },
+    {
+      "name": "with zero included, an empty side across the diagonal lets the minimum volume decide",
+      "rows": [
+        [0, 3],
+        [0, 4],
+        [7, 6]
+      ],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 0,
+      "includeZero": true,
+      "stackRows": 3,
+      "buy": [2],
+      "sell": [],
+      "stacks": []
+    },
+    {
+      "name": "a bar's extremes are never compared with rows it did not trade",
+      "rows": [[100, 100]],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 0,
+      "includeZero": false,
+      "stackRows": 3,
+      "buy": [],
+      "sell": [],
+      "stacks": []
+    },
+    {
+      "name": "three adjacent buys stack; a lone sell does not",
+      "rows": [
+        [5, 1],
+        [1, 20],
+        [1, 20],
+        [1, 20],
+        [30, 2],
+        [1, 1]
+      ],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 0,
+      "includeZero": false,
+      "stackRows": 3,
+      "buy": [1, 2, 3],
+      "sell": [4],
+      "stacks": [["buy", 1, 3]]
+    },
+    {
+      "name": "the ratio is reached at equality",
+      "rows": [
+        [4, 0],
+        [0, 12]
+      ],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 0,
+      "includeZero": false,
+      "stackRows": 3,
+      "buy": [1],
+      "sell": [],
+      "stacks": []
+    },
+    {
+      "name": "one row can be imbalanced both ways",
+      "rows": [
+        [2, 0],
+        [9, 9],
+        [0, 2]
+      ],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 0,
+      "includeZero": false,
+      "stackRows": 1,
+      "buy": [1],
+      "sell": [1],
+      "stacks": [
+        ["buy", 1, 1],
+        ["sell", 1, 1]
+      ]
+    },
+    {
+      "name": "sells stack downward through a selling wave",
+      "rows": [
+        [2, 1],
+        [40, 1],
+        [35, 2],
+        [30, 3],
+        [12, 10],
+        [0, 4]
+      ],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 0,
+      "includeZero": false,
+      "stackRows": 3,
+      "buy": [],
+      "sell": [1, 2, 3, 4],
+      "stacks": [["sell", 1, 4]]
+    },
+    {
+      "name": "a lone print against an empty row reads as nothing, not as N against 0",
+      "rows": [
+        [0, 3],
+        [0, 9],
+        [0, 1]
+      ],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 0,
+      "includeZero": false,
+      "stackRows": 3,
+      "buy": [],
+      "sell": [],
+      "stacks": []
+    },
+    {
+      "name": "the side difference reaches the minimum difference at equality",
+      "rows": [
+        [3, 1],
+        [1, 9]
+      ],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 6,
+      "includeZero": false,
+      "stackRows": 3,
+      "buy": [1],
+      "sell": [],
+      "stacks": []
+    },
+    {
+      "name": "a side difference under the minimum difference is no imbalance",
+      "rows": [
+        [3, 1],
+        [1, 9]
+      ],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 7,
+      "includeZero": false,
+      "stackRows": 3,
+      "buy": [],
+      "sell": [],
+      "stacks": []
+    },
+    {
+      "name": "with zero included the minimum difference still applies",
+      "rows": [
+        [0, 0],
+        [0, 6],
+        [0, 9]
+      ],
+      "ratio": 3,
+      "minVolume": 5,
+      "minDifference": 8,
+      "includeZero": true,
+      "stackRows": 3,
+      "buy": [2],
+      "sell": [],
+      "stacks": []
+    }
+  ]
+}

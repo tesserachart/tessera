@@ -1,0 +1,18 @@
+[package]
+name = "tessera-http"
+description = "Tessera's one HTTP client builder: rustls, no redirects, bounded timeouts, and errors worded without their URL."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+reqwest.workspace = true
+rustls.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt", "net", "io-util"] }
+
+[lints]
+workspace = true

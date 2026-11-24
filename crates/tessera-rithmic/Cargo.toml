@@ -1,0 +1,39 @@
+[package]
+name = "tessera-rithmic"
+description = "Tessera's Rithmic connector (R|Protocol; orders only to paper systems and to prop evaluations the user enabled, decision 0009): plant sessions with login, reconnect and ForcedLogout handling, the send-path template allowlist, the market-data provider and the depth-by-order book."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tessera-core.workspace = true
+tessera-broker.workspace = true
+tessera-market.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+futures.workspace = true
+parking_lot.workspace = true
+prost.workspace = true
+rithmic-rs.workspace = true
+rust_decimal.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["sync", "time", "rt", "macros"] }
+tokio-stream.workspace = true
+tokio-tungstenite-rithmic.workspace = true
+tracing.workspace = true
+zstd.workspace = true
+
+[dev-dependencies]
+tessera-core = { workspace = true, features = ["test-support"] }
+tessera-host.workspace = true
+tessera-store.workspace = true
+tessera-tools.workspace = true
+tracing-subscriber.workspace = true
+tokio-tungstenite.workspace = true
+tokio = { workspace = true, features = ["full", "test-util"] }
+
+[lints]
+workspace = true

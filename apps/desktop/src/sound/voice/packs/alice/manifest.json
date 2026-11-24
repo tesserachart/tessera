@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "id": "alice",
+  "name": "Alice",
+  "about": "British, clear",
+  "vendor": {
+    "id": "elevenlabs",
+    "voiceId": "Xb7hH8MSUJpSbSDYk0k2",
+    "model": "eleven_v4",
+    "plan": "free",
+    "commercialUse": false,
+    "credit": "Voices by ElevenLabs"
+  },
+  "generated": "2026-11-05",
+  "lines": {
+    "order_filled": {
+      "file": "order_filled.mp3",
+      "text": "Order filled.",
+      "durationMs": 1099,
+      "lufs": -20.4
+    },
+    "market_filled": {
+      "file": "market_filled.mp3",
+      "text": "Market filled.",
+      "durationMs": 1267,
+      "lufs": -20.4
+    },
+    "limit_filled": {
+      "file": "limit_filled.mp3",
+      "text": "Limit filled.",
+      "durationMs": 1208,
+      "lufs": -20.4
+    },
+    "stop_filled": {
+      "file": "stop_filled.mp3",
+      "text": "Stop order filled.",
+      "durationMs": 1520,
+      "lufs": -20.4
+    },
+    "stop_limit_filled": {
+      "file": "stop_limit_filled.mp3",
+      "text": "Stop limit filled.",
+      "durationMs": 1840,
+      "lufs": -20.4
+    },
+    "partially_filled": {
+      "file": "partially_filled.mp3",
+      "text": "Partially filled.",
+      "durationMs": 1244,
+      "lufs": -20.3
+    },
+    "stop_hit": {
+      "file": "stop_hit.mp3",
+      "text": "Stop loss hit.",
+      "durationMs": 1402,
+      "lufs": -20.3
+    },
+    "target_hit": {
+      "file": "target_hit.mp3",
+      "text": "Target hit.",
+      "durationMs": 1134,
+      "lufs": -20.4
+    },
+    "position_closed": {
+      "file": "position_closed.mp3",
+      "text": "Position closed.",
+      "durationMs": 1289,
+      "lufs": -20.3
+    },
+    "position_reversed": {
+      "file": "position_reversed.mp3",
+      "text": "Position reversed.",
+      "durationMs": 1480,
+      "lufs": -20.3
+    },
+    "order_cancelled": {
+      "file": "order_cancelled.mp3",
+      "text": "Order cancelled.",
+      "durationMs": 1250,
+      "lufs": -20.3
+    },
+    "order_rejected": {
+      "file": "order_rejected.mp3",
+      "text": "Order rejected.",
+      "durationMs": 1399,
+      "lufs": -20.4
+    },
+    "loss_limit": {
+      "file": "loss_limit.mp3",
+      "text": "Loss limit reached.",
+      "durationMs": 1493,
+      "lufs": -21.2
+    },
+    "account_locked": {
+      "file": "account_locked.mp3",
+      "text": "Account locked.",
+      "durationMs": 1298,
+      "lufs": -21.6
+    },
+    "connection_lost": {
+      "file": "connection_lost.mp3",
+      "text": "Connection lost.",
+      "durationMs": 1239,
+      "lufs": -20.3
+    },
+    "connection_restored": {
+      "file": "connection_restored.mp3",
+      "text": "Connection restored.",
+      "durationMs": 1507,
+      "lufs": -20.3
+    },
+    "alert": {
+      "file": "alert.mp3",
+      "text": "Alert.",
+      "durationMs": 776,
+      "lufs": -20.4
+    },
+    "big_buyer": {
+      "file": "big_buyer.mp3",
+      "text": "Big buyer.",
+      "durationMs": 1079,
+      "lufs": -20.4
+    },
+    "big_seller": {
+      "file": "big_seller.mp3",
+      "text": "Big seller.",
+      "durationMs": 1001,
+      "lufs": -20.3
+    }
+  }
+}

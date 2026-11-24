@@ -1,0 +1,42 @@
+[package]
+name = "tessera-broker"
+description = "Tessera brokers: BrokerProvider trait, GuardedBroker (the only path to order entry), the send-path rules, the paper broker, and the orders and portfolio tools and topics."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tessera-core.workspace = true
+tessera-host.workspace = true
+tessera-market.workspace = true
+tessera-protocol.workspace = true
+tessera-store.workspace = true
+tessera-tools.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+futures.workspace = true
+parking_lot.workspace = true
+rust_decimal.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["sync", "time", "rt", "macros"] }
+tokio-stream.workspace = true
+tracing.workspace = true
+ts-rs = { workspace = true, features = ["serde-json-impl", "chrono-impl"] }
+
+[features]
+test-support = []
+
+[dev-dependencies]
+tessera-broker = { path = ".", features = ["test-support"] }
+tessera-core = { workspace = true, features = ["test-support"] }
+tessera-market = { workspace = true, features = ["test-support"] }
+tokio = { workspace = true, features = ["full", "test-util"] }
+
+[lints]
+workspace = true

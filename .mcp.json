@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "e2e": {
+      "command": "bun",
+      "args": ["x", "--no-install", "e2e", "mcp", "--headless"],
+      "env": {
+        "E2E_TELEMETRY_DISABLED": "1",
+        "TESSERA_E2E_AGENT_PORT": "0"
+      }
+    }
+  }
+}

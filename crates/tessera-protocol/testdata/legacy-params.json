@@ -1,0 +1,27 @@
+{
+  "about": "Params stored in an older shape (before the indicator registry, or Big trades before its size switch) and what migrate_legacy (Rust) and migrateLegacy (desktop) make of them. Both test suites run every case.",
+  "cases": [
+    { "kind": "sma", "params": { "period": 50 }, "migrated": { "inputs": { "length": 50 } } },
+    { "kind": "ema", "params": { "period": 9, "x": 1 }, "migrated": { "x": 1, "inputs": { "length": 9 } } },
+    { "kind": "volume", "params": { "mode": "pane" }, "migrated": {} },
+    { "kind": "vwap", "params": { "bands": [1, 2] }, "migrated": { "inputs": { "mult1": 1, "mult2": 2 } } },
+    { "kind": "vwap", "params": { "bands": [1] }, "migrated": { "inputs": { "mult1": 1 } } },
+    { "kind": "vwap", "params": { "bands": [2, 1.5] }, "migrated": { "inputs": { "mult1": 1.5, "mult2": 2 } } },
+    { "kind": "vwap", "params": { "bands": [4, "a", 0.05, 3, 9] }, "migrated": { "inputs": { "mult1": 0.1, "mult2": 3, "mult3": 4 } } },
+    { "kind": "vwap", "params": { "bands": "x" }, "migrated": { "inputs": {} } },
+    { "kind": "vwap", "params": { "bands": null }, "migrated": { "inputs": {} } },
+    { "kind": "vwap", "params": { "bands": [1], "inputs": { "band1": true } }, "migrated": { "bands": [1], "inputs": { "band1": true } } },
+    { "kind": "rsi", "params": { "period": 14 }, "migrated": { "period": 14 } },
+    { "kind": "big_trades", "params": { "inputs": { "mode": "auto", "high": true, "medium": false, "low": true, "minSize": 40 } }, "migrated": { "inputs": { "size": "auto", "tier": "low", "minSize": 40 } } },
+    { "kind": "big_trades", "params": { "inputs": { "low": false, "showSize": false } }, "migrated": { "inputs": { "size": "auto", "tier": "medium", "showSize": false } } },
+    { "kind": "big_trades", "params": { "inputs": { "mode": "auto", "high": true, "medium": false, "low": false } }, "migrated": { "inputs": { "size": "auto", "tier": "high" } } },
+    { "kind": "big_trades", "params": { "inputs": { "mode": "auto", "high": false, "medium": false, "low": false } }, "migrated": { "inputs": { "size": "auto", "tier": "low" } } },
+    { "kind": "big_trades", "params": { "inputs": { "mode": "manual", "high": true, "minSize": 25, "maxSize": 300 }, "style": {} }, "migrated": { "inputs": { "size": "fixed", "minSize": 25, "maxSize": 300 }, "style": {} } },
+    { "kind": "big_trades", "params": { "inputs": { "mode": "manual", "minSize": 0 } }, "migrated": { "inputs": { "size": "fixed" } } },
+    { "kind": "big_trades", "params": { "inputs": { "minSize": 25 } }, "migrated": { "inputs": { "size": "fixed", "minSize": 25 } } },
+    { "kind": "big_trades", "params": { "inputs": { "minSize": 25, "maxSize": 300, "showSize": false } }, "migrated": { "inputs": { "size": "fixed", "minSize": 25, "maxSize": 300, "showSize": false } } },
+    { "kind": "big_trades", "params": { "inputs": { "minSize": 0, "maxSize": 80 } }, "migrated": { "inputs": { "size": "auto", "tier": "low", "maxSize": 80 } } },
+    { "kind": "big_trades", "params": { "inputs": { "maxSize": 80 } }, "migrated": { "inputs": { "maxSize": 80 } } },
+    { "kind": "big_trades", "params": { "inputs": { "size": "fixed", "minSize": 25 } }, "migrated": { "inputs": { "size": "fixed", "minSize": 25 } } }
+  ]
+}

@@ -1,0 +1,141 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background: var(--ink);
+  color: var(--t1);
+  font: var(--fw-body) var(--fs-body) / var(--lh-body) var(--sans);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+  text-rendering: optimizeLegibility;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--ink);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  outline: 0;
+}
+
+button {
+  cursor: pointer;
+  text-align: inherit;
+}
+
+button:disabled,
+[aria-disabled='true'] {
+  cursor: default;
+}
+
+b,
+strong {
+  font-weight: var(--fw-body-em);
+  color: var(--t1);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+::selection {
+  background: var(--selection);
+  color: var(--t1);
+}
+
+/* WKWebView reads -webkit-user-select. */
+html {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+:where(input, textarea, [contenteditable]:not([contenteditable='false']), pre, code, [data-selectable]) {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: auto;
+}
+:where(button, [role='button'], select, [data-selectable='false']) {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+:where(html[data-selecting]) :where(pre, code, [data-selectable]) {
+  -webkit-user-select: none;
+  user-select: none;
+}
+:where([data-selection-scope]),
+:where([data-selection-scope]) :where(pre, code, [data-selectable]:not([data-selectable='false'])) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.t-menu,
+.t-popover,
+.t-sheet,
+.t-tip,
+.t-palette,
+.t-anote,
+.t-wl:hover,
+.t-pal-row.is-on,
+.t-ladder .r.is-bb,
+.t-ladder .r.is-ba {
+  --t3: var(--t3-raised);
+  --color-t3: var(--t3-raised);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--thumb) transparent;
+}
+
+:where(button, [role='button'], [role='option'], a[href], summary, input, select, textarea) {
+  transition:
+    color var(--dur-hover) linear,
+    background-color var(--dur-hover) linear,
+    border-color var(--dur-hover) linear,
+    opacity var(--dur-hover) linear,
+    scale var(--dur-press) var(--ease-out-strong);
+}
+:where(button, [role='button']):where(
+    :not(
+      :disabled,
+      [aria-disabled='true'],
+      [role='row'],
+      [role='treeitem'],
+      [role='tab'],
+      [role='switch'],
+      [role='radio'],
+      [role='option'],
+      [role='columnheader'],
+      [role^='menuitem'],
+      [aria-current],
+      [data-press='none']
+    )
+  ):where(:active:not(:focus-visible)) {
+  scale: var(--scale-press);
+}
+
+[data-resizing] *,
+[data-resizing] *::before,
+[data-resizing] *::after {
+  transition: none !important;
+}

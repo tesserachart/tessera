@@ -1,0 +1,26 @@
+[package]
+name = "tessera-cloud"
+description = "Tessera Cloud's client: the build's Cloud address, PKCE for the desktop sign-in, and the HTTP client that exchanges, refreshes (rotating) and uses a session."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tessera-http.workspace = true
+async-trait.workspace = true
+getrandom.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["sync", "time"] }
+tracing.workspace = true
+
+[dev-dependencies]
+axum.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "net", "sync", "time"] }
+
+[lints]
+workspace = true

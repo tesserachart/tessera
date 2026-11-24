@@ -1,0 +1,43 @@
+[package]
+name = "tessera-intel"
+description = "Tessera market intelligence: IntelligenceProvider trait, the intel router, service and hub, the intel module (tools and topic), conversion records, the levels-source engine (any HTTP API that returns levels, from a spec)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tessera-core.workspace = true
+tessera-host.workspace = true
+tessera-protocol.workspace = true
+tessera-script.workspace = true
+tessera-store.workspace = true
+tessera-tools.workspace = true
+tessera-http.workspace = true
+async-trait.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+flate2.workspace = true
+futures.workspace = true
+parking_lot.workspace = true
+rust_decimal.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["sync", "time", "rt", "macros"] }
+tracing.workspace = true
+ts-rs = { workspace = true, features = ["serde-json-impl", "chrono-impl"] }
+
+[features]
+test-support = ["tessera-core/test-support"]
+
+[dev-dependencies]
+tessera-core = { workspace = true, features = ["test-support"] }
+tessera-intel = { path = ".", features = ["test-support"] }
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "test-util"] }
+
+[lints]
+workspace = true

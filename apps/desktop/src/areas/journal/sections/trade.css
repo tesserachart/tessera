@@ -1,0 +1,454 @@
+.jt-page {
+  flex: 1;
+  height: 100%;
+}
+.jt-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: 60px;
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--line-2);
+  background: var(--ink-2);
+}
+.jt-title {
+  min-width: 0;
+  margin-left: var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.jt-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.jt-title h2 {
+  margin: 0;
+  font: 600 var(--fs-strong) / var(--lh-strong) var(--sans);
+  color: var(--t1);
+}
+.jt-acts {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.jt-reviewed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--line-3);
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  font: 500 var(--fs-meta) / 1 var(--sans);
+  color: var(--t2);
+}
+.jt-reviewed svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+.jt-reviewed:hover {
+  color: var(--t1);
+  border-color: var(--line-field);
+}
+.jt-reviewed.is-on {
+  color: var(--mist);
+  border-color: var(--line-3);
+  background: var(--mist-10);
+}
+.jt-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.jt-stats {
+  flex: none;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink-2);
+}
+.jt-split {
+  flex: none;
+}
+.jt-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.jt-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.jt-tabs {
+  flex: none;
+  padding: 0 var(--sp-4);
+  border-bottom: 1px solid var(--line);
+}
+.jt-scroll {
+  flex: 1;
+  min-height: 0;
+}
+.jt-pad {
+  padding: var(--sp-4);
+}
+.jt-content .jt-pad {
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.jt-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+  padding: var(--sp-2) 0 var(--sp-4);
+  border-bottom: 1px solid var(--line);
+}
+.jt-hero > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.jt-hero-v {
+  margin: 2px 0;
+  font: 600 30px/34px var(--fig);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: var(--t1);
+}
+.jt-hero-v.up {
+  color: var(--up);
+}
+.jt-hero-v.down {
+  color: var(--down);
+}
+.jt-excursion {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+.jt-excursion .jk-metric {
+  padding: var(--sp-3);
+}
+.jt-excursion + .jk-section {
+  margin-top: var(--sp-3);
+}
+.jt-stats .jr-fact.is-input .t-input,
+.jt-stats .jr-fact.is-input input {
+  width: 128px;
+}
+.jt-tags {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-1) 0;
+}
+.jr-badges.is-wrap {
+  flex-wrap: wrap;
+}
+
+.jt-setup-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+.jk-section .t-check + .t-check {
+  margin-top: var(--sp-1);
+}
+.jr-rule.is-done {
+  color: var(--t3);
+  text-decoration: line-through;
+}
+.jk-section-head .jk-caps::first-letter {
+  text-transform: uppercase;
+}
+
+.jt-timeline {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.jt-timeline::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 12px;
+  bottom: 12px;
+  width: 1px;
+  background: var(--line-2);
+}
+.jt-exec {
+  position: relative;
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+}
+.jt-exec-dot {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line-2);
+  background: var(--ink-2);
+}
+.jt-exec-dot .t-icon {
+  --icon: 14px;
+}
+.jt-exec.up .jt-exec-dot {
+  color: var(--up);
+  border-color: color-mix(in srgb, var(--up) 40%, transparent);
+}
+.jt-exec.down .jt-exec-dot {
+  color: var(--down);
+  border-color: color-mix(in srgb, var(--down) 40%, transparent);
+}
+.jt-exec-body {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--raise) 30%, transparent);
+}
+.jt-exec-top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.jt-exec-top b {
+  font: 500 var(--fs-body) / var(--lh-body) var(--sans);
+  color: var(--t1);
+}
+.jt-exec-time {
+  margin-left: auto;
+  font-size: var(--fs-meta);
+  font-variant-numeric: tabular-nums;
+}
+.jt-exec-line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-top: 2px;
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--t2);
+}
+.jt-exec-line .r {
+  font: 500 var(--fs-body) / var(--lh-body) var(--fig);
+}
+.jt-exec-line .up {
+  color: var(--up);
+}
+.jt-exec-line .down {
+  color: var(--down);
+}
+.jt-exec-fee {
+  font-size: var(--fs-meta);
+}
+
+.jr-tchart-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-2);
+}
+.jr-tchart-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--line-2);
+  margin: 0 var(--sp-1);
+}
+.jr-tool {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+  font: 600 var(--fs-meta) / 1 var(--fig);
+  color: var(--t3);
+}
+.jr-tool:hover {
+  color: var(--t1);
+  background: var(--raise);
+}
+.jr-tool.is-on {
+  color: var(--t1);
+  border-color: var(--line-3);
+  background: var(--raise);
+}
+.jr-tool-dash {
+  display: block;
+  width: 14px;
+  height: 0;
+  border-top: 2px solid var(--t2);
+}
+.jr-tool-dash.dash {
+  border-top-style: dashed;
+}
+.jr-tchart-key {
+  margin-left: auto;
+}
+.jt-content .jr-tchart-plot {
+  border: 1px solid var(--line-2);
+}
+.jt-chart-pad {
+  display: flex;
+  flex: 1;
+  min-height: 380px;
+  padding: var(--sp-4) var(--sp-5);
+}
+.jt-chart-pad .jr-tchart {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+}
+.jt-chart-pad .jr-tchart-head {
+  flex: none;
+}
+.jt-chart-pad .jr-tchart-plot {
+  flex: 1;
+  min-height: 0;
+}
+
+.jt-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.jt-notes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.jt-replay-clock {
+  font: 600 var(--fs-strong) / 1 var(--fig);
+  font-variant-numeric: tabular-nums;
+  color: var(--t1);
+}
+.jt-replay-pnl {
+  margin-left: auto;
+  font-size: var(--fs-body);
+  color: var(--t2);
+}
+.jt-replay-pnl b {
+  font-family: var(--fig);
+  font-variant-numeric: tabular-nums;
+}
+.jt-replay-pnl b.up {
+  color: var(--up);
+}
+.jt-replay-pnl b.down {
+  color: var(--down);
+}
+.jt-replay-ctl {
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--line-2);
+  background: var(--jk-card);
+}
+.jt-scrub {
+  width: 100%;
+  accent-color: var(--mist);
+}
+.jt-replay-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  margin-top: var(--sp-2);
+}
+.jt-speeds {
+  display: inline-flex;
+  margin-left: var(--sp-4);
+  border: 1px solid var(--line-2);
+}
+.jt-speeds button {
+  height: 26px;
+  min-width: 36px;
+  padding: 0 var(--sp-2);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: 500 var(--fs-meta) / 1 var(--fig);
+  color: var(--t3);
+}
+.jt-speeds button + button {
+  border-left: 1px solid var(--line-2);
+}
+.jt-speeds button.is-on {
+  background: var(--raise);
+  color: var(--t1);
+}
+
+.jt-running .jk-metrics {
+  margin-top: var(--sp-4);
+}
+
+@container (max-width: 1100px) {
+  .jt-head {
+    flex-wrap: wrap;
+  }
+  .jt-acts {
+    flex-wrap: wrap;
+  }
+  .jt-stats {
+    max-width: 40%;
+  }
+  .jt-tabs {
+    overflow-x: auto;
+  }
+}
+
+@container (max-width: 760px) {
+  .jt-page {
+    height: auto;
+  }
+  .jt-body {
+    flex-direction: column;
+  }
+  .jt-stats {
+    width: 100% !important;
+    max-width: none;
+    min-height: 320px;
+    max-height: 480px;
+  }
+  .jt-split {
+    display: none;
+  }
+  .jt-content {
+    min-height: 560px;
+  }
+  .jt-acts {
+    width: 100%;
+    margin-left: 0;
+  }
+  .jt-title-row {
+    flex-wrap: wrap;
+  }
+}

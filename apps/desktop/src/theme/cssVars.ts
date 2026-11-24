@@ -1,0 +1,103 @@
+import { cssOf, TRANSPARENT, timesAlpha } from './colour.ts';
+import type { ResolvedTheme, ShellKey } from './resolve.ts';
+
+type Source = ShellKey | readonly [ShellKey, number] | { readonly dark: ShellKey; readonly light: ShellKey };
+
+export const THEME_CSS_VARS = {
+  '--color-ink': 'surfaces.ground',
+  '--color-ink-2': 'surfaces.panel',
+  '--color-panel': 'surfaces.panel',
+  '--color-raise': 'surfaces.raise',
+  '--color-hover': 'surfaces.hover',
+  '--color-menu': 'surfaces.menu',
+  '--color-line': 'lines.hairline',
+  '--color-line-2': 'lines.line2',
+  '--color-line-3': 'lines.line3',
+  '--color-line-field': ['ink.t1', 0.38],
+  '--color-line-field-hover': ['ink.t1', 0.5],
+  '--color-ink-86': ['surfaces.ground', 0.86],
+  '--color-ink-70': 'surfaces.scrim',
+  '--color-shadow': 'surfaces.shadow',
+  '--color-dim': { dark: 'surfaces.ground', light: 'ink.t1' },
+  '--color-thumb': ['ink.t1', 0.18],
+  '--color-selection': 'surfaces.selection',
+  '--color-petrol': 'accents.deep',
+  '--color-petrol-2': ['accents.aqua', 0.16],
+  '--color-nav-on': 'surfaces.selection',
+  '--color-teal': 'accents.teal',
+  '--color-mist': 'ink.t1',
+  '--color-mist-press': 'ink.t2',
+  '--color-mist-key': 'ink.t3',
+  '--color-on-petrol': 'accents.onDeep',
+  '--color-on-petrol-2': 'accents.onDeep2',
+  '--color-on-petrol-line': ['accents.onDeep', 0.35],
+  '--color-card': 'card.paper',
+  '--color-card-expired': 'card.expired',
+  '--color-card-ink': 'card.ink',
+  '--color-card-t2': 'card.t2',
+  '--color-card-t3': 'card.t3',
+  '--color-card-t4': 'card.t4',
+  '--color-card-line': 'card.line',
+  '--color-card-line-2': 'card.line2',
+  '--color-teal-on-card': 'card.blue',
+  '--color-approve': 'accents.deep',
+  '--color-approve-fill': 'accents.deep',
+  '--color-approve-idle': 'card.idle',
+  '--color-approve-ink': 'accents.onDeep',
+  '--color-approve-ink-2': 'accents.onDeep2',
+  '--color-t1': 'ink.t1',
+  '--color-t2': 'ink.t2',
+  '--color-t3': 'ink.t3',
+  '--color-t3-raised': 'ink.t3',
+  '--color-t4-fig': 'ink.t4',
+  '--color-t4': 'ink.t4',
+  '--color-aqua': 'accents.aqua',
+  '--color-agent': 'semantics.agent',
+  '--color-up': 'semantics.up',
+  '--color-down': 'semantics.down',
+  '--color-brass': 'semantics.hazard',
+  '--color-brass-on-card': 'card.gold',
+  '--color-active': 'semantics.active',
+  '--color-aqua-60': ['accents.aqua', 0.6],
+  '--color-aqua-40': ['accents.aqua', 0.4],
+  '--color-aqua-25': ['accents.aqua', 0.25],
+  '--color-aqua-12': ['accents.aqua', 0.12],
+  '--color-agent-60': ['semantics.agent', 0.6],
+  '--color-agent-12': ['semantics.agent', 0.12],
+  '--color-up-60': ['semantics.up', 0.6],
+  '--color-down-60': ['semantics.down', 0.6],
+  '--color-brass-60': ['semantics.hazard', 0.6],
+  '--color-mist-70': ['ink.t1', 0.7],
+  '--color-mist-55': ['ink.t1', 0.55],
+  '--color-mist-45': ['ink.t1', 0.45],
+  '--color-mist-25': ['ink.t1', 0.25],
+  '--color-mist-12': ['ink.t1', 0.12],
+  '--color-mist-10': ['ink.t1', 0.1],
+  '--color-link-1': 'categorical.c1',
+  '--color-link-2': 'categorical.c4',
+  '--color-link-3': 'categorical.c2',
+  '--color-link-4': 'categorical.c3',
+  '--color-tag-1': 'categorical.c1',
+  '--color-tag-2': 'categorical.c2',
+  '--color-tag-3': 'categorical.c3',
+  '--color-tag-4': 'categorical.c4',
+  '--color-tag-5': 'categorical.c5',
+  '--color-tag-6': 'categorical.c6',
+  '--color-tag-7': 'categorical.c7',
+  '--color-tag-8': 'categorical.c8',
+  '--color-focus': 'accents.teal',
+  '--color-up-volume': ['semantics.up', 0.24],
+  '--color-down-volume': ['semantics.down', 0.28],
+} as const satisfies Readonly<Record<`--color-${string}`, Source>>;
+
+export type ThemeCssVar = keyof typeof THEME_CSS_VARS;
+
+export function cssVarsOf(r: ResolvedTheme): Record<ThemeCssVar, string> {
+  const out = {} as Record<ThemeCssVar, string>;
+  for (const [name, source] of Object.entries(THEME_CSS_VARS) as [ThemeCssVar, Source][]) {
+    const [key, alpha] = typeof source === 'string' ? [source, 1] : 'dark' in source ? [source[r.mode], 1] : source;
+    const c = r.colors[key];
+    out[name] = c ? cssOf(alpha === 1 ? c : timesAlpha(c, alpha)) : TRANSPARENT;
+  }
+  return out;
+}

@@ -1,0 +1,110 @@
+---
+import type { ImageMetadata } from 'astro';
+import { Image } from 'astro:assets';
+import agent from '../assets/shots/agent.webp';
+import aiData from '../assets/shots/ai-data.webp';
+import chart from '../assets/shots/chart.webp';
+import orderFlow from '../assets/shots/order-flow.webp';
+
+interface Feature {
+  id: string;
+  title: string;
+  text: string;
+  shot: ImageMetadata;
+  alt: string;
+  width: number;
+}
+
+const features: Feature[] = [
+  {
+    id: 'chart',
+    title: 'The chart',
+    text: 'Candles with volume profile, big trades and cumulative delta, drawn from your own market data.',
+    shot: chart,
+    alt: 'A five-minute NQ chart in Tessera with volume profile, big trade bubbles and cumulative delta.',
+    width: 1120,
+  },
+  {
+    id: 'order-flow',
+    title: 'Order flow',
+    text: 'A footprint with bid and ask at every price, the DOM ladder and time and sales, side by side.',
+    shot: orderFlow,
+    alt: 'A one-minute NQ footprint chart with bid and ask volume per price, imbalances and delta per bar, beside the DOM ladder and time and sales.',
+    width: 1120,
+  },
+  {
+    id: 'agent',
+    title: 'An agent that trades',
+    text: 'In full access it places, changes and closes orders on its own, and your risk limits apply to every order it sends. You choose how much it may do, from read only to full access.',
+    shot: agent,
+    alt: 'The trade panel and the analyst in full access mode: it has bought one NQ with a 40-tick stop and an 80-tick target, and reports the stop risk of $200 against a $300 per-trade limit.',
+    width: 640,
+  },
+  {
+    id: 'your-ai',
+    title: 'Your AI, your data',
+    text: 'The agent runs on your own Claude Code or Codex plan. Prices and orders come through your own Rithmic login, and any levels API joins with the analyst’s help. No house AI, no data to buy.',
+    shot: aiData,
+    alt: 'Tessera settings: Codex and Claude Code as models on your own subscription, and the Add connection menu with Rithmic and any levels API.',
+    width: 720,
+  },
+];
+---
+
+<section class="features" aria-label="What is in Tessera">
+  {features.map((f) => (
+    <article class="feature wrap" id={f.id} data-reveal>
+      <div class="copy">
+        <h2 class="serif">{f.title}</h2>
+        <p>{f.text}</p>
+      </div>
+      <figure class="shot" style={`--w:${String(f.width)}px`}>
+        <Image
+          src={f.shot}
+          alt={f.alt}
+          widths={[640, 1120, 1600].filter((w) => w < f.shot.width).concat(f.shot.width)}
+          sizes={`(max-width: ${String(f.width)}px) 100vw, ${String(f.width)}px`}
+          loading="lazy"
+          decoding="async"
+        />
+      </figure>
+    </article>
+  ))}
+</section>
+
+<style>
+  .features {
+    display: grid;
+    gap: clamp(112px, 12vw, 176px);
+    padding-block: clamp(48px, 6vw, 96px) clamp(112px, 12vw, 176px);
+  }
+  .feature {
+    display: grid;
+    justify-items: center;
+    gap: clamp(28px, 3vw, 40px);
+  }
+  .copy {
+    display: grid;
+    gap: 12px;
+    max-width: 34em;
+    text-align: center;
+  }
+  h2 {
+    font-size: var(--fs-title);
+    line-height: 1.1;
+    color: var(--t1);
+  }
+  .copy p {
+    color: var(--t2);
+    line-height: 1.6;
+  }
+  .shot {
+    width: min(100%, var(--w));
+    border: 1px solid var(--line-2);
+    background: var(--ink-2);
+  }
+  .shot :global(img) {
+    width: 100%;
+    height: auto;
+  }
+</style>

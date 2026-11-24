@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "trace-1",
+  "createdAt": "2026-10-05T15:05:09.473Z",
+  "payload": {
+    "actions": [
+      {
+        "name": "tap",
+        "summary": "tap button \"Timeframe 1m\" in \"NQ Z6\"",
+        "target": {
+          "role": "button",
+          "name": "Timeframe 1m",
+          "text": "1m",
+          "within": "NQ Z6"
+        }
+      },
+      {
+        "name": "tap",
+        "summary": "tap menuitemradio \"30m\" in \"1m\"",
+        "target": {
+          "role": "menuitemradio",
+          "name": "30m",
+          "within": "1m"
+        }
+      }
+    ],
+    "executor": {
+      "name": "e2e-default-agent",
+      "version": "2"
+    },
+    "recordedFor": {
+      "testId": "e2e/agent/persistence.e2e.ts::a%20timeframe%20the%20agent%20picks%20for%20the%20second%20chart%20stays%20after%20a%20reload",
+      "targetId": "web",
+      "instructionDigest": "49db334f917332110ec5c8e0958f739bae839d9f5ba9727af47e8e59ec2b4851"
+    },
+    "summary": "Selected 30m for the NQ Z6 chart. The workspace now shows the NQ Z6 30m region and its timeframe button reads 30m.",
+    "startPath": "/",
+    "endPath": "/",
+    "endAnchors": [
+      {
+        "text": "954 bars"
+      }
+    ],
+    "endWaitMs": 14789
+  }
+}

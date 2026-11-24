@@ -1,0 +1,24 @@
+{
+  "name": "@tessera/bridge",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "The Bridge: the only seam between the Tessera UI and its host (Tauri shell or plain browser).",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./browser": "./src/browser.ts",
+    "./tauri": "./src/tauri.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.1"
+  },
+  "devDependencies": {
+    "happy-dom": "20.14.5"
+  }
+}
