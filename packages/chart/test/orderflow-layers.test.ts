@@ -2864,7 +2864,7 @@ describe('big trades layer', () => {
     expect(bigTradeOutcomeWords(trade(1, 0, 5800, 60, 1))).toBeNull();
   });
 
-  it('cards one bubble for the tooltip: side, size, price, time, fills and its tier and what happened next', () => {
+  it('cards one bubble in two lines: side, size and price, then time, fills, tier and what happened next', () => {
     const card = (t: BigTrade) =>
       bigTradeCard(
         t,
@@ -2884,37 +2884,20 @@ describe('big trades layer', () => {
     };
     expect(card(sweep)).toEqual({
       side: 1,
-      sideWords: 'Buy · lifted the offer',
-      rows: [
-        ['Size', '1,200 contracts'],
-        ['Price', '5799.75–5801.25 · 7 levels'],
-        ['Time', '@5000'],
-        ['Filled', '18 fills in 1.2 s · 3 orders'],
-        ['Tier', 'High'],
-        ['After 60 s', 'Pushed through · 30 ticks'],
-      ],
+      headline: ['Buy 1,200 @ 5799.75–5801.25', '7 levels'],
+      detail: ['@5000', '18 fills in 1.2 s', '3 orders', 'High tier', 'Pushed through 30 ticks in 60 s'],
     });
     expect(
       card({ ...trade(2, 0, 5800, 40, -1), outcome: { kind: 'absorbed', reachTicks: 1, withinMs: 9_000 } }),
     ).toEqual({
       side: -1,
-      sideWords: 'Sell · hit the bid',
-      rows: [
-        ['Size', '40 contracts'],
-        ['Price', '5800.00'],
-        ['Time', '@0'],
-        ['Filled', '1 fill'],
-        ['After 9 s', 'Absorbed · back 1 tick'],
-      ],
+      headline: ['Sell 40 @ 5800.00'],
+      detail: ['@0', '1 fill', 'Absorbed, back 1 tick in 9 s'],
     });
-    expect(card({ ...sweep, outcome: { kind: 'neither', reachTicks: 2, withinMs: 60_000 } }).rows.at(-1)).toEqual([
-      'After 60 s',
-      'Neither',
-    ]);
-    expect(
-      card({ ...sweep, outcome: null }).rows.map(([k]) => k),
-      'nothing while undecided',
-    ).toEqual(['Size', 'Price', 'Time', 'Filled', 'Tier']);
-    expect(card({ ...sweep, tier: null }).rows.map(([k]) => k)).not.toContain('Tier');
+    expect(card({ ...sweep, outcome: { kind: 'neither', reachTicks: 2, withinMs: 60_000 } }).detail.at(-1)).toBe(
+      'Neither within 60 s',
+    );
+    expect(card({ ...sweep, outcome: null }).detail.at(-1), 'nothing while undecided').toBe('High tier');
+    expect(card({ ...sweep, tier: null }).detail).not.toContain('High tier');
   });
 });

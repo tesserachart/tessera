@@ -32,7 +32,7 @@ import { updateChart } from '../workspace/controller.ts';
 import { ChartFeed, type FeedMeta } from './feed.ts';
 import { withPaneHeights } from './indicators.ts';
 import { flowHub } from '../market/flow/hub.ts';
-import { bubbleTipCards, fillBubbleTip } from './bubbleTip.ts';
+import { bubbleTipAreas, bubbleTipCards, fillBubbleTip, placeBubbleTip } from './bubbleTip.ts';
 import { gapTipWords } from './gapTip.ts';
 import { LayerReconciler, type LevelsSink } from './layers/index.ts';
 import { legendItems, type LegendSource } from './legend.ts';
@@ -89,6 +89,8 @@ export interface ChartViewProps {
 const VIEWPORT_REPORT_MS = 1000;
 const PROFILE_REPORT_MS = 1500;
 const TIP_GAP = 12;
+const BUBBLE_TIP_GAP = 8;
+const TIP_INSET = 6;
 
 export function ChartView(props: ChartViewProps) {
   const { layoutId, tileId, instrument, tf, printBars, spec, layers, levels, annotations, scene, reportViewport } =
@@ -325,14 +327,10 @@ export function ChartView(props: ChartViewProps) {
       const show = () => {
         el.dataset.kind = 'bubble';
         fillBubbleTip(el, h.cards);
-        const box = el.parentElement;
-        const reach = h.r + TIP_GAP;
-        const w = el.offsetWidth;
-        const tall = el.offsetHeight;
-        const right = h.x + reach + w <= (box?.clientWidth ?? Infinity) - TIP_GAP;
-        const x = right ? h.x + reach : h.x - reach - w;
-        const y = Math.max(TIP_GAP, Math.min(h.y - tall / 2, (box?.clientHeight ?? Infinity) - tall - TIP_GAP));
-        el.style.transform = `translate(${String(Math.round(x))}px, ${String(Math.round(y))}px)`;
+        const areas = bubbleTipAreas(chart.coords(), TIP_INSET);
+        el.style.maxWidth = `${String(Math.floor(Math.max(...areas.map((a) => a.w))))}px`;
+        const at = placeBubbleTip(h, { w: el.offsetWidth, h: el.offsetHeight }, areas, BUBBLE_TIP_GAP);
+        el.style.transform = `translate(${String(Math.round(at.x))}px, ${String(Math.round(at.y))}px)`;
         el.dataset.open = 'true';
         tipWarm = true;
       };
@@ -351,6 +349,7 @@ export function ChartView(props: ChartViewProps) {
       }
       const show = () => {
         el.dataset.kind = 'gap';
+        el.style.maxWidth = '';
         el.textContent = gapTipWords(g.from, g.to);
         const box = el.parentElement;
         const w = el.offsetWidth;

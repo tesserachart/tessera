@@ -692,42 +692,45 @@ export function bigTradeOutcomeWords(t: BigTrade): string | null {
   }
 }
 
-const TIER_WORDS: Readonly<Record<BigTradeTier, string>> = { high: 'High', medium: 'Medium', low: 'Low' };
+const TIER_WORDS: Readonly<Record<BigTradeTier, string>> = {
+  high: 'High tier',
+  medium: 'Medium tier',
+  low: 'Low tier',
+};
 
 export interface BigTradeCard {
   side: 1 | -1;
-  sideWords: string;
-  rows: readonly (readonly [string, string])[];
+  headline: readonly string[];
+  detail: readonly string[];
 }
 
-function outcomeRow(o: BigTradeOutcome): readonly [string, string] {
-  const after = `After ${withinWords(o.withinMs)}`;
+function outcomeCardWords(o: BigTradeOutcome): string {
+  const within = withinWords(o.withinMs);
   switch (o.kind) {
     case 'absorbed':
-      return [after, `Absorbed · back ${ticksWords(o.reachTicks)}`];
+      return `Absorbed, back ${ticksWords(o.reachTicks)} in ${within}`;
     case 'pushed':
-      return [after, `Pushed through · ${ticksWords(o.reachTicks)}`];
+      return `Pushed through ${ticksWords(o.reachTicks)} in ${within}`;
     case 'neither':
-      return [after, 'Neither'];
+      return `Neither within ${within}`;
   }
 }
 
 export function bigTradeCard(t: BigTrade, price: (p: number) => string, clock: (ms: number) => string): BigTradeCard {
   const first = t.firstPrice ?? t.price;
   const last = t.lastPrice ?? t.price;
-  const levels = (t.levels ?? 1) > 1 ? ` · ${String(t.levels)} levels` : '';
-  const fills = [`${String(t.prints)} fill${t.prints === 1 ? '' : 's'}`];
-  if (t.prints > 1 && t.durationMs !== undefined) fills.push(`in ${durationWords(t.durationMs)}`);
-  if ((t.orders ?? 1) > 1) fills.push(`· ${String(t.orders)} orders`);
-  const rows: (readonly [string, string])[] = [
-    ['Size', `${formatCount(t.size)} contracts`],
-    ['Price', (first === last ? price(first) : `${price(first)}–${price(last)}`) + levels],
-    ['Time', clock(t.t)],
-    ['Filled', fills.join(' ')],
+  const at = first === last ? price(first) : `${price(first)}–${price(last)}`;
+  const headline = [`${t.side > 0 ? 'Buy' : 'Sell'} ${formatCount(t.size)} @ ${at}`];
+  if ((t.levels ?? 1) > 1) headline.push(`${String(t.levels)} levels`);
+  const fills = `${String(t.prints)} fill${t.prints === 1 ? '' : 's'}`;
+  const detail = [
+    clock(t.t),
+    t.prints > 1 && t.durationMs !== undefined ? `${fills} in ${durationWords(t.durationMs)}` : fills,
   ];
-  if (t.tier) rows.push(['Tier', TIER_WORDS[t.tier]]);
-  if (t.outcome) rows.push(outcomeRow(t.outcome));
-  return { side: t.side, sideWords: t.side > 0 ? 'Buy · lifted the offer' : 'Sell · hit the bid', rows };
+  if ((t.orders ?? 1) > 1) detail.push(`${String(t.orders)} orders`);
+  if (t.tier) detail.push(TIER_WORDS[t.tier]);
+  if (t.outcome) detail.push(outcomeCardWords(t.outcome));
+  return { side: t.side, headline, detail };
 }
 
 export function bigTradeWords(t: BigTrade, price: (p: number) => string = String): string {

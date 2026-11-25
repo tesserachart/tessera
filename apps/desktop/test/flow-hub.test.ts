@@ -1412,17 +1412,17 @@ describe('big trades as charts read them', () => {
       bubbleTipCards(
         feed.between(from, to).map((trade) => ({ x: 0, y: 0, r: 8, opacity: 0.4, trade })),
         2,
-      ).map((c) => Object.fromEntries(c.rows));
+      ).map((c) => [...c.headline, ...c.detail.slice(1)]);
     await vi.waitFor(() => expect(rt.toolCalls('market.get_big_trades')).toHaveLength(20));
     await vi.waitFor(() => expect(manual.feed.status.reading).toBe(false));
     const sub = await vi.waitFor(() => rt.sub('market.trades'));
     sub.event(trades(0, [[ns(liveStart + 1000), 5800, 6, 1]]), 0);
     await vi.waitFor(() => expect(manual.feed.between(liveStart, liveStart + 5000)).toHaveLength(1));
     expect(rows(manual.feed, liveStart, liveStart + 5000), 'under the Low cut the newest day has').toEqual([
-      { Size: '6 contracts', Price: expect.any(String), Time: expect.any(String), Filled: '1 fill' },
+      [expect.stringMatching(/ 6 @ /), '1 fill'],
     ]);
     expect(rows(manual.feed, T0 - 3_600_000, T0), 'a read-back bubble the runtime left untiered').toEqual([
-      { Size: '9 contracts', Price: expect.any(String), Time: expect.any(String), Filled: '1 fill' },
+      [expect.stringMatching(/ 9 @ /), '1 fill'],
     ]);
     manual.release();
     release();
@@ -1603,25 +1603,12 @@ describe('big trades as charts read them', () => {
     const big = bigTrades(flow, size(5));
     await vi.waitFor(() => expect(big.feed.between(T0 - 3_600_000, T0)).toHaveLength(2));
     const markers = big.feed.between(T0 - 3_600_000, T0).map((trade) => ({ x: 0, y: 0, r: 8, opacity: 0.4, trade }));
-    expect(bubbleTipCards(markers, 2).map((c) => [c.sideWords, c.rows.filter(([k]) => k !== 'Time')])).toEqual([
+    expect(bubbleTipCards(markers, 2).map((c) => [c.headline, c.detail.slice(1)])).toEqual([
       [
-        'Buy · lifted the offer',
-        [
-          ['Size', '492 contracts'],
-          ['Price', '20,627.75–20,643.00 · 9 levels'],
-          ['Filled', '18 fills in 1.2 s'],
-          ['Tier', 'High'],
-        ],
+        ['Buy 492 @ 20,627.75–20,643.00', '9 levels'],
+        ['18 fills in 1.2 s', 'High tier'],
       ],
-      [
-        'Sell · hit the bid',
-        [
-          ['Size', '60 contracts'],
-          ['Price', '20,640.00'],
-          ['Filled', '3 fills in 40 ms'],
-          ['Tier', 'Low'],
-        ],
-      ],
+      [['Sell 60 @ 20,640.00'], ['3 fills in 40 ms', 'Low tier']],
     ]);
     big.release();
     release();
