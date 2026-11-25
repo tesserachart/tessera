@@ -1,49 +1,107 @@
+import type { AgentSessionSummary, RunDigest, Study } from '@tessera/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  blankStudy,
-  coverageInput,
-  coverageLines,
-  dataWords,
-  hhmm,
-  parseLevels,
-  dateValue,
-  fromDateValue,
-  moneyCi,
-  pctCi,
-  placeboLine,
-  stateWord,
-  studyProblem,
-} from '../src/areas/research/model.ts';
-import { candlesInput, curveOf, inCandles, sessionSharpe } from '../src/areas/research/tester.ts';
+  dayWords,
+  entrySource,
+  entryTotals,
+  groupByDay,
+  ledgerEntries,
+  matching,
+  onShelf,
+  pickEntry,
+  sourceWords,
+} from '../src/areas/research/ledger.ts';
+import { coverageLines, dateValue, moneyCi, pctCi, placeboLine, setupRows } from '../src/areas/research/model.ts';
+import { SAMPLE_DIGEST, SAMPLE_STUDIES } from '../src/areas/research/samples.ts';
+import { curveOf, sessionSharpe } from '../src/areas/research/tester.ts';
 import { putRuntimeSettings } from '../src/state/runtimeSettings.ts';
 
 afterEach(() => putRuntimeSettings({ 'display.timeZone': null }, false));
 
-describe('a study’s level inputs and window', () => {
-  it('levels are named vendor.level, the window HH:MM to HH:MM', () => {
-    expect(parseLevels('zeta.major_long_gamma, zeta.zero_gamma@NDX  ')).toEqual([
-      'zeta.major_long_gamma',
-      'zeta.zero_gamma@NDX',
-    ]);
-    expect(hhmm('9:30')).toBe('09:30');
-    expect(hhmm('24:00')).toBeNull();
-    const s = { ...blankStudy('NQ'), name: 'MLG', hypothesis: 'h' };
-    expect(studyProblem({ ...s, data: { ...s.data, levels: ['major_long_gamma'] } })).toBe(
-      'Name levels as vendor.level, as Level history names them',
-    );
-    expect(studyProblem({ ...s, data: { ...s.data, window: { start: '11:30', end: '09:30' } } })).toBe(
-      'The window needs a start before its end (HH:MM)',
-    );
-    const d = { ...s.data, levels: ['zeta.major_long_gamma'], window: { start: '09:30', end: '11:30' } };
-    expect(studyProblem({ ...s, data: d })).toBeNull();
-    expect(dataWords(d, 'NQ Z6')).toBe(
-      'NQ Z6 · 5m · all served history · 09:30–11:30 New York · zeta.major_long_gamma',
-    );
-    expect(dataWords({ ...d, window: { ...d.window, timeZone: 'Asia/Kolkata' } }, 'NQ Z6')).toBe(
-      'NQ Z6 · 5m · all served history · 09:30–11:30 Kolkata · zeta.major_long_gamma',
-    );
+const DAY = 86_400_000_000_000;
+const OCT_2 = Date.parse('2026-10-02T18:00:00Z') * 1e6;
+const chat = (sessionId: string) => ({ kind: 'agent' as const, sessionId, provider: 'claude-code' });
+const [orb, gap, flip] = SAMPLE_STUDIES as [Study, Study, Study];
+const run = (id: string, study: Study, at: number, more: Partial<RunDigest> = {}): RunDigest => ({
+  ...SAMPLE_DIGEST,
+  runId: id,
+  studyId: study.id,
+  at,
+  ...more,
+});
+const sessions = [{ id: 'ses-1', title: 'Opening range ideas' }] as unknown as AgentSessionSummary[];
+
+describe('the research ledger', () => {
+  const runs = [
+    run('r-old', orb, OCT_2 - DAY, { origin: { kind: 'user' } }),
+    run('r-new', orb, OCT_2, { origin: chat('ses-1') }),
+    run('r-gap', gap, OCT_2 - 2 * DAY, { archivedAt: OCT_2 }),
+    run('r-gone', { ...orb, id: 'deleted-study' }, OCT_2),
+  ];
+  const entries = ledgerEntries([orb, gap, flip], runs);
+
+  it('lists every run newest first under its idea, and ideas not run yet first', () => {
+    expect(entries.map((e) => e.id)).toEqual([flip.id, 'r-new', 'r-old', 'r-gap']);
+    expect(entries[1]!.study.name).toBe(orb.name);
   });
 
+  it('keeps archived runs on their own shelf', () => {
+    expect(onShelf(entries, 'active').map((e) => e.id)).toEqual([flip.id, 'r-new', 'r-old']);
+    expect(onShelf(entries, 'archived').map((e) => e.id)).toEqual(['r-gap']);
+  });
+
+  it('says which chat a run came from, else the chat its idea came from', () => {
+    const [, fresh, old] = entries as [never, (typeof entries)[0], (typeof entries)[0]];
+    expect(sourceWords(entrySource(fresh, sessions))).toBe('Opening range ideas');
+    expect(sourceWords(entrySource(old, sessions))).toBe('You');
+    const fromChat = ledgerEntries(
+      [{ ...orb, origin: chat('ses-1') }],
+      [run('r', orb, OCT_2, { origin: { kind: 'user' } })],
+    );
+    expect(entrySource(fromChat[0]!, sessions)).toEqual({
+      kind: 'chat',
+      sessionId: 'ses-1',
+      title: 'Opening range ideas',
+      gone: false,
+    });
+    const gone = ledgerEntries([orb], [run('r', orb, OCT_2, { origin: chat('ses-9') })]);
+    expect(sourceWords(entrySource(gone[0]!, sessions))).toBe('A deleted chat');
+    expect(sourceWords(entrySource(gone[0]!, null))).toBe('An analyst chat');
+  });
+
+  it('opens a study on its newest run', () => {
+    expect(pickEntry(entries, orb.id)?.id).toBe('r-new');
+    expect(pickEntry(entries, 'r-old')?.id).toBe('r-old');
+    expect(pickEntry(entries, 'nowhere')).toBeNull();
+  });
+
+  it('finds runs by every word typed, across idea, market, verdict and chat', () => {
+    expect(matching(entries, 'opening ideas', sessions).map((e) => e.id)).toEqual(['r-new']);
+    expect(matching(entries, 'gap lead', sessions).map((e) => e.id)).toEqual(['r-gap']);
+    expect(matching(entries, '  ', sessions)).toHaveLength(entries.length);
+  });
+
+  it('adds development and later into the run’s totals, and groups runs by day', () => {
+    const base = SAMPLE_DIGEST.cases[0]!;
+    expect(entryTotals(entries[1]!)).toEqual({
+      trades: base.development.trades + base.later.trades,
+      net: base.development.netPnl + base.later.netPnl,
+    });
+    expect(entryTotals(entries[0]!)).toBeNull();
+    const days = groupByDay(entries, 'America/New_York');
+    expect(days.map((d) => [d.day, d.entries.length])).toEqual([
+      [null, 1],
+      ['2026-10-02', 1],
+      ['2026-10-01', 1],
+      ['2026-09-30', 1],
+    ]);
+    expect(dayWords('2026-10-02', '2026-10-02')).toBe('Today');
+    expect(dayWords('2026-10-01', '2026-10-02')).toBe('Thu 1 Oct');
+    expect(dayWords(null, '2026-10-02')).toBe('Not run yet');
+  });
+});
+
+describe('a study’s level inputs and window', () => {
   it('a run says what its levels covered and what was left out', () => {
     expect(
       coverageLines({
@@ -75,12 +133,6 @@ describe('a study’s level inputs and window', () => {
 });
 
 describe('the Research area’s words', () => {
-  it('a study reads its state, or its verdict once run, with its generation', () => {
-    expect(stateWord({ state: 'draft', lastVerdict: null, generation: 1 })).toBe('Draft');
-    expect(stateWord({ state: 'frozen', lastVerdict: null, generation: 1 })).toBe('Frozen');
-    expect(stateWord({ state: 'recorded', lastVerdict: 'lead', generation: 3 })).toBe('Lead · gen 3');
-  });
-
   it('measurements carry their intervals', () => {
     expect(pctCi(0.5242, [0.47, 0.576])).toBe('52.4% (47.0–57.6)');
     expect(moneyCi(12.4, [-3.1, 27.9])).toBe('$12.40 (−$3.10 to $27.90)');
@@ -90,32 +142,34 @@ describe('the Research area’s words', () => {
     );
   });
 
-  it('a new study needs its name and its hypothesis before it can be saved', () => {
-    const s = blankStudy('NQ');
-    expect(studyProblem(s)).toBe('Name the study');
-    expect(studyProblem({ ...s, name: 'ORB' })).toBe('Register the hypothesis before it runs');
-    expect(studyProblem({ ...s, name: 'ORB', hypothesis: 'h' })).toBeNull();
-  });
-
   it('dates are days in the trader’s time zone', () => {
     putRuntimeSettings({ 'display.timeZone': 'Asia/Tokyo' }, false);
-    const ns = fromDateValue('2026-10-02')!;
-    expect(new Date(ns / 1e6).toISOString()).toBe('2026-10-01T15:00:00.000Z');
-    expect(dateValue(ns)).toBe('2026-10-02');
-    expect(new Date(fromDateValue('2026-10-02', true)! / 1e6).toISOString()).toBe('2026-10-02T14:59:59.999Z');
-    putRuntimeSettings({ 'display.timeZone': 'Asia/Kolkata' }, false);
-    expect(new Date(fromDateValue('2026-10-02')! / 1e6).toISOString()).toBe('2026-10-01T18:30:00.000Z');
-    putRuntimeSettings({ 'display.timeZone': 'Europe/London' }, false);
-    expect(new Date(fromDateValue('2026-10-25', true)! / 1e6).toISOString()).toBe('2026-10-25T23:59:59.999Z');
-    expect(dateValue(fromDateValue('2026-01-15', true))).toBe('2026-01-15');
-    expect(fromDateValue('')).toBeNull();
+    expect(dateValue(Date.parse('2026-10-01T15:00:00Z') * 1e6)).toBe('2026-10-02');
+    putRuntimeSettings({ 'display.timeZone': 'America/New_York' }, false);
+    expect(dateValue(Date.parse('2026-10-01T15:00:00Z') * 1e6)).toBe('2026-10-01');
+    expect(dateValue(null)).toBe('');
   });
 
-  it('asks coverage for the exchange’s trade dates, whatever the trader’s zone', () => {
-    putRuntimeSettings({ 'display.timeZone': 'Asia/Tokyo' }, false);
-    const s = blankStudy('NQ');
-    const run = { from: fromDateValue('2026-10-07')!, to: fromDateValue('2026-10-09', true)! };
-    expect(coverageInput(s, run)).toMatchObject({ from: '2026-10-06', to: '2026-10-09' });
+  it('reads a study’s setup in plain words', () => {
+    const study: Study = {
+      ...orb,
+      data: { ...orb.data, rthOnly: true, window: { start: '09:30', end: '12:00' }, levels: ['zeta.zero_gamma'] },
+      execution: { ...orb.execution, stopTicks: 60, targetTicks: null },
+    };
+    const rows = Object.fromEntries(setupRows(study, 'NQ Z6').map((r) => [r.label, r.value]));
+    expect(rows).toMatchObject({
+      Market: 'NQ Z6 · 5m · RTH only',
+      History: 'All served history',
+      Window: '09:30–12:00 New York',
+      Levels: 'zeta.zero_gamma',
+      Rules: 'Breakout of 20 bars, held 12',
+      Stop: '60 ticks',
+      Target: 'None',
+      'Fill cases': 'base 1t · stressed 2t',
+    });
+    expect(rows['Pass rules']).toBe(
+      'At least 100 later trades · Later mean trade’s interval above zero · Each half of the later sessions positive · Development positive',
+    );
   });
 });
 
@@ -137,20 +191,5 @@ describe('the strategy tester measures', () => {
       { time: 4, pnl: -10, drawdown: -40 },
       { time: 5, pnl: 40, drawdown: 0 },
     ]);
-  });
-
-  it('charts the whole run when it fits, else a window around the picked trade', () => {
-    const study = blankStudy('NQ');
-    const step = 300e9;
-    const short = { from: 0, to: 100 * step };
-    expect(candlesInput(study, short, null)).toMatchObject({ from: 0, to: 101 * step, tf: '5m', session: 'all' });
-    const long = { from: 0, to: 20_000 * step };
-    const trade = { entryTime: 10_000 * step, exitTime: 10_010 * step };
-    const around = candlesInput(study, long, trade);
-    expect(around.to! - around.from!).toBe(2000 * step);
-    expect(inCandles(around, trade)).toBe(true);
-    expect(inCandles(around, { entryTime: 0, exitTime: step })).toBe(false);
-    const last = candlesInput(study, long, { entryTime: 20_000 * step, exitTime: 20_000 * step });
-    expect(last.to).toBe(20_001 * step);
   });
 });

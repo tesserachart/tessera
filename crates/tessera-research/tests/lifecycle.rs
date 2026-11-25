@@ -6,9 +6,10 @@ use serde_json::json;
 use tessera_core::capabilities::MarketCapabilities;
 use tessera_core::clock::ManualClock;
 use tessera_core::health::ProviderHealth;
+use tessera_core::ids::SessionId;
 use tessera_core::instrument::{AssetClass, ContractSpec, Instrument};
 use tessera_core::market::{Quote, Trade};
-use tessera_core::{InstrumentId, Timeframe, Timestamp};
+use tessera_core::{InstrumentId, Origin, Timeframe, Timestamp};
 use tessera_market::{
     BarSeries, BarsRequest, LiveBar, MarketDataProvider, MarketError, MarketRouter, MarketStream,
     MockConfig, MockMarket,
@@ -84,6 +85,7 @@ struct H {
     store: Store,
     studies: Arc<Studies>,
     market: Arc<Gated>,
+    clock: Arc<ManualClock>,
 }
 
 fn harness() -> H {
@@ -102,11 +104,12 @@ fn harness() -> H {
         .add(Arc::clone(&market) as Arc<dyn MarketDataProvider>)
         .unwrap();
     let store = Store::open_in_memory().unwrap();
-    let studies = Arc::new(Studies::new(store.clone(), router, clock));
+    let studies = Arc::new(Studies::new(store.clone(), router, clock.clone()));
     H {
         store,
         studies,
         market,
+        clock,
     }
 }
 
@@ -134,7 +137,7 @@ async fn a_save_made_while_a_study_runs_is_kept() {
     h.market.held.store(true, Ordering::SeqCst);
     let run = {
         let (studies, id) = (Arc::clone(&h.studies), saved.id.clone());
-        tokio::spawn(async move { studies.run(&id).await })
+        tokio::spawn(async move { studies.run(&id, tessera_core::Origin::User).await })
     };
     h.market.entered.notified().await;
     let edited = Study {
@@ -160,7 +163,7 @@ async fn a_study_deleted_while_it_runs_stays_deleted() {
     h.market.held.store(true, Ordering::SeqCst);
     let run = {
         let (studies, id) = (Arc::clone(&h.studies), saved.id.clone());
-        tokio::spawn(async move { studies.run(&id).await })
+        tokio::spawn(async move { studies.run(&id, tessera_core::Origin::User).await })
     };
     h.market.entered.notified().await;
     assert!(h.studies.delete(&saved.id).unwrap());
@@ -177,7 +180,11 @@ async fn a_run_records_its_verdict_on_the_study_it_ran() {
     let h = harness();
     let saved = h.studies.save(draft("first")).await.unwrap();
     let frozen = h.studies.freeze(&saved.id).unwrap();
-    let run = h.studies.run(&saved.id).await.unwrap();
+    let run = h
+        .studies
+        .run(&saved.id, tessera_core::Origin::User)
+        .await
+        .unwrap();
     let now = h.studies.get(&saved.id).unwrap();
     assert_eq!(now.state, ExperimentState::Recorded);
     assert_eq!(now.last_verdict, Some(run.evaluation.verdict));
@@ -225,4 +232,89 @@ async fn freezing_a_draft_drops_its_exploratory_verdict() {
     assert_eq!(frozen.state, ExperimentState::Frozen);
     assert_eq!(frozen.last_verdict, None);
     assert_eq!(h.studies.get(&saved.id).unwrap().last_verdict, None);
+}
+
+fn chat(id: &str) -> Origin {
+    Origin::Agent {
+        session_id: SessionId::new(id),
+        provider: "codex".into(),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_run_keeps_the_chat_that_ran_it_and_is_archived_restored_and_deleted_alone() {
+    let h = harness();
+    let saved = h.studies.save(draft("first")).await.unwrap();
+    let run = h.studies.run(&saved.id, chat("ses-7")).await.unwrap();
+
+    let listed = h.studies.all_runs().unwrap();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].origin, Some(chat("ses-7")));
+    assert_eq!(listed[0].archived_at, None);
+
+    let archived = h.studies.archive_run(&run.id, true).unwrap();
+    let when = archived.archived_at.expect("archived");
+    h.clock.advance(60_000_000_000);
+    let again = h.studies.archive_run(&run.id, true).unwrap();
+    assert_eq!(again.archived_at, Some(when));
+    assert_eq!(h.studies.all_runs().unwrap()[0].archived_at, Some(when));
+
+    let restored = h.studies.archive_run(&run.id, false).unwrap();
+    assert_eq!(restored.archived_at, None);
+
+    assert!(h.studies.delete_run(&run.id).unwrap());
+    assert!(!h.studies.delete_run(&run.id).unwrap());
+    assert!(h.studies.all_runs().unwrap().is_empty());
+    assert_eq!(h.studies.get(&saved.id).unwrap().id, saved.id);
+    assert!(h.studies.archive_run(&run.id, true).is_err());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn every_study_s_runs_list_together_newest_first() {
+    let h = harness();
+    let one = h.studies.save(draft("one")).await.unwrap();
+    let two = h.studies.save(draft("two")).await.unwrap();
+    let first = h.studies.run(&one.id, Origin::User).await.unwrap();
+    h.clock.advance(60_000_000_000);
+    let second = h.studies.run(&two.id, chat("ses-2")).await.unwrap();
+    h.clock.advance(60_000_000_000);
+    let third = h.studies.run(&one.id, chat("ses-3")).await.unwrap();
+    h.studies.archive_run(&first.id, true).unwrap();
+
+    let ids: Vec<_> = h
+        .studies
+        .all_runs()
+        .unwrap()
+        .into_iter()
+        .map(|r| r.id)
+        .collect();
+    assert_eq!(ids, [third.id.clone(), second.id, first.id.clone()]);
+    let of_one: Vec<_> = h
+        .studies
+        .runs(&one.id)
+        .unwrap()
+        .into_iter()
+        .map(|r| r.id)
+        .collect();
+    assert_eq!(of_one, [third.id, first.id]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_entry_that_cannot_be_read_leaves_the_rest_of_the_ledger_readable() {
+    let h = harness();
+    let saved = h.studies.save(draft("kept")).await.unwrap();
+    h.studies.run(&saved.id, Origin::User).await.unwrap();
+    let broken = json!({"id": "x", "state": "nonsense"});
+    h.store
+        .documents("research.study")
+        .put("study-x", None, &broken, Timestamp(1))
+        .unwrap();
+    h.store
+        .documents("research.run")
+        .put("run-x", Some(&saved.id), &broken, Timestamp(1))
+        .unwrap();
+
+    assert_eq!(h.studies.list().unwrap().len(), 1);
+    assert_eq!(h.studies.all_runs().unwrap().len(), 1);
+    assert_eq!(h.studies.runs(&saved.id).unwrap().len(), 1);
 }

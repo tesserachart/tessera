@@ -2,6 +2,7 @@
 import type { Execution } from "./Execution";
 import type { ExperimentState } from "./ExperimentState";
 import type { Gates } from "./Gates";
+import type { Origin } from "./Origin";
 import type { Strategy } from "./Strategy";
 import type { StudyData } from "./StudyData";
 import type { Verdict } from "./Verdict";
@@ -71,6 +72,6 @@ frozenAt: number | null,
  */
 lastVerdict: Verdict | null, 
 /**
- * Who registered it (`user`, or the analyst session).
+ * Who registered it: the user, or the analyst chat (its session) that asked for it.
  */
-author: string | null, };
+origin: Origin | null, };

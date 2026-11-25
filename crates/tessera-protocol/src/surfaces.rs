@@ -71,8 +71,8 @@ pub struct UiShowAreaInput {
     /// form, `connections.exchanges` the section by exchange.
     /// `markets`: an instrument id or symbol, selected (its detail shown). `agents`: a session id
     /// (agent.list_sessions). `indicators`: an indicator id (a built-in kind such as `ema`, or a custom indicator's id
-    /// from indicators.list). `research`: a study id (research.list_studies). Not for the desk, the profile, copy or
-    /// the journal (`journal` says where the journal opens).
+    /// from indicators.list). `research`: a run id (research.list_runs), or a study id (research.list_studies) for
+    /// its newest run. Not for the desk, the profile, copy or the journal (`journal` says where the journal opens).
     #[serde(default)]
     pub item: Option<String>,
     /// `journal`: where the Journal opens and what it shows (only the fields given change).

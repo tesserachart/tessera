@@ -3,6 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tessera_core::{Origin, Timestamp};
 use tessera_protocol::tools::RiskTier;
 use tessera_tools::{Tool, ToolCtx, ToolError, ToolMeta};
 use ts_rs::TS;
@@ -75,6 +76,24 @@ pub struct RunIdInput {
     pub run_id: String,
 }
 
+/// `research.archive_run` input.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ArchiveRunInput {
+    /// The run.
+    pub run_id: String,
+    /// True archives it; false brings it back to the list.
+    pub archived: bool,
+}
+
+/// `research.list_runs` output.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RunList {
+    /// Every run of every study, newest first, archived ones included and marked.
+    pub runs: Vec<RunDigest>,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct NoInput {}
@@ -134,6 +153,18 @@ pub struct SplitDigest {
 pub struct RunDigest {
     /// The run's id.
     pub run_id: String,
+    /// The study it ran.
+    pub study_id: String,
+    /// The study's generation it ran.
+    pub generation: u32,
+    /// When it ran.
+    #[ts(type = "number")]
+    pub at: Timestamp,
+    /// Who ran it: the user, or the analyst chat (its session).
+    pub origin: Option<Origin>,
+    /// When it was archived (none: in the list).
+    #[ts(type = "number | null")]
+    pub archived_at: Option<Timestamp>,
     /// Run on a draft: exploratory, not evidence.
     pub exploratory: bool,
     /// The study's manifest hash it ran (none: exploratory, on a draft).
@@ -171,6 +202,11 @@ impl From<&StudyRun> for RunDigest {
         };
         Self {
             run_id: r.id.clone(),
+            study_id: r.study_id.clone(),
+            generation: r.generation,
+            at: r.at,
+            origin: r.origin.clone(),
+            archived_at: r.archived_at,
             exploratory: r.exploratory,
             manifest_hash: r.manifest_hash.clone(),
             verdict: r.evaluation.verdict,
@@ -295,7 +331,7 @@ impl Tool for SaveStudy {
             manifest_hash: None,
             frozen_at: None,
             last_verdict: None,
-            author: Some(ctx.origin.to_string()),
+            origin: Some(ctx.origin.clone()),
         };
         self.0.save(study).await.map_err(failed)
     }
@@ -337,8 +373,12 @@ impl Tool for RunStudy {
             .timeout_ms(180_000)
     }
 
-    async fn call(&self, _ctx: &ToolCtx, input: StudyIdInput) -> Result<RunDigest, ToolError> {
-        let run = self.0.run(&input.id).await.map_err(failed)?;
+    async fn call(&self, ctx: &ToolCtx, input: StudyIdInput) -> Result<RunDigest, ToolError> {
+        let run = self
+            .0
+            .run(&input.id, ctx.origin.clone())
+            .await
+            .map_err(failed)?;
         Ok(RunDigest::from(&run))
     }
 
@@ -362,6 +402,74 @@ impl Tool for GetRun {
 
     async fn call(&self, _ctx: &ToolCtx, input: RunIdInput) -> Result<StudyRun, ToolError> {
         self.0.run_of(&input.run_id).map_err(failed)
+    }
+}
+
+struct ListRuns(Arc<Studies>);
+
+#[async_trait]
+impl Tool for ListRuns {
+    type Input = NoInput;
+    type Output = RunList;
+
+    fn meta(&self) -> ToolMeta {
+        ToolMeta::new("research.list_runs", "List research runs", RiskTier::Read)
+            .description("Every run of every study, newest first, in brief: its study, when it ran, who ran it (the user or an analyst chat's session), whether it is archived, its verdict and each fill case's development and later measurements. research.get_run has a run's trades and curves.")
+            .activity("Reading the research runs")
+    }
+
+    async fn call(&self, _ctx: &ToolCtx, _input: NoInput) -> Result<RunList, ToolError> {
+        Ok(RunList {
+            runs: self
+                .0
+                .all_runs()
+                .map_err(failed)?
+                .iter()
+                .map(RunDigest::from)
+                .collect(),
+        })
+    }
+}
+
+struct ArchiveRun(Arc<Studies>);
+
+#[async_trait]
+impl Tool for ArchiveRun {
+    type Input = ArchiveRunInput;
+    type Output = RunDigest;
+
+    fn meta(&self) -> ToolMeta {
+        ToolMeta::new("research.archive_run", "Archive a research run", RiskTier::Modify)
+            .description("Archives a run (archived: true), keeping it and its trial but taking it out of the Research list, or brings it back (archived: false).")
+            .activity("Archiving a run")
+    }
+
+    async fn call(&self, _ctx: &ToolCtx, input: ArchiveRunInput) -> Result<RunDigest, ToolError> {
+        let run = self
+            .0
+            .archive_run(&input.run_id, input.archived)
+            .map_err(failed)?;
+        Ok(RunDigest::from(&run))
+    }
+}
+
+struct DeleteRun(Arc<Studies>);
+
+#[async_trait]
+impl Tool for DeleteRun {
+    type Input = RunIdInput;
+    type Output = Deleted;
+
+    fn meta(&self) -> ToolMeta {
+        ToolMeta::new("research.delete_run", "Delete a research run", RiskTier::Modify)
+            .description("Removes one run from the ledger; its study stays. Its trial stays counted in the family's research budget.")
+            .activity("Deleting a run")
+    }
+
+    async fn call(&self, _ctx: &ToolCtx, input: RunIdInput) -> Result<Deleted, ToolError> {
+        Ok(Deleted {
+            deleted: self.0.delete_run(&input.run_id).map_err(failed)?,
+        })
     }
 }
 
@@ -403,7 +511,7 @@ impl Tool for StudyTrades {
 
     async fn call(&self, ctx: &ToolCtx, input: StudyTradesInput) -> Result<Study, ToolError> {
         let mut study = replay_study(&input).map_err(failed)?;
-        study.author = Some(ctx.origin.to_string());
+        study.origin = Some(ctx.origin.clone());
         self.0.save(study).await.map_err(failed)
     }
 
@@ -442,6 +550,9 @@ pub fn register(
     r.register(FreezeStudy(Arc::clone(studies)))?;
     r.register(RunStudy(Arc::clone(studies)))?;
     r.register(GetRun(Arc::clone(studies)))?;
+    r.register(ListRuns(Arc::clone(studies)))?;
+    r.register(ArchiveRun(Arc::clone(studies)))?;
+    r.register(DeleteRun(Arc::clone(studies)))?;
     r.register(SignalOf(Arc::clone(studies)))?;
     r.register(StudyTrades(Arc::clone(studies)))?;
     r.register(DeleteStudy(Arc::clone(studies)))
@@ -454,6 +565,9 @@ pub fn ts_exports(t: tessera_host::TsExports) -> tessera_host::TsExports {
         .tool::<StudyIdInput, Study>("research.freeze_study")
         .tool::<StudyIdInput, RunDigest>("research.run_study")
         .tool::<RunIdInput, StudyRun>("research.get_run")
+        .tool::<NoInput, RunList>("research.list_runs")
+        .tool::<ArchiveRunInput, RunDigest>("research.archive_run")
+        .tool::<RunIdInput, Deleted>("research.delete_run")
         .tool::<StudyIdInput, StudySignal>("research.study_signal")
         .tool::<StudyTradesInput, Study>("research.study_trades")
         .tool::<StudyIdInput, Deleted>("research.delete_study")

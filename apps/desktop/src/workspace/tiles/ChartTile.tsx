@@ -36,6 +36,7 @@ import { hoursOf, useChartSession } from '../../chart/hours.ts';
 import { frontMonthsNote } from '../../market/frontMonths.ts';
 import { displaySymbol, printBarsShort, isReplay } from '../../market/instruments.ts';
 import { ReplayBar } from '../../chart/replay/ReplayBar.tsx';
+import { ChartLinkedTrade } from '../../chart/ChartLinkedTrade.tsx';
 import { ReplayPicker } from '../../chart/replay/ReplayPicker.tsx';
 import { pricesStale, useFeeds } from '../../shell/freshness.ts';
 import { chartTypeOf, useChartState, useStageView } from '../../state/layouts.ts';
@@ -241,6 +242,7 @@ export function ChartTile({ params, api }: IDockviewPanelProps<ChartTileParams>)
             tick={spec?.tickSize ?? 10 ** -precision}
             target={{ layoutId, tileId }}
           />
+          <ChartLinkedTrade chart={handle?.chart ?? null} ids={ids} target={{ layoutId, tileId }} />
           {active ? (
             <DrawingToolbar
               chart={{ layoutId, tileId }}

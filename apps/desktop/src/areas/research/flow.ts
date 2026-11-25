@@ -1,19 +1,26 @@
 import { formatMoney } from '@tessera/ui';
-import type {
-  JournalTrade,
-  ReplayTrade,
-  SessionRunnerSetting,
-  Setup,
-  Study,
-  TradingSessionStatus,
+import {
+  timeframeMs,
+  type BacktestTrade,
+  type JournalTrade,
+  type ReplayTrade,
+  type SessionRunnerSetting,
+  type Setup,
+  type Study,
+  type TradingSessionStatus,
 } from '@tessera/protocol';
+import { linkTrade, tradeRange } from '../../chart/linkedTrade.ts';
+import { requestViewport } from '../../chart/viewportRequests.ts';
+import { read } from '../../app/store.ts';
+import { layoutsStore } from '../../state/layouts.ts';
+import { activeChartTarget, setChartTimeframe, showOnChart } from '../../workspace/controller.ts';
 import { SESSION_RUNNER_KEY, runnerValue, sessionRunning, standingWords } from '../../analyst/tradingSessions.ts';
 import { refreshTools, runTool } from '../../app/tools.ts';
 import { setRuntimeSetting } from '../../state/runtimeSettings.ts';
 import { pct, plural, tradeClosed } from '../journal/model/format.ts';
 import { setJournal } from '../journal/store.ts';
 import { showArea } from '../store.ts';
-import { selectStudy } from './selection.ts';
+import { selectStudy, showRunTrade } from './selection.ts';
 
 const PAGE = 2000;
 const STUDY_TOOLS = ['research.list_studies', 'research.get_study'];
@@ -41,6 +48,33 @@ export function setupOfStudy(setups: readonly Setup[], study: Pick<Study, 'id'>)
 export function openStudy(id: string): void {
   selectStudy(id);
   showArea('research');
+}
+
+export async function showTradeOnChart(
+  study: Pick<Study, 'name' | 'data'>,
+  runId: string,
+  n: number,
+  trade: BacktestTrade,
+): Promise<void> {
+  showArea('desk');
+  const target = activeChartTarget();
+  if (!target) return;
+  const { instrument, tf } = study.data;
+  const chart = read(layoutsStore).layouts[target.layoutId]?.charts[target.tileId];
+  if (chart?.instrument !== instrument) await showOnChart(instrument, target);
+  const step = timeframeMs(tf);
+  if (!chart || chart.printBars || timeframeMs(chart.timeframe) > step) await setChartTimeframe(tf, target);
+  linkTrade({
+    label: `Trade ${String(n)} · ${study.name}`,
+    instrument,
+    trade,
+    target,
+    back: () => {
+      showRunTrade(runId, n);
+      showArea('research');
+    },
+  });
+  requestViewport(target, tradeRange(trade, step * 1e6));
 }
 
 export function openSetupTrades(setup: Pick<Setup, 'id'>): void {

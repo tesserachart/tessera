@@ -54,7 +54,7 @@ for (const viewport of [
         } else if (area.name === 'Indicators') {
           await expect(page.getByRole('region', 'Inputs')).toBeVisible();
         } else if (area.name === 'Research') {
-          await expect(page.getByRole('button', 'New study')).toBeVisible();
+          await expect(page.getByRole('button', 'Ask the analyst to test an idea')).toBeVisible();
         } else if (area.name === 'Journal') {
           await expect(page.getByRole('heading', 'Dashboard')).toBeVisible();
         } else {
@@ -244,9 +244,8 @@ for (const viewport of [
 
         await nav.getByRole('button', 'Research').tap();
         const research = screen.getByRole('region', 'Research');
-        await research.getByRole('button', 'New study').tap();
-        await expect(research.getByRole('textbox', 'Hypothesis')).toBeVisible();
-        await shot('research-form');
+        await expect(research.getByText('No research yet.')).toBeVisible();
+        await shot('research-empty');
 
         await nav.getByRole('button', 'Indicators').tap();
         const indicators = screen.getByRole('region', 'Indicators');

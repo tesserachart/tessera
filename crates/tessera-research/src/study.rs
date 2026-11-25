@@ -10,7 +10,7 @@ use tessera_core::ids::CallId;
 use tessera_core::initial_balance::{MINUTES_SETTING, minutes_setting};
 use tessera_core::instrument::ContractSpec;
 use tessera_core::session::SessionCalendar;
-use tessera_core::{InstrumentId, Timeframe, Timestamp};
+use tessera_core::{InstrumentId, Origin, Timeframe, Timestamp};
 use tessera_market::saved::{Contract, SavedTrades};
 use tessera_market::{BarsRequest, MarketDataProvider, MarketRouter};
 use tessera_store::{Docs, Store, StoreError};
@@ -189,9 +189,9 @@ pub struct Study {
     /// The latest run's verdict.
     #[serde(default)]
     pub last_verdict: Option<Verdict>,
-    /// Who registered it (`user`, or the analyst session).
+    /// Who registered it: the user, or the analyst chat (its session) that asked for it.
     #[serde(default)]
-    pub author: Option<String>,
+    pub origin: Option<Origin>,
 }
 
 fn placebo() -> u32 {
@@ -231,7 +231,7 @@ impl Study {
 
     fn revise(&self, mut next: Study) -> Study {
         next.generation = self.generation;
-        next.author = self.author.clone().or(next.author);
+        next.origin = self.origin.clone().or(next.origin);
         if self.state != ExperimentState::Draft {
             if self.manifest() == next.manifest()
                 && self.name == next.name
@@ -330,6 +330,13 @@ pub struct StudyRun {
     /// What its level inputs covered, and the sessions left out for lack of them.
     #[serde(default)]
     pub levels: Option<LevelCoverage>,
+    /// Who ran it: the user, or the analyst chat (its session).
+    #[serde(default)]
+    pub origin: Option<Origin>,
+    /// When it was archived: kept, but out of the Research list until restored.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub archived_at: Option<Timestamp>,
 }
 
 /// `research.study_signal` output: where a study's strategy stands on the latest closed bars.
@@ -467,6 +474,18 @@ pub struct Frame {
     pub levels: Vec<LevelColumn>,
 }
 
+fn readable<T: serde::de::DeserializeOwned>(docs: Vec<tessera_store::Document>) -> Vec<T> {
+    docs.into_iter()
+        .filter_map(|d| match serde_json::from_value(d.body) {
+            Ok(v) => Some(v),
+            Err(e) => {
+                tracing::warn!(id = %d.id, error = %e, "a research ledger entry could not be read and is left out");
+                None
+            }
+        })
+        .collect()
+}
+
 pub struct Studies {
     store: Store,
     market: Arc<MarketRouter>,
@@ -551,13 +570,12 @@ impl Studies {
     }
 
     pub fn list(&self) -> Result<Vec<Study>, String> {
-        self.store
-            .documents(STUDIES)
-            .list(None, 500)
-            .map_err(store_err)?
-            .into_iter()
-            .map(|d| serde_json::from_value(d.body).map_err(|e| e.to_string()))
-            .collect()
+        Ok(readable(
+            self.store
+                .documents(STUDIES)
+                .list(None, 500)
+                .map_err(store_err)?,
+        ))
     }
 
     fn studies(&self) -> Docs<'_, Study> {
@@ -641,13 +659,41 @@ impl Studies {
     }
 
     pub fn runs(&self, id: &str) -> Result<Vec<StudyRun>, String> {
+        let mut runs: Vec<StudyRun> = readable(
+            self.store
+                .documents(RUNS)
+                .list(Some(id), 200)
+                .map_err(store_err)?,
+        );
+        runs.sort_by_key(|r| std::cmp::Reverse(r.at));
+        Ok(runs)
+    }
+
+    pub fn all_runs(&self) -> Result<Vec<StudyRun>, String> {
+        let mut runs: Vec<StudyRun> = readable(
+            self.store
+                .documents(RUNS)
+                .list(None, 1_000)
+                .map_err(store_err)?,
+        );
+        runs.sort_by_key(|r| std::cmp::Reverse(r.at));
+        Ok(runs)
+    }
+
+    pub fn archive_run(&self, run_id: &str, archived: bool) -> Result<StudyRun, String> {
+        let now = self.clock.now();
         self.store
-            .documents(RUNS)
-            .list(Some(id), 200)
+            .docs::<StudyRun>(RUNS)
+            .change(run_id, now, |r| {
+                r.archived_at = archived.then_some(r.archived_at.unwrap_or(now));
+                Ok::<_, StoreError>(r.clone())
+            })
             .map_err(store_err)?
-            .into_iter()
-            .map(|d| serde_json::from_value(d.body).map_err(|e| e.to_string()))
-            .collect()
+            .ok_or_else(|| format!("no run {run_id}"))
+    }
+
+    pub fn delete_run(&self, run_id: &str) -> Result<bool, String> {
+        self.store.documents(RUNS).delete(run_id).map_err(store_err)
     }
 
     pub fn run_of(&self, run_id: &str) -> Result<StudyRun, String> {
@@ -817,7 +863,7 @@ impl Studies {
         standing_signal(&study, &frame.bars, &signals, &config_of(&study, &spec))
     }
 
-    pub async fn run(&self, id: &str) -> Result<StudyRun, String> {
+    pub async fn run(&self, id: &str, origin: Origin) -> Result<StudyRun, String> {
         let study = self.get(id)?;
         study.validate()?;
         let d = &study.data;
@@ -864,6 +910,8 @@ impl Studies {
             budget,
             evaluation,
             levels: coverage,
+            origin: Some(origin),
+            archived_at: None,
         };
         self.store
             .documents(RUNS)
@@ -1076,7 +1124,7 @@ mod tests {
             manifest_hash: None,
             frozen_at: None,
             last_verdict: None,
-            author: None,
+            origin: None,
         }
     }
 

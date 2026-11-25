@@ -116,12 +116,15 @@ async fn stops_and_targets_resolve_on_saved_prints_and_bars_alone_are_approximat
         manifest_hash: None,
         frozen_at: None,
         last_verdict: None,
-        author: None,
+        origin: None,
     };
     let studies = Studies::new(Store::open_in_memory().unwrap(), Arc::clone(&market), clock)
         .with_prints(saved);
     let saved_study = studies.save(study).await.unwrap();
-    let run = studies.run(&saved_study.id).await.unwrap();
+    let run = studies
+        .run(&saved_study.id, tessera_core::Origin::User)
+        .await
+        .unwrap();
 
     let base = &run.evaluation.cases[0];
     let bracketed: Vec<_> = base

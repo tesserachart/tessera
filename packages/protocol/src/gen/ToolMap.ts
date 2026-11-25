@@ -56,6 +56,7 @@ import type { AlertsPauseInput } from "./AlertsPauseInput";
 import type { AlertsSetDiscordInput } from "./AlertsSetDiscordInput";
 import type { AlertsTestDiscordInput } from "./AlertsTestDiscordInput";
 import type { AlertsUpdateInput } from "./AlertsUpdateInput";
+import type { ArchiveRunInput } from "./ArchiveRunInput";
 import type { AttachmentData } from "./AttachmentData";
 import type { AttachmentInfo } from "./AttachmentInfo";
 import type { BackfillLevelHistoryInput } from "./BackfillLevelHistoryInput";
@@ -312,6 +313,7 @@ import type { RithmicDirectoryOutput } from "./RithmicDirectoryOutput";
 import type { RithmicLoginInput } from "./RithmicLoginInput";
 import type { RunDigest } from "./RunDigest";
 import type { RunIdInput } from "./RunIdInput";
+import type { RunList } from "./RunList";
 import type { SaveChecklistInput } from "./SaveChecklistInput";
 import type { SaveDayInput } from "./SaveDayInput";
 import type { SaveFilterInput } from "./SaveFilterInput";
@@ -843,6 +845,10 @@ export interface ToolMap {
   /** tessera-broker */
   "portfolio.get_risk_status": { input: RiskStatusInput; output: RiskStatusOutput };
   /** tessera-research */
+  "research.archive_run": { input: ArchiveRunInput; output: RunDigest };
+  /** tessera-research */
+  "research.delete_run": { input: RunIdInput; output: Deleted };
+  /** tessera-research */
   "research.delete_study": { input: StudyIdInput; output: Deleted };
   /** tessera-research */
   "research.freeze_study": { input: StudyIdInput; output: Study };
@@ -850,6 +856,8 @@ export interface ToolMap {
   "research.get_run": { input: RunIdInput; output: StudyRun };
   /** tessera-research */
   "research.get_study": { input: StudyIdInput; output: StudyDetail };
+  /** tessera-research */
+  "research.list_runs": { input: NoInput; output: RunList };
   /** tessera-research */
   "research.list_studies": { input: NoInput; output: StudyList };
   /** tessera-research */

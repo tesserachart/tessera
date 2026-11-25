@@ -115,12 +115,6 @@ export function zoneOffsetMs(zone: string, at: number): number {
   return asUtc - Math.floor(at / 1000) * 1000;
 }
 
-export function zonedMidnight(date: string, zone: string): number {
-  const utc = Date.parse(`${date}T00:00:00Z`);
-  const guess = utc - zoneOffsetMs(zone, utc);
-  return utc - zoneOffsetMs(zone, guess);
-}
-
 const ISO_DATE = zonedFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
 export function dateIn(ms: number, zone: string = displayZone()): string {

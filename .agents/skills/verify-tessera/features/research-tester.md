@@ -1,25 +1,28 @@
-# Research results as a strategy tester
+# Research station
 
-A study's latest run reads as a strategy tester in the results pane, beside the study's form: the verdict in plain words, the base case's equity curve with its development and later sessions and its drawdown, development against later side by side with quant stats computed from the run's trades, a per-month breakdown, the pass rules, and a Trades tab with a price chart marking every entry and exit over a sortable trades list. Hypothesis, data and every fill case are folded under `Hypothesis · data · every fill case`.
+Research lists every run of every study, newest first under day headings, each with its idea (the study's name), verdict, trades, net and where it came from: the analyst chat that ran it (else the chat that registered the idea), `You`, or an MCP client. A study not run yet sits under `Not run yet`. The run's page leads with the idea, the verdict and why, the hypothesis, development against later at a glance and the equity curve, then `Overview` (quant stats, pass rules, months, fill cases), `Trades · <n>` and `Setup`. A run can be archived, restored and deleted. A trade opens at its moment on the trader's real chart, and the chart offers the way back to it.
 
 ## Sub-features
 
-- `rt-verdict` the pane opens on the verdict word (`Qualified`, `Lead`, `Rejected`) and `research.get_run`'s `evaluation.reason`, then the exploratory note and the data words.
-- `rt-equity` `Summary` › `Equity · base`: `img "Equity curve, … at the end"` with `Development` and `Later` tags and the later sessions shaded from the later split's first bar, `img "Drawdown, deepest …"` under it. Hovering reads the date, the P&L and how far it is from the high.
-- `rt-sides` `Development vs later`: `group "Development"` and `group "Later"`, each with Net, Profit factor, Win rate, Max drawdown and Trades from `cases[0].development.metrics` and `.later.metrics`; under them Expectancy (mean trade and its 5-session block interval), Sharpe (session P&L, sessions without a trade flat, ×√252), win rate interval, average win and loss, best and worst trade, average MAE and MFE, longest losing run, bars held, long · short, trades per session, sessions and costs.
-- `rt-months` `By month`: one row per month of the trades' exit days (the instrument's trading day), with trades, win rate, net and which split it holds.
-- `rt-trades` `Trades · <n>`: `img "Price chart with <n> trades marked"` on the study's instrument and timeframe (RTH bars when the study is RTH only), every trade's entry and exit marked and the picked trade drawn with its stop and target; `table "Trades"` in entry order under `Development · <n>` and `Later · <n>`. Entry, Side, Exit, Bars, MAE, MFE and P&L sort (`aria-sort`), a second press reverses; a row picks its trade and the chart frames it.
+- `rs-list` `navigation "Runs"`: `searchbox "Search runs"` matches every word typed across idea, hypothesis, market, verdict, net and chat title; `Runs` and `Archived · <n>` switch shelves. A row reads `<idea> <verdict>` over `<symbol> <tf> · <n> trades · <source>` and the net. Right-clicking a run offers `Archive` or `Restore`.
+- `rs-source` the page's meta line starts with the source: a chat's title is a button that opens that chat in the Analyst area; `Run by you`; `A deleted chat` once the chat list has answered without it.
+- `rs-glance` `table "Development and later"`: Net, Trades, Win rate, Profit factor, Max drawdown and Expectancy of each split, from `research.get_run`'s `evaluation.cases[0]`; under it `img "Equity curve, … at the end"` with the later sessions shaded and `img "Drawdown, deepest …"`.
+- `rs-overview` `Overview`: the quant table (Expectancy, Sharpe, win rate interval, …), `Pass rules` per fill case with the placebo line, `By month`, `Fill cases` and the approximate-fills note, `Level inputs` when the study has them.
+- `rs-trades` `Trades · <n>`: `table "Trades"` under `Development · <n>` and `Later · <n>`; Entry, Side, Exit, Bars, MAE, MFE and P&L sort (`aria-sort`). No chart is drawn in Research.
+- `rs-link` each row's `button "Show trade <n> on the chart"` (or a double-click) shows the desk, puts the study's instrument on the active chart, its timeframe when the chart's is coarser, frames the trade a dozen bars each side (its own length for a longer one) and draws it over the bars it held, at least one: the buy and the sell at their prices, the stop and target bands, `Long 1` and `<exit> <P&L>` labels, and axis tags for all four prices. `group "Research trade"` on that chart holds `Trade <n> · <idea>`, which returns to the run with that trade selected, and `button "Hide the research trade"`.
+- `rs-archive` `Archive` moves the run to the `Archived` shelf (`research.list_runs` gives its `archivedAt`), `Restore` brings it back. `Delete` asks `Delete this run? Its trial stays counted.` and removes only the run; the study stays, under `Not run yet` once it has no runs. A study not run yet has `Run` and `Delete`.
+- `rs-setup` `Setup`: the hypothesis and notes, the setup in words (market, history, window, levels, rules, contracts, costs, stop, target, fill cases, pass rules, placebo runs, family), a script's code, and the trading-session buttons of `strategy-flow.md`.
 
 ## How to get to it (user POV)
 
-- Research › a study with a run › results pane. `Trades · <n>` beside `Summary`.
+- `button "Research"` in `navigation "Areas"`. Agents open it on a run or study with `ui.show_area {area: "research", item}`.
 
 ## Driving it
 
-- **Run.** `research.save_study` an NQ 5m breakout (lookback 20, hold 12, RTH only, window 09:30–12:00, stop 60 and target 120 ticks, development 60%, 50 placebo runs), then `research.run_study`. On the frozen mock market it reads Rejected over 20 sessions with 25 trades.
-- **End state.** The screen's numbers match `research.get_run`'s `evaluation.cases[0]`; the price chart's bars are `market.get_candles` for the run's range. `apps/desktop/test/research-tester.test.tsx` renders the same run from `apps/desktop/test/fixtures/sim-research-run.json`, recorded from the sim.
+- **Script.** `node .agents/skills/verify-tessera/scripts/research-station.ts [out dir] [label] [ui dir]` starts its own sim runtime, has a chat on the Claude stand-in register and run an NQ 5m breakout through its own MCP connection (`Research: <name>`, `analyst-queue.md`), runs one study as the user, leaves one not run, then walks the page, a trade to the chart and back, the chat link, archive and delete. It saves stills and the runtime's answers (`list-runs-*.json`, `chart-state.json`, `report.json`). With `TESSERA_TEST_RUNTIME_BIN` and a ui dir from main and the label `main`, it takes main's stills of the same data.
+- **End state.** `report.json`: `tradeOnChart.tradeInView` true with `chart.get_state` on the study's instrument and timeframe, `backSelected` the trade's number, `archived` 1, `runsAfterDelete` one less, `studyKept` true. `apps/desktop/test/research-tester.test.tsx` renders `apps/desktop/test/fixtures/sim-research-run.json`, recorded from the sim.
 
 ## Gotchas
 
-- A run longer than 5,000 bars of its timeframe charts a 2,000-bar window around the picked trade, read again when a trade outside it is picked.
+- The sim's chart pages intraday history back 20 calendar days while the mock serves 20 sessions, so a run's earliest trades (before about 13 Sep) fall before what the chart can show; the chart says so in its own words. The script frames the run's last trade.
 - Trade times show in the display zone; months and Sharpe sessions use the instrument's trading day.

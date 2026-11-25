@@ -11,7 +11,7 @@ for (const viewport of [
   { width: 1920, height: 1080 },
 ]) {
   test(
-    `review controls, compact entry and native dates at ${String(viewport.width)} × ${String(viewport.height)}`,
+    `review controls and compact entry at ${String(viewport.width)} × ${String(viewport.height)}`,
     { requires: ['browser'], timeout: 120_000, tags: ['design'] },
     async ({ app, screen, browser }) => {
       const rpc = await RuntimeRpc.open(await readRuntimeInfo(app.baseUrl));
@@ -49,23 +49,9 @@ for (const viewport of [
 
         await nav.getByRole('button', 'Research').tap();
         const research = screen.getByRole('region', 'Research');
-        await research.getByRole('button', 'New study').tap();
-        await research.getByLabel('From').fill('2026-09-28');
-        await research.getByLabel('To').fill('2026-10-02');
-        await expect(research.getByLabel('From')).toHaveValue('2026-09-28');
-        await expect(research.getByLabel('To')).toHaveValue('2026-10-02');
-        const dates = await browser.evaluate(() =>
-          [...document.querySelectorAll<HTMLInputElement>('.rs input[type="date"]')].map((el) => {
-            const rect = el.getBoundingClientRect();
-            return { label: el.getAttribute('aria-label'), width: rect.width, right: rect.right, value: el.value };
-          }),
-        );
-        expect(dates).toHaveLength(2);
-        for (const date of dates) {
-          expect(date.width, `${date.label}: complete native date control`).toBeGreaterThanOrEqual(160);
-          expect(date.right).toBeLessThanOrEqual(viewport.width);
-        }
-        await shot('research-dates');
+        await expect(research.getByText('No research yet.')).toBeVisible();
+        await expect(research.getByRole('button', 'Ask the analyst to test an idea')).toBeVisible();
+        await shot('research-empty');
 
         await nav.getByRole('button', 'Desk').tap();
         const bracket = browser.locator('.tk-bracket .tk-fold').first();
@@ -134,7 +120,7 @@ for (const viewport of [
           return true;
         });
         const initial = await geometry();
-        console.info('design correction geometry', JSON.stringify({ viewport, entry, dates, draft: initial }));
+        console.info('design correction geometry', JSON.stringify({ viewport, entry, draft: initial }));
         await shot('waiting-draft');
         const assertInside = (g: Awaited<ReturnType<typeof geometry>>, items = g.items) => {
           for (const item of items) {

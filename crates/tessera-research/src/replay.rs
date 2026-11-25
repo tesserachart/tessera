@@ -109,7 +109,7 @@ pub fn replay_study(input: &StudyTradesInput) -> Result<Study, String> {
         manifest_hash: None,
         frozen_at: None,
         last_verdict: None,
-        author: None,
+        origin: None,
     })
 }
 

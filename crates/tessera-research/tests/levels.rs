@@ -58,7 +58,7 @@ fn study(levels: Vec<String>) -> Study {
         manifest_hash: None,
         frozen_at: None,
         last_verdict: None,
-        author: None,
+        origin: None,
     }
 }
 
@@ -137,7 +137,10 @@ async fn a_level_input_is_aligned_covered_windowed_and_refused_without_history()
         .save(study(vec!["acme.major_long_gamma".into()]))
         .await
         .unwrap();
-    let run = studies.run(&saved.id).await.unwrap();
+    let run = studies
+        .run(&saved.id, tessera_core::Origin::User)
+        .await
+        .unwrap();
 
     let cov = run.levels.as_ref().expect("coverage reported");
     assert_eq!(cov.sessions_used, 7);
@@ -224,7 +227,10 @@ async fn a_level_input_is_aligned_covered_windowed_and_refused_without_history()
         .save(study(vec!["acme.major_short_gamma".into()]))
         .await
         .unwrap();
-    let e = studies.run(&none.id).await.unwrap_err();
+    let e = studies
+        .run(&none.id, tessera_core::Origin::User)
+        .await
+        .unwrap_err();
     assert!(
         e.contains("no level history of acme.major_short_gamma"),
         "{e}"

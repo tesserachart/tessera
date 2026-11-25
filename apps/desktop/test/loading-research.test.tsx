@@ -4,9 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { patch } from '../src/app/store.ts';
 import type { ToolOutput } from '../src/app/tools.ts';
 import { ResearchPage } from '../src/areas/research/ResearchPage.tsx';
+import { SAMPLE_STUDIES } from '../src/areas/research/samples.ts';
 import { researchViewStore } from '../src/areas/research/selection.ts';
-import { blankStudy } from '../src/areas/research/model.ts';
 import { runtimeSettingsStore } from '../src/state/runtimeSettings.ts';
+import recorded from './fixtures/sim-research-run.json';
 import {
   expectLoadsInOneGo,
   heldReads,
@@ -23,19 +24,12 @@ vi.mock('../src/analyst/cards/LiveCard.tsx', () => ({
   LiveCard: ({ card }: { card: Card }) => <div>{`Coverage card ${card.id}`}</div>,
 }));
 
-const study = {
-  ...blankStudy('NQ'),
+const study: Study = {
+  ...SAMPLE_STUDIES[0]!,
   id: 's-1',
   name: 'Opening drive',
-  family: 'orb',
   hypothesis: 'The first thirty minutes lead the day.',
-  state: 'draft',
-  generation: 1,
-  manifestHash: null,
-  frozenAt: null,
-  lastVerdict: null,
-  author: null,
-} as unknown as Study;
+};
 
 const split = (net: number): SplitDigest => ({
   sessions: 10,
@@ -86,6 +80,11 @@ const budget = { family: 'orb', trials: 3, freeParameters: 2, segments: 1 };
 
 const digest = {
   runId: 'r-1',
+  studyId: 's-1',
+  generation: 1,
+  at: 1_790_600_000_000_000_000,
+  origin: { kind: 'user' },
+  archivedAt: null,
   exploratory: true,
   manifestHash: null,
   verdict: 'lead',
@@ -138,45 +137,21 @@ const fullRun = {
     laterFromSession: 10,
   },
   levels: null,
+  origin: { kind: 'user' },
+  archivedAt: null,
 } as unknown as StudyRun;
-
-const coverage = (): ToolOutput<'market.data_coverage'> => ({
-  card: {
-    id: 'cov-1',
-    body: {
-      kind: 'data_coverage',
-      symbol: 'NQ',
-      scope: 'session',
-      from: '2026-09-01',
-      to: '2026-09-30',
-      days: [],
-      download: null,
-    },
-    actions: [],
-    updatedAt: 1,
-  },
-  days: 20,
-  printsSaved: 0,
-  printsMissing: [],
-  barsMissing: [],
-  downloading: false,
-});
 
 const ANSWERS = {
   'research.list_studies': (): ToolOutput<'research.list_studies'> => ({ studies: [study], budgets: [budget] }),
-  'research.get_study': (): ToolOutput<'research.get_study'> => ({ study, runs: [] }),
-  'research.get_run': (): ToolOutput<'research.get_run'> => fullRun,
-  'market.data_coverage': coverage,
-};
-
-const WITH_RUN = {
-  ...ANSWERS,
-  'research.get_study': (): ToolOutput<'research.get_study'> => ({ study, runs: [digest] }),
+  'research.list_runs': (): ToolOutput<'research.list_runs'> => ({ runs: [digest] }),
+  'research.get_run': (input: { runId: string }): ToolOutput<'research.get_run'> => ({ ...fullRun, id: input.runId }),
+  'market.data_coverage': (): ToolOutput<'market.data_coverage'> =>
+    recorded.coverage as unknown as ToolOutput<'market.data_coverage'>,
 };
 
 beforeEach(() => {
   patch(runtimeSettingsStore, { values: {}, loaded: false });
-  patch(researchViewStore, { selected: null, fresh: false });
+  patch(researchViewStore, { selected: null, query: '', shelf: 'active', tab: 'overview', trade: null });
 });
 
 afterEach(unmountSurface);
@@ -191,65 +166,54 @@ function mount(held: HeldReads, feed = true) {
     ) : (
       <ResearchPage />
     ),
-    { tools: [...Object.keys(SIM.tools), 'research.get_study', 'research.get_run', 'market.data_coverage'] },
+    { tools: [...Object.keys(SIM.tools), 'research.get_run', 'market.data_coverage'] },
   );
 }
 
-describe('a study loads as one unit', () => {
-  it('says there are no studies only once the list has answered', async () => {
+describe('research loads as one unit', () => {
+  it('says there is no research only once the ledger has answered', async () => {
     const held = heldReads(SIM);
     const { container } = mount(held, false);
     const { loading, loaded } = await expectLoadsInOneGo(held, () => container);
-    expect(loading).not.toMatch(/studies|No studies/);
-    expect(loaded).toContain('0 studies · 0 trials');
-    expect(loaded).toContain('No studies yet.');
+    expect(loading).not.toMatch(/No research/);
+    expect(loaded).toContain('0 runs · 0 trials');
+    expect(loaded).toContain('No research yet.');
   });
 
-  it('draws its skeleton from the page itself: the studies list beside a study form', async () => {
+  it('draws its skeleton from the page itself: the run list beside a run', async () => {
     mount(heldReads(SIM), false);
     await settle();
-    const skeleton = screen.getByRole('status', { name: 'Loading studies' });
+    const skeleton = screen.getByRole('status', { name: 'Loading research' });
     expect(skeleton.querySelectorAll('.rs-row').length).toBeGreaterThan(1);
-    expect(skeleton.querySelector('.rs-proto-head .rs-actions')).toBeTruthy();
-    expect(skeleton.querySelector('.rs-form textarea')).toBeTruthy();
+    expect(skeleton.querySelector('.rs-head .rs-actions')).toBeTruthy();
+    expect(skeleton.querySelector('.rs-splits')).toBeTruthy();
   });
 
-  it('says there is no run only once the study has answered', async () => {
+  it('shows the run’s verdict, idea, source and equity together', async () => {
     const held = heldReads(SIM, ANSWERS);
     const { container } = mount(held);
     const { loading, loaded } = await expectLoadsInOneGo(held, () => container);
-    expect(loading).not.toContain('No run yet');
-    expect(loaded).toContain('No run yet.');
-    expect(loaded).toContain('Opening drive');
-    expect(screen.queryByRole('status', { name: 'Loading the study' })).toBeNull();
-  });
-
-  it('shows the verdict, the saved data and the equity curve together', async () => {
-    const held = heldReads(SIM, WITH_RUN);
-    const { container } = mount(held);
-    const { loading, loaded } = await expectLoadsInOneGo(held, () => container);
-    expect(loading).not.toMatch(/Reading|Lead|Saved data|Equity/);
+    expect(loading).not.toMatch(/Later sessions held up|Opening drive/);
     expect(loaded).toContain('Later sessions held up');
-    expect(loaded).toContain('Coverage card cov-1');
-    expect(loaded).toContain('Equity · Base');
-    expect(loaded).not.toContain('No run yet');
+    expect(loaded).toContain('The first thirty minutes lead the day.');
+    expect(loaded).toContain('Run by you');
+    expect(loaded).toContain(`Coverage card ${recorded.coverage.card.id}`);
+    expect(screen.getByRole('img', { name: /^Equity curve/ })).toBeTruthy();
     expect(screen.queryByRole('status', { name: 'Loading the run' })).toBeNull();
   });
 
   it('shows the run skeleton, not half a run, while another run is read', async () => {
-    const second = { ...digest, runId: 'r-2', reason: 'Placebo beat it' };
+    const second = { ...digest, runId: 'r-2', at: digest.at - 1, reason: 'Placebo beat it' };
     const held = heldReads(SIM, {
       ...ANSWERS,
-      'research.get_study': (): ToolOutput<'research.get_study'> => ({ study, runs: [digest, second] }),
+      'research.list_runs': (): ToolOutput<'research.list_runs'> => ({ runs: [digest, second] }),
     });
     const { container } = mount(held);
     await expectLoadsInOneGo(held, () => container);
-    fireEvent.click(container.querySelectorAll('.rs-run-row')[1]!);
+    fireEvent.click(container.querySelectorAll('.rs-row')[1]!);
     await settle();
-    expect(
-      screen.getByRole('status', { name: 'Loading the run' }).querySelector('.rs-verdict .rs-verdict-why'),
-    ).toBeTruthy();
-    expect(visibleText(container)).not.toContain('Placebo beat it');
+    expect(screen.getByRole('status', { name: 'Loading the run' }).querySelector('.rs-splits')).toBeTruthy();
+    expect(visibleText(container)).not.toContain('Later sessions held up');
     while (held.waiting > 0) {
       await act(async () => void held.answerNext());
       await settle();
@@ -257,32 +221,5 @@ describe('a study loads as one unit', () => {
     await settle();
     expect(screen.queryByRole('status', { name: 'Loading the run' })).toBeNull();
     expect(visibleText(container)).toContain('Placebo beat it');
-  });
-
-  it('shows the study skeleton, not an empty "No run yet", while another study is read', async () => {
-    const other = { ...study, id: 's-2', name: 'Gap fade' };
-    const held = heldReads(SIM, {
-      ...ANSWERS,
-      'research.list_studies': (): ToolOutput<'research.list_studies'> => ({
-        studies: [study, other],
-        budgets: [budget],
-      }),
-      'research.get_study': (input): ToolOutput<'research.get_study'> =>
-        input.id === 's-2' ? { study: other, runs: [digest] } : { study, runs: [] },
-    });
-    const { container } = mount(held);
-    await expectLoadsInOneGo(held, () => container);
-    expect(visibleText(container)).toContain('No run yet.');
-    fireEvent.click(screen.getByRole('button', { name: /Gap fade/ }));
-    await settle();
-    expect(screen.getByRole('status', { name: 'Loading the study' })).toBeTruthy();
-    expect(visibleText(container)).not.toMatch(/No run yet|Later sessions held up/);
-    while (held.waiting > 0) {
-      await act(async () => void held.answerNext());
-      await settle();
-    }
-    await settle();
-    expect(screen.queryByRole('status', { name: 'Loading the study' })).toBeNull();
-    expect(visibleText(container)).toContain('Later sessions held up');
   });
 });

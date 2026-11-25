@@ -1,14 +1,10 @@
-import type { TradeOverlay } from '@tessera/chart';
 import { formatMoney } from '@tessera/ui';
 import {
-  timeframeMs,
   type BacktestEquityPoint,
   type BacktestTrade,
   type CaseResult,
   type SplitResult,
-  type GetCandlesInput,
   type Study,
-  type StudyRun,
 } from '@tessera/protocol';
 import { guessSessionOptions, tradingDayZone } from '../../market/instruments.ts';
 import { dateIn, displayZone, zonedFormat } from '../../state/timeZone.ts';
@@ -19,8 +15,6 @@ export type Split = 'development' | 'later';
 export const SPLIT_WORD: Record<Split, string> = { development: 'Development', later: 'Later' };
 
 const SESSIONS_PER_YEAR = 252;
-const CANDLE_LIMIT = 5000;
-const CHART_SPAN_BARS = 2000;
 
 function nsToMs(ns: number): number {
   return Math.round(ns / 1e6);
@@ -227,69 +221,6 @@ export function sortTrades(rows: readonly IndexedTrade[], key: TradeKey, ascendi
 
 export function sideWord(t: Pick<BacktestTrade, 'qty'>): string {
   return `${t.qty > 0 ? 'Long' : 'Short'} ${String(Math.abs(t.qty))}`;
-}
-
-export const EXIT_WORD: Record<BacktestTrade['exit'], string> = {
-  signal: 'Signal',
-  stop: 'Stop',
-  target: 'Target',
-  end_of_data: 'End of data',
-};
-
-export function tradeOverlay(t: BacktestTrade, colors: TradeOverlay['colors']): TradeOverlay {
-  const long = t.qty > 0;
-  const open = nsToMs(t.entryTime);
-  const close = nsToMs(t.exitTime);
-  const qty = Math.abs(t.qty);
-  return {
-    long,
-    open,
-    close,
-    entry: t.entryPrice,
-    exit: t.exitPrice,
-    stop: t.stop === null ? [] : [{ t: open, price: t.stop }],
-    target: t.target === null ? [] : [{ t: open, price: t.target }],
-    fills: [
-      { t: open, price: t.entryPrice, side: long ? 'buy' : 'sell', qty },
-      { t: close, price: t.exitPrice, side: long ? 'sell' : 'buy', qty },
-    ],
-    mae: null,
-    mfe: null,
-    colors,
-  };
-}
-
-export function candlesInput(
-  study: Pick<Study, 'data'>,
-  run: Pick<StudyRun, 'from' | 'to'>,
-  around: Pick<BacktestTrade, 'entryTime' | 'exitTime'> | null,
-): GetCandlesInput {
-  const step = timeframeMs(study.data.tf) * 1e6;
-  const base = {
-    instrument: study.data.instrument,
-    tf: study.data.tf,
-    limit: CANDLE_LIMIT,
-    session: study.data.rthOnly ? 'rth' : 'all',
-  } as const;
-  const lastBar = run.to + step;
-  if ((lastBar - run.from) / step <= CANDLE_LIMIT || around === null) {
-    return { ...base, from: run.from, to: lastBar };
-  }
-  const half = (CHART_SPAN_BARS / 2) * step;
-  const mid = (around.entryTime + around.exitTime) / 2;
-  const from = Math.max(run.from, Math.min(mid - half, lastBar - 2 * half));
-  return { ...base, from, to: Math.min(lastBar, from + 2 * half) };
-}
-
-export function inCandles(input: GetCandlesInput, t: Pick<BacktestTrade, 'entryTime' | 'exitTime'>): boolean {
-  return (input.from ?? -Infinity) <= t.entryTime && t.exitTime <= (input.to ?? Infinity);
-}
-
-export function tradeFrame(t: BacktestTrade, stepMs: number, lastMs: number): { from: number; to: number } {
-  const open = nsToMs(t.entryTime);
-  const close = nsToMs(t.exitTime);
-  const pad = Math.max(48 * stepMs, (close - open) * 1.5);
-  return { from: open - pad, to: Math.min(lastMs, close + pad) };
 }
 
 interface StatValue {

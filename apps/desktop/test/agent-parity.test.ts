@@ -149,12 +149,12 @@ describe('where each area is, and the recent symbols, are runtime settings', () 
     expect(view.journal?.tradeId).toBe('T-7');
     expect(view.journal?.section).toBe('trades');
     expect(journalPatch({ section: 'nowhere', range: 'decade', sort: '' }, read(journalUiStore))).toEqual({});
-    patch(researchViewStore, { selected: null, fresh: false });
+    patch(researchViewStore, { selected: null });
     applyView({ research: 'st-4' });
     expect(currentView().research).toBe('st-4');
     setJournal({ section: 'overview', trade: null, filter: {}, groupBy: 'symbol' });
     patch(uiStore, { settingsSection: 'connections' });
-    patch(researchViewStore, { selected: null, fresh: false });
+    patch(researchViewStore, { selected: null });
   });
 
   it('keeps the recent symbols in the preferences', () => {

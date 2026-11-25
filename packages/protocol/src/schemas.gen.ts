@@ -236,6 +236,7 @@ export const ApprovalsResolveParams: z.ZodType<T.ApprovalsResolveParams> = struc
 export const PendingApproval: z.ZodType<T.PendingApproval> = z.object({ approvalId: ApprovalId, draftId: DraftId.nullable().default(null), previewHash: z.string(), staleAt: Timestamp });
 export const ToolResult: z.ZodType<T.ToolResult> = z.object({ ok: z.boolean(), status: ToolOutcome, callId: CallId, durationMs: z.number(), output: JsonValue.nullable().default(null), error: ToolErrorInfo.nullable().default(null), approval: PendingApproval.nullable().default(null), deduped: z.boolean() });
 export const ApprovalsResolveResult: z.ZodType<T.ApprovalsResolveResult> = z.object({ approval: Approval, result: ToolResult.nullable().default(null), replacement: Approval.nullable().default(null) });
+export const ArchiveRunInput: z.ZodType<T.ArchiveRunInput> = z.object({ runId: z.string(), archived: z.boolean() });
 export const AssetClass: z.ZodType<T.AssetClass> = z.enum(["equity", "etf", "index", "future", "crypto", "option"]);
 export const AttachmentInfo: z.ZodType<T.AttachmentInfo> = z.object({ id: z.string(), filename: z.string(), mediaType: z.string(), size: z.number(), caption: z.string().nullable().default(null), createdAt: z.number() });
 export const AttachmentData: z.ZodType<T.AttachmentData> = z.object({ info: AttachmentInfo, dataBase64: z.string() });
@@ -831,8 +832,9 @@ export const Rule: z.ZodType<T.Rule> = z.union([z.object({ rule: z.literal("ema_
 export const RuleCheck: z.ZodType<T.RuleCheck> = z.object({ ruleId: z.string(), text: z.string(), category: z.string(), checked: z.boolean() });
 export const RuleSet: z.ZodType<T.RuleSet> = z.object({ id: RuleSetId, programId: ProgramId, version: z.number(), effectiveFrom: z.string(), verified: z.boolean(), source: z.string(), rules: z.array(RiskRule) });
 export const RuleTick: z.ZodType<T.RuleTick> = z.object({ ruleId: z.string(), checked: z.boolean() });
-export const RunDigest: z.ZodType<T.RunDigest> = z.object({ runId: z.string(), exploratory: z.boolean(), manifestHash: z.string().nullable().default(null), verdict: Verdict, reason: z.string(), sessions: z.number(), laterFromSession: z.number(), cases: z.array(CaseDigest), placebo: PlaceboResult.nullable().default(null), budget: ResearchBudget, levels: LevelCoverage.nullable().default(null) });
+export const RunDigest: z.ZodType<T.RunDigest> = z.object({ runId: z.string(), studyId: z.string(), generation: z.number(), at: z.number(), origin: Origin.nullable().default(null), archivedAt: z.number().nullable().default(null), exploratory: z.boolean(), manifestHash: z.string().nullable().default(null), verdict: Verdict, reason: z.string(), sessions: z.number(), laterFromSession: z.number(), cases: z.array(CaseDigest), placebo: PlaceboResult.nullable().default(null), budget: ResearchBudget, levels: LevelCoverage.nullable().default(null) });
 export const RunIdInput: z.ZodType<T.RunIdInput> = z.object({ runId: z.string() });
+export const RunList: z.ZodType<T.RunList> = z.object({ runs: z.array(RunDigest) });
 export const SaveChecklistInput: z.ZodType<T.SaveChecklistInput> = z.object({ items: z.array(ChecklistItemInput) });
 export const SaveDayInput: z.ZodType<T.SaveDayInput> = struct({ date: z.string(), content: optionalField(z.string()), start: optionalField(z.boolean()), checks: optionalField(z.array(RuleTick)) }, ["content","start","checks"]);
 export const SaveFilterInput: z.ZodType<T.SaveFilterInput> = struct({ id: optionalField(z.string()), name: z.string(), filter: TradeFilter, isDefault: optionalField(z.boolean()) }, ["id","isDefault"]);
@@ -876,11 +878,11 @@ export const ShareLink: z.ZodType<T.ShareLink> = z.object({ id: z.string(), url:
 export const ShareListInput: z.ZodType<T.ShareListInput> = z.object({});
 export const ShareListOutput: z.ZodType<T.ShareListOutput> = z.object({ available: z.boolean(), shares: z.array(ShareLink) });
 export const StopMove: z.ZodType<T.StopMove> = z.object({ t: z.number(), orderId: z.string(), from: z.number(), to: z.number(), ticks: z.number(), direction: MoveDirection, replaced: z.boolean() });
-export const Study: z.ZodType<T.Study> = z.object({ id: z.string(), name: z.string(), family: z.string(), hypothesis: z.string(), notes: z.string().nullable().default(null), data: StudyData, strategy: Strategy, execution: Execution, gates: Gates, placeboRuns: z.number(), state: ExperimentState, generation: z.number(), manifestHash: z.string().nullable().default(null), frozenAt: z.number().nullable().default(null), lastVerdict: Verdict.nullable().default(null), author: z.string().nullable().default(null) });
+export const Study: z.ZodType<T.Study> = z.object({ id: z.string(), name: z.string(), family: z.string(), hypothesis: z.string(), notes: z.string().nullable().default(null), data: StudyData, strategy: Strategy, execution: Execution, gates: Gates, placeboRuns: z.number(), state: ExperimentState, generation: z.number(), manifestHash: z.string().nullable().default(null), frozenAt: z.number().nullable().default(null), lastVerdict: Verdict.nullable().default(null), origin: Origin.nullable().default(null) });
 export const StudyDetail: z.ZodType<T.StudyDetail> = z.object({ study: Study, runs: z.array(RunDigest) });
 export const StudyIdInput: z.ZodType<T.StudyIdInput> = z.object({ id: z.string() });
 export const StudyList: z.ZodType<T.StudyList> = z.object({ studies: z.array(Study), budgets: z.array(ResearchBudget) });
-export const StudyRun: z.ZodType<T.StudyRun> = z.object({ id: z.string(), studyId: z.string(), generation: z.number(), manifestHash: z.string().nullable().default(null), exploratory: z.boolean(), at: z.number(), from: z.number(), to: z.number(), budget: ResearchBudget, evaluation: Evaluation, levels: LevelCoverage.nullable().default(null) });
+export const StudyRun: z.ZodType<T.StudyRun> = z.object({ id: z.string(), studyId: z.string(), generation: z.number(), manifestHash: z.string().nullable().default(null), exploratory: z.boolean(), at: z.number(), from: z.number(), to: z.number(), budget: ResearchBudget, evaluation: Evaluation, levels: LevelCoverage.nullable().default(null), origin: Origin.nullable().default(null), archivedAt: z.number().nullable().default(null) });
 export const StudySignal: z.ZodType<T.StudySignal> = z.object({ studyId: z.string(), name: z.string(), generation: z.number(), manifestHash: z.string().nullable().default(null), instrument: InstrumentId, tf: Timeframe, barAt: z.number(), position: z.number(), decidedAt: z.number().nullable().default(null), stopDistance: z.number().nullable().default(null), targetDistance: z.number().nullable().default(null), reenters: z.boolean(), levelsMissing: z.boolean(), nextAt: z.number() });
 export const StudyTradesInput: z.ZodType<T.StudyTradesInput> = z.object({ name: z.string(), hypothesis: z.string().nullable().default(null), trades: z.array(ReplayTrade) });
 export const SubmitOutput: z.ZodType<T.SubmitOutput> = struct({ order: Order, bracket: z.array(Order), copies: optionalField(CopyReport) }, ["copies"]);
@@ -1196,10 +1198,13 @@ export const ToolOutputs = {
   "portfolio.get_orders": OrdersOutput,
   "portfolio.get_positions": PositionsOutput,
   "portfolio.get_risk_status": RiskStatusOutput,
+  "research.archive_run": RunDigest,
+  "research.delete_run": Deleted,
   "research.delete_study": Deleted,
   "research.freeze_study": Study,
   "research.get_run": StudyRun,
   "research.get_study": StudyDetail,
+  "research.list_runs": RunList,
   "research.list_studies": StudyList,
   "research.run_study": RunDigest,
   "research.save_study": Study,

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 
 const PACE_MS = 220;
@@ -49,6 +50,44 @@ const reply = (text, steered) => {
   return steered ? `Taking that on board mid-run: ${text} ${STEERED}` : ANSWER;
 };
 
+const RESEARCH = /^Research: (.+)$/m;
+
+async function tool(name, args) {
+  const server = JSON.parse(readFileSync(flag('--mcp-config'), 'utf8')).mcpServers.tessera;
+  const res = await fetch(server.url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...server.headers },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: name.replace('.', '_'), arguments: args } }),
+  });
+  const out = await res.json();
+  const text = out.result?.content?.[0]?.text ?? '';
+  if (out.error || out.result?.isError) throw new Error(out.error?.message ?? text);
+  return JSON.parse(text);
+}
+
+async function research(name) {
+  const study = await tool('research.save_study', {
+    name,
+    hypothesis:
+      'A close beyond the last 20 bars in the New York morning keeps going for an hour: breakouts in the 09:30 to 12:00 window carry.',
+    data: { instrument: 'NQ', tf: '5m', rthOnly: true, developmentShare: 0.6, window: { start: '09:30', end: '12:00' } },
+    strategy: { kind: 'rules', rule: { rule: 'breakout', lookback: 20, holdBars: 12, sides: 'both' } },
+    execution: {
+      qty: 1,
+      commissionPerContract: 1,
+      stopTicks: 60,
+      targetTicks: 120,
+      fillCases: [
+        { name: 'base', slippageTicks: 1 },
+        { name: 'stressed', slippageTicks: 2 },
+      ],
+    },
+    placeboRuns: 50,
+  });
+  const run = await tool('research.run_study', { id: study.id });
+  return `Stand-in answer for the demo, not a model. I registered "${name}" and ran it: ${run.verdict}, ${run.reason}`;
+}
+
 let turn = null;
 let messages = 0;
 const waiting = [];
@@ -59,12 +98,12 @@ function stopStreaming() {
   emit(frame({ type: 'message_stop' }));
 }
 
-function answer(text, steered) {
+function answer(text, steered, said = null) {
   messages += 1;
   emit({ type: 'system', subtype: 'init', session_id: session, model, mcp_servers: [{ name: 'tessera', status: 'connected' }], tools: [] });
   emit(frame({ type: 'message_start', message: { id: `msg_${String(messages)}` } }));
   emit(frame({ type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }));
-  const words = reply(text, steered).split(/(?<= )/);
+  const words = (said ?? reply(text, steered)).split(/(?<= )/);
   const current = { said: '', timer: null };
   current.timer = setInterval(() => {
     const word = words.shift();
@@ -115,6 +154,17 @@ createInterface({ input: process.stdin }).on('line', (line) => {
   const text = Array.isArray(content)
     ? content.filter((b) => b.type === 'text').map((b) => b.text).join('\n')
     : String(content ?? '');
+  const asked = RESEARCH.exec(text)?.[1];
+  if (asked && !turn) {
+    turn = { said: '', timer: null };
+    void research(asked.trim())
+      .catch((e) => `Stand-in answer for the demo, not a model. The research tools refused: ${e.message}`)
+      .then((said) => {
+        turn = null;
+        answer(text, false, said);
+      });
+    return;
+  }
   if (turn && msg.priority === 'now') {
     abort(false);
     answer(text, true);

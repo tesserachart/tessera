@@ -10,7 +10,6 @@ import type {
   Study,
   StudyRun,
 } from '@tessera/protocol';
-import { DEFAULT_EXECUTION, DEFAULT_GATES, blankStudy } from './model.ts';
 
 const NS_PER_DAY = 86_400_000_000_000;
 const SAMPLE_FROM = 1_782_000_000_000_000_000;
@@ -19,22 +18,41 @@ const LATER_FROM_SESSION = 36;
 const SAMPLE_TRADES = 48;
 
 function sampleStudy(id: string, name: string, hypothesis: string, instrument: string): Study {
-  const input = blankStudy(instrument);
   return {
-    ...input,
     id,
     name,
     family: 'orb',
     hypothesis,
-    execution: input.execution ?? DEFAULT_EXECUTION,
-    gates: input.gates ?? DEFAULT_GATES,
-    placeboRuns: input.placeboRuns ?? 100,
+    notes: null,
+    data: {
+      instrument,
+      tf: '5m',
+      from: null,
+      to: null,
+      rthOnly: false,
+      developmentShare: 0.5,
+      levels: [],
+      window: null,
+    },
+    strategy: { kind: 'rules', rule: { rule: 'breakout', lookback: 20, holdBars: 12, sides: 'both' } },
+    execution: {
+      qty: 1,
+      commissionPerContract: 1,
+      stopTicks: null,
+      targetTicks: null,
+      fillCases: [
+        { name: 'base', slippageTicks: 1 },
+        { name: 'stressed', slippageTicks: 2 },
+      ],
+    },
+    gates: { minTrades: 100, minWinRate: null, ciAboveZero: true, eachHalfPositive: true, developmentPositive: true },
+    placeboRuns: 100,
     state: 'draft',
     generation: 1,
     manifestHash: null,
     frozenAt: null,
     lastVerdict: null,
-    author: null,
+    origin: null,
   };
 }
 
@@ -138,8 +156,17 @@ const sampleSplitDigest = (sessions: number, trades: number, net: number): Split
   approximateExits: 0,
 });
 
+export function sampleDigest(study: Study, i: number): RunDigest {
+  return { ...SAMPLE_DIGEST, runId: `sample-run-${String(i)}`, studyId: study.id, at: SAMPLE_FROM - i * NS_PER_DAY };
+}
+
 export const SAMPLE_DIGEST: RunDigest = {
   runId: 'sample-run',
+  studyId: 'sample-1',
+  generation: 1,
+  at: SAMPLE_FROM,
+  origin: null,
+  archivedAt: null,
   exploratory: true,
   manifestHash: null,
   verdict: 'lead',
@@ -166,7 +193,7 @@ export const SAMPLE_DIGEST: RunDigest = {
 export function sampleRun(digest: RunDigest): StudyRun {
   return {
     id: digest.runId,
-    studyId: 'sample',
+    studyId: digest.studyId,
     generation: 1,
     manifestHash: digest.manifestHash,
     exploratory: digest.exploratory,
@@ -184,5 +211,7 @@ export function sampleRun(digest: RunDigest): StudyRun {
       laterFromSession: digest.laterFromSession,
     },
     levels: null,
+    origin: null,
+    archivedAt: null,
   };
 }

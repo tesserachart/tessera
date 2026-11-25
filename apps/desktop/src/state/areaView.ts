@@ -61,8 +61,8 @@ export function currentView(): AreaView {
   const sel = read(pageStore).selection;
   if (sel?.kind === 'custom') view.indicators = sel.id;
   else if (sel?.kind === 'builtin') view.indicators = sel.key;
-  const study = read(researchViewStore);
-  if (study.selected && !study.fresh) view.research = study.selected;
+  const research = read(researchViewStore).selected;
+  if (research) view.research = research;
   return view;
 }
 
@@ -121,7 +121,9 @@ export function onViewChange(cb: () => void): () => void {
     watch(pageStore, (s, prev) => {
       if (s.selection !== prev.selection) cb();
     }),
-    watch(researchViewStore, cb),
+    watch(researchViewStore, (s, prev) => {
+      if (s.selected !== prev.selected) cb();
+    }),
     watch(marketsUiStore, cb),
   ];
   return () => {

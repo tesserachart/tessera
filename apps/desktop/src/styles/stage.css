@@ -72,6 +72,40 @@
 .chart-sketch-at {
   position: absolute;
 }
+.chart-linked {
+  position: absolute;
+  z-index: 7;
+  bottom: 40px;
+  left: 8px;
+  display: flex;
+  max-width: calc(100% - 96px);
+  border: 1px solid var(--line-3);
+  background: var(--ink-86);
+}
+.chart-linked button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--hit);
+  padding: 0 var(--sp-2);
+  border: 0;
+  background: transparent;
+  color: var(--t2);
+  font-size: var(--fs-meta);
+}
+.chart-linked button:hover {
+  color: var(--t1);
+  background: var(--raise);
+}
+.chart-linked-back {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chart-linked .chart-linked-close {
+  border-left: 1px solid var(--line-3);
+}
 .layer-strip {
   position: absolute;
   z-index: 7;
