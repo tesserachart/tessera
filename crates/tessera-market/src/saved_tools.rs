@@ -733,10 +733,7 @@ fn follow(
         let g = &p.progress;
         body.download = Some(CoverageDownload {
             pull_id: p.id.clone(),
-            state: serde_json::to_value(p.state)
-                .ok()
-                .and_then(|v| v.as_str().map(str::to_owned))
-                .unwrap_or_default(),
+            state: p.state,
             days: g.days,
             done: g.saved + g.already_saved + g.no_trades,
             failed: g.failed,

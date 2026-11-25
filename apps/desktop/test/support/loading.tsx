@@ -39,6 +39,7 @@ export interface HeldReads {
   readonly client: FakeClient;
   readonly waiting: number;
   readonly answered: readonly string[];
+  readonly queued: readonly string[];
   answerNext(): string;
 }
 
@@ -81,6 +82,9 @@ export function heldReads(reads: SimReads, answers: Answers = {}): HeldReads {
       return queue.length;
     },
     answered,
+    get queued() {
+      return queue.map((h) => h.what);
+    },
     answerNext: () => {
       const next = queue.shift();
       if (!next) throw new Error('no read is waiting');

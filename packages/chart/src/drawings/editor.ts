@@ -301,6 +301,12 @@ export class DrawingEditor {
     return true;
   }
 
+  cancel(): void {
+    if (!this.drag) return;
+    this.drag = null;
+    this.host.invalidate();
+  }
+
   key(key: string): boolean {
     if (key === 'Escape') {
       if (this.placing) {

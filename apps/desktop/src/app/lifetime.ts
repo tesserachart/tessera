@@ -2,6 +2,8 @@ import { computeBackoffDelay, DEFAULT_BACKOFF, Runtime, type BackoffOptions, typ
 import { appClient } from './services.ts';
 import type { TopicData, TopicParams } from './topics.ts';
 
+export const READ_AGAIN_MS = 5_000;
+
 export class Lifetime {
   private readonly stops = new Set<() => void>();
   private tasks = 0;

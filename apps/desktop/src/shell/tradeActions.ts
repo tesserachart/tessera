@@ -25,7 +25,7 @@ import { reverseDone } from '../chart/ticket/send.ts';
 import { restingPrice, type LegRole } from '../chart/brackets.ts';
 import { entryWithLegs, exitInput, replaceInput, type LegHost } from '../chart/placement.ts';
 import { hasLegs, legWords } from './oco.ts';
-import { sendSurface } from './ticket.ts';
+import { sendSurface, toTick } from './ticket.ts';
 import { clearRefusal, noteRefusal } from '../state/refusals.ts';
 import { approve, ranUnread, runToolResult, type ToolInput } from '../app/tools.ts';
 
@@ -108,9 +108,18 @@ export interface LateOrder {
 
 let freshMs = ORDER_FRESH_MS;
 const held = createStore<ReadonlySet<string>>(new Set());
-const inflight = new Map<string, Promise<unknown>>();
-const holdTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const lateListeners = new Set<(update: LateOrder) => void>();
+
+interface Hold {
+  done: Promise<unknown>;
+  lapse: ReturnType<typeof setTimeout> | null;
+}
+
+const holds = new Map<string, Hold>();
+
+function publishHolds(): void {
+  held.set(new Set(holds.keys()));
+}
 
 export function orderFreshMs(): number {
   return freshMs;
@@ -144,10 +153,9 @@ export function watchOrderLate(fn: (update: LateOrder) => void): () => void {
 }
 
 export function resetOrderIntents(): void {
-  for (const timer of holdTimers.values()) clearTimeout(timer);
-  holdTimers.clear();
-  held.set(new Set());
-  inflight.clear();
+  for (const hold of holds.values()) if (hold.lapse) clearTimeout(hold.lapse);
+  holds.clear();
+  publishHolds();
 }
 
 function intentPart(value: unknown): string {
@@ -173,39 +181,11 @@ export function approvalIntent(approvalId: string, decision: string): string {
   return `approvals.resolve|${approvalId}|${decision}`;
 }
 
-function holdIntent(intent: string): void {
-  const prev = holdTimers.get(intent);
-  if (prev) clearTimeout(prev);
-  holdTimers.delete(intent);
-  const next = new Set(held.getSnapshot());
-  next.add(intent);
-  held.set(next);
-}
-
-function boundHold(intent: string): void {
-  holdTimers.set(
-    intent,
-    setTimeout(() => {
-      holdTimers.delete(intent);
-      inflight.delete(intent);
-      if (!held.getSnapshot().has(intent)) return;
-      const left = new Set(held.getSnapshot());
-      left.delete(intent);
-      held.set(left);
-    }, freshMs),
-  );
-}
-
-function releaseIntent(intent: string): void {
-  const timer = holdTimers.get(intent);
-  if (timer) {
-    clearTimeout(timer);
-    holdTimers.delete(intent);
-  }
-  if (!held.getSnapshot().has(intent)) return;
-  const next = new Set(held.getSnapshot());
-  next.delete(intent);
-  held.set(next);
+function release(intent: string, hold: Hold): void {
+  if (holds.get(intent) !== hold) return;
+  if (hold.lapse) clearTimeout(hold.lapse);
+  holds.delete(intent);
+  publishHolds();
 }
 
 function publishLate(key: string, result: ActionResult): void {
@@ -222,80 +202,59 @@ function lateAction(value: unknown, error: RequestError | null): ActionResult {
   return { tone: 'ok', text: 'Sent' };
 }
 
-function sendNow<N extends ToolName>(name: N, input: ToolInput<N>, surface: InvokeSurface) {
-  const intent = orderIntentKey(name, input);
-  const running = inflight.get(intent);
-  if (running) return afterInflight(running);
-  if (isOrderHeld(intent)) return alreadySending();
-  const key = crypto.randomUUID();
-  holdIntent(intent);
-  const done = runToolResult(name, input, {
-    surface,
-    queue: false,
-    idempotencyKey: key,
-    timeoutMs: freshMs,
-    deadline: orderDeadlineNs(Date.now(), freshMs),
-    onLate: (value, error) => {
-      inflight.delete(intent);
-      releaseIntent(intent);
-      publishLate(intent, { ...lateAction(value, error), key: intent });
-    },
+type OnLate = (value: unknown, error: RequestError | null) => void;
+
+function sendOnce<A>(intent: string, send: (onLate: OnLate) => Promise<A>): Promise<A> {
+  const running = holds.get(intent);
+  if (running) return afterInflight(running.done);
+  const hold: Hold = { done: Promise.resolve(), lapse: null };
+  const done = send((value, error) => {
+    release(intent, hold);
+    publishLate(intent, { ...lateAction(value, error), key: intent });
   }).then(
     (res) => {
-      inflight.delete(intent);
-      releaseIntent(intent);
+      release(intent, hold);
       return res;
     },
     (err: unknown) => {
-      if (err instanceof RequestTimeout) boundHold(intent);
-      else {
-        inflight.delete(intent);
-        releaseIntent(intent);
-      }
+      if (err instanceof RequestTimeout && holds.get(intent) === hold) {
+        hold.lapse = setTimeout(() => {
+          release(intent, hold);
+        }, freshMs);
+      } else release(intent, hold);
       throw err;
     },
   );
-  inflight.set(intent, done);
+  hold.done = done;
+  holds.set(intent, hold);
+  publishHolds();
   return done;
 }
 
-export async function resolveNow(params: ApprovalsResolveParams): Promise<ApprovalsResolveResult> {
-  const intent = approvalIntent(params.approvalId, params.decision);
-  const running = inflight.get(intent);
-  if (running) return afterInflight(running);
-  if (isOrderHeld(intent)) return alreadySending();
-  holdIntent(intent);
-  const done = approve(
-    {
-      ...params,
-      deadline: params.deadline ?? orderDeadlineNs(Date.now(), freshMs),
-      idempotencyKey: params.idempotencyKey ?? crypto.randomUUID(),
-    },
-    {
+function sendNow<N extends ToolName>(name: N, input: ToolInput<N>, surface: InvokeSurface) {
+  return sendOnce(orderIntentKey(name, input), (onLate) =>
+    runToolResult(name, input, {
+      surface,
+      queue: false,
+      idempotencyKey: crypto.randomUUID(),
       timeoutMs: freshMs,
-      onLate: (value, error) => {
-        inflight.delete(intent);
-        releaseIntent(intent);
-        publishLate(intent, { ...lateAction(value, error), key: intent });
-      },
-    },
-  ).then(
-    (res) => {
-      inflight.delete(intent);
-      releaseIntent(intent);
-      return res;
-    },
-    (err: unknown) => {
-      if (err instanceof RequestTimeout) boundHold(intent);
-      else {
-        inflight.delete(intent);
-        releaseIntent(intent);
-      }
-      throw err;
-    },
+      deadline: orderDeadlineNs(Date.now(), freshMs),
+      onLate,
+    }),
   );
-  inflight.set(intent, done);
-  return done;
+}
+
+export function resolveNow(params: ApprovalsResolveParams): Promise<ApprovalsResolveResult> {
+  return sendOnce(approvalIntent(params.approvalId, params.decision), (onLate) =>
+    approve(
+      {
+        ...params,
+        deadline: params.deadline ?? orderDeadlineNs(Date.now(), freshMs),
+        idempotencyKey: params.idempotencyKey ?? crypto.randomUUID(),
+      },
+      { timeoutMs: freshMs, onLate },
+    ),
+  );
 }
 
 interface Submitted {
@@ -422,6 +381,26 @@ async function dropHeldLeg(leg: Order): Promise<ActionResult> {
   if (c.tone === 'err') return { tone: 'err', text: `${what}: the entry could not be replaced (${c.text})`, what };
   const r = await submitOrder(entry.environment, entryWithLegs(entry, stop, target), what, 2);
   return r.tone === 'err' ? entryLost(r) : { tone: 'ok', text: what };
+}
+
+export interface PriceMove {
+  readonly order: Order;
+  readonly price: number;
+}
+
+export function shiftedBy(orders: readonly Order[], delta: number, tick: number): PriceMove[] {
+  return orders.flatMap((order) => {
+    const from = restingPrice(order.request);
+    return from === null ? [] : [{ order, price: toTick(from + delta, tick) }];
+  });
+}
+
+export async function moveOrders(env: Environment, moves: readonly PriceMove[]): Promise<ActionResult> {
+  for (const m of moves) {
+    const r = await modifyOrderPrice(env, m.order, m.price);
+    if (r.tone !== 'ok') return r;
+  }
+  return { tone: 'ok', text: 'Moved' };
 }
 
 /** Rithmic's native bracket cannot gain a leg once sent. */

@@ -215,6 +215,7 @@ export function reduceTranscript(prev: Transcript, env: AgentEventEnvelope): Tra
       if (status) status = { ...status, since: at };
       break;
     case 'turn_finished':
+      items = items.map((it) => (it.kind === 'assistant' && it.streaming ? { ...it, streaming: false } : it));
       items = [...items, { kind: 'turn', key, end: ev.end, durationMs: ev.durationMs, toolCalls: ev.toolCalls }];
       status = null;
       turnStartedAt = null;

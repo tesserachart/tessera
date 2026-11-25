@@ -10,7 +10,7 @@ import type {
 import { SESSION_RUNNER_KEY, runnerValue, sessionRunning, standingWords } from '../../analyst/tradingSessions.ts';
 import { refreshTools, runTool } from '../../app/tools.ts';
 import { setRuntimeSetting } from '../../state/runtimeSettings.ts';
-import { pct, plural } from '../journal/model/format.ts';
+import { pct, plural, tradeClosed } from '../journal/model/format.ts';
 import { setJournal } from '../journal/store.ts';
 import { showArea } from '../store.ts';
 import { selectStudy } from './selection.ts';
@@ -28,7 +28,7 @@ export function tradedBySessions(setting: SessionRunnerSetting, study: Pick<Stud
 
 export function replayTrades(trades: readonly JournalTrade[]): ReplayTrade[] {
   return trades.flatMap((t) =>
-    t.status === 'closed' && t.closedAt !== null
+    tradeClosed(t)
       ? [{ instrument: t.instrument, side: t.side, qty: t.qty, openedAt: t.openedAt, closedAt: t.closedAt }]
       : [],
   );

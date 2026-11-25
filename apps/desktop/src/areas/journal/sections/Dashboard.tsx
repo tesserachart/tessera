@@ -40,7 +40,7 @@ import {
   wordCount,
   type JournalStatus,
 } from '../model/dashboard.ts';
-import { clock, dayLabel, longDate, monthLabel, pct, plural, tone } from '../model/format.ts';
+import { clock, dayLabel, longDate, monthLabel, pct, plural, tone, tradeOpen } from '../model/format.ts';
 import { rangeDates } from '../model/scope.ts';
 import { Gauge, Spark } from '../parts/Charts.tsx';
 import { openDay, openTrade, setJournal, useJournalUi } from '../store.ts';
@@ -201,8 +201,8 @@ function TodayBody({ v: { all: a, vs, trades } }: { v: TodayView }) {
               <span className="text-t3">{clock(t.openedAt)}</span>
               <b>{t.symbol}</b>
               <DirectionChip side={t.side} size="s" />
-              <span className={cx('r', t.status === 'open' ? 'text-t3' : tone(t.netPnl))}>
-                {t.status === 'open' ? 'Open' : formatMoney(t.netPnl, { signed: true })}
+              <span className={cx('r', tradeOpen(t) ? 'text-t3' : tone(t.netPnl))}>
+                {tradeOpen(t) ? 'Open' : formatMoney(t.netPnl, { signed: true })}
               </span>
             </button>
           </li>
@@ -671,8 +671,8 @@ function RecentTradesBody({ v: { trades, day, now } }: { v: RecentView }) {
               <span className={cx('jd-arrow', t.side === 'buy' ? 'up' : 'down')}>{t.side === 'buy' ? '↑' : '↓'}</span>
               <span className="nm">{t.symbol}</span>
               <span className="text-t3">{ago(t.openedAt, now)}</span>
-              <span className={cx('r', t.status === 'open' ? 'text-t3' : tone(t.netPnl))}>
-                {t.status === 'open' ? 'Open' : formatMoney(t.netPnl, { signed: true })}
+              <span className={cx('r', tradeOpen(t) ? 'text-t3' : tone(t.netPnl))}>
+                {tradeOpen(t) ? 'Open' : formatMoney(t.netPnl, { signed: true })}
               </span>
             </button>
           </li>

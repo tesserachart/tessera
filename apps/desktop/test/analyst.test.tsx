@@ -179,11 +179,11 @@ describe('what the analyst is doing', () => {
     expect(activityWords(thinking)).toBe('Thinking');
     const writing = fold([{ type: 'status', state: 'writing', text: null, step: null, totalSteps: null }], thinking);
     expect(activityWords(writing)).toBe('Writing');
-    const waits = fold(
-      [{ type: 'status', state: 'waiting_approval', text: null, step: null, totalSteps: null }],
-      thinking,
-    );
-    expect(analystActivity(waits, null)).toEqual({ phase: 'waiting', words: 'Waiting for you', since: 0 });
+    expect(analystActivity(thinking, session({ status: 'needs_you' }))).toEqual({
+      phase: 'waiting',
+      words: 'Waiting for you',
+      since: 0,
+    });
   });
 
   it('counts from the turn’s start, stops between turns, and says Stopped after a failure', () => {
@@ -489,7 +489,15 @@ describe('the analyst’s controls', () => {
       fireEvent.click(allow);
       await Promise.resolve();
     });
-    expect(calls('approvals.resolve')).toEqual([{ approvalId: 'a_2', decision: 'approve', previewHash: 'h1' }]);
+    expect(calls('approvals.resolve')).toEqual([
+      {
+        approvalId: 'a_2',
+        decision: 'approve',
+        previewHash: 'h1',
+        deadline: expect.any(Number),
+        idempotencyKey: expect.any(String),
+      },
+    ]);
     cleanup();
     request.mockClear();
     wrap(<InlineApproval approval={change()} />);
@@ -497,7 +505,15 @@ describe('the analyst’s controls', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Deny' }));
       await Promise.resolve();
     });
-    expect(calls('approvals.resolve')).toEqual([{ approvalId: 'a_2', decision: 'reject', previewHash: 'h1' }]);
+    expect(calls('approvals.resolve')).toEqual([
+      {
+        approvalId: 'a_2',
+        decision: 'reject',
+        previewHash: 'h1',
+        deadline: expect.any(Number),
+        idempotencyKey: expect.any(String),
+      },
+    ]);
   });
 
   it('a change asked while the analyst is out of sight arms Allow only 600 ms after it is shown', () => {
@@ -534,7 +550,14 @@ describe('the analyst’s controls', () => {
       await Promise.resolve();
     });
     expect(calls('approvals.resolve')).toEqual([
-      { approvalId: 'a_2', decision: 'edit', previewHash: 'h1', input: { tileId: 'c1', period: 50 } },
+      {
+        approvalId: 'a_2',
+        decision: 'edit',
+        previewHash: 'h1',
+        input: { tileId: 'c1', period: 50 },
+        deadline: expect.any(Number),
+        idempotencyKey: expect.any(String),
+      },
     ]);
   });
 

@@ -189,6 +189,7 @@ export {
   MAX_GPU_CONTEXTS,
   GPU_TEXTURE_BYTES,
   GPU_UPLOAD_BYTES_PER_FRAME,
+  GPU_LOSS_WINDOW_MS,
   GPU_MAX_LOSSES,
   gpuContextsHeld,
   parseColor,

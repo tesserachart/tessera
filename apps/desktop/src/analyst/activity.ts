@@ -26,7 +26,6 @@ export function activityWords(t: Transcript): string {
   }
   if (status?.state === 'thinking') return 'Thinking';
   if (status?.state === 'writing') return 'Writing';
-  if (status?.state === 'waiting_approval') return 'Waiting for you';
   if (status?.state === 'running_tool') return 'Running a tool';
   return 'Thinking';
 }
@@ -55,8 +54,12 @@ export function analystActivity(t: Transcript | null, session: AgentSessionSumma
     (t.turnStartedAt !== null || (t.status !== null && t.status.state !== 'idle')) &&
     (session === null || sessionBusy(session));
   if (running) {
-    const waiting = t.status?.state === 'waiting_approval';
-    return { phase: waiting ? 'waiting' : 'working', words: activityWords(t), since: t.turnStartedAt };
+    const waiting = session?.status === 'needs_you';
+    return {
+      phase: waiting ? 'waiting' : 'working',
+      words: waiting ? 'Waiting for you' : activityWords(t),
+      since: t.turnStartedAt,
+    };
   }
   if (lastTurnFailed(t)) return { phase: 'stopped', words: 'Stopped', since: null };
   return IDLE;

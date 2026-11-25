@@ -109,6 +109,28 @@ async function mount() {
   return { ...view, held };
 }
 
+describe('a study’s run', () => {
+  it('stays running when its pane comes back mid-run, so a second press cannot start it twice', async () => {
+    const { held } = await mount();
+    const runButton = () => screen.getByRole('button', { name: /^(Run|Run exploratory|Running…)$/ });
+    fireEvent.click(runButton());
+    await settle();
+    expect(held.queued.filter((t) => t === 'research.run_study')).toHaveLength(1);
+    act(() => {
+      patch(researchViewStore, { fresh: true });
+    });
+    act(() => {
+      patch(researchViewStore, { fresh: false });
+    });
+    await settle();
+    expect(runButton().textContent).toBe('Running…');
+    expect((runButton() as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(runButton());
+    await settle();
+    expect(held.queued.filter((t) => t === 'research.run_study')).toHaveLength(1);
+  });
+});
+
 describe('a Research run reads as a strategy tester', () => {
   it('leads with the verdict in plain words, then the equity curve split and its drawdown', async () => {
     const { container } = await mount();

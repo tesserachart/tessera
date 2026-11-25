@@ -25,7 +25,7 @@ import { askLabel, askQuestion } from '../src/chart/orderflowAsk.ts';
 import { isOrderFlow, withOrderFlow } from '../src/chart/templates/builtin.ts';
 import { requirementWords, unavailableKinds } from '../src/chart/settings/availability.ts';
 import { BigTradeView, LOWER_AFTER_MS, type BigTradeFilter } from '../src/market/flow/bigTrades.ts';
-import { Lifetime } from '../src/app/lifetime.ts';
+import { Lifetime, READ_AGAIN_MS } from '../src/app/lifetime.ts';
 import { FlowHub, Refill, type InstrumentFlow } from '../src/market/flow/hub.ts';
 import { addPrints, OPEN_SPAN_REFRESH_MS, profileData, sessionLabel, withoutRth } from '../src/market/flow/profiles.ts';
 import { fakeRuntime, type FakeRuntime } from './support/fakeRuntime.ts';
@@ -336,6 +336,33 @@ describe('the order-flow hub', () => {
     second.event(snapshot(4), 0);
     await vi.waitFor(() => expect(flow.book.seq).toBe(4));
     expect(rt.subscriptions.filter((s) => s.topic === 'market.depth')).toHaveLength(2);
+    release();
+  });
+
+  it('drops a refused feed’s words once it delivers again, the book and the tape alike', async () => {
+    const rt = fakeRuntime();
+    const hub = new FlowHub({ now: () => T0 });
+    const { flow, release } = hub.acquire('NQ', 0.25, 2);
+    flow.useBook();
+    flow.useTrades();
+    const status = vi.fn();
+    flow.statusChanged.on(status);
+    const book = await vi.waitFor(() => rt.sub('market.depth'));
+    const tape = await vi.waitFor(() => rt.sub('market.trades'));
+    book.refuse('The depth feed dropped');
+    tape.refuse('The trade feed dropped');
+    await vi.waitFor(() => expect(flow.depthError).toBe('The depth feed dropped'));
+    await vi.waitFor(() => expect(flow.tradesError).toBe('The trade feed dropped'));
+    book.active();
+    book.event(
+      { instrument: 'NQZ6.CME', ts: ns(T0), seq: 1, kind: 'snapshot', levels: 10, bids: [[100, 3]], asks: [], source },
+      0,
+    );
+    tape.active();
+    tape.event({ instrument: 'NQZ6.CME', seq: 0, trades: [], source }, 0);
+    await vi.waitFor(() => expect(flow.depthError).toBeNull());
+    await vi.waitFor(() => expect(flow.tradesError).toBeNull());
+    expect(status).toHaveBeenCalledTimes(4);
     release();
   });
 
@@ -832,6 +859,21 @@ describe('the order-flow hub', () => {
     expect(rt.toolCalls('market.get_volume_profile')).toHaveLength(2);
     profiles.release();
     big.release();
+    release();
+  });
+
+  it('loads its footprints again a while after the first load was refused', async () => {
+    const rt = fakeRuntime();
+    const hub = new FlowHub({ now: () => T0 });
+    const { flow, release } = hub.acquire('NQ', 0.25, 2);
+    const footprints = flow.useFootprints('5m');
+    (await vi.waitFor(() => rt.pending('market.get_footprint'))).fail('rejected', 'The history feed dropped');
+    await vi.waitFor(() => expect(footprints.feed.status.error).not.toBeNull());
+    await vi.advanceTimersByTimeAsync(READ_AGAIN_MS);
+    expect(rt.toolCalls('market.get_footprint')).toHaveLength(2);
+    rt.pending('market.get_footprint').ok(footprintOutput([], { lastBarOpen: false, truncated: true }));
+    await vi.waitFor(() => expect(footprints.feed.status.error).toBeNull());
+    footprints.release();
     release();
   });
 
@@ -2010,6 +2052,26 @@ describe('session profiles', () => {
     lastPrint: null,
     gaps: [],
     rows,
+  });
+
+  it('asks a closed range again after a read of it failed, instead of leaving it blank', async () => {
+    const now = { t: T0 + 86_400_000 };
+    const rt = fakeRuntime();
+    const hub = new FlowHub({ now: () => now.t }, { keepMs: 0 });
+    const { flow, release } = hub.acquire('NQ', 0.25, 2);
+    const vp = flow.useProfiles();
+    const range = () => vp.feed.span(T0 - 3_600_000, T0 + 3_600_000, 'all');
+    range();
+    (await vi.waitFor(() => rt.pending('market.get_volume_profile'))).fail('rejected', 'The history feed dropped');
+    await quiet();
+    expect(range()).toBeNull();
+    expect(rt.toolCalls('market.get_volume_profile')).toHaveLength(1);
+    now.t += READ_AGAIN_MS;
+    range();
+    (await vi.waitFor(() => rt.pending('market.get_volume_profile'))).ok(volumeProfile([profile([[20600, 5, 3, 2]])]));
+    await vi.waitFor(() => expect(range()).not.toBeNull());
+    vp.release();
+    release();
   });
 
   it('reads the sessions a view scrolls back to past the newest ten, once each, and stops at a refusal until the view asks for older', async () => {

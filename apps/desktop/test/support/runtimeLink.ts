@@ -75,6 +75,7 @@ export interface RuntimeLink {
   received(method: string): unknown[];
   hold(): void;
   release(): void;
+  releaseFirst(): void;
   lagBehind(): void;
   catchUp(): void;
   open(): Promise<void>;
@@ -255,6 +256,10 @@ export function runtimeLink(
     release: () => {
       holding = false;
       for (const item of parked.splice(0)) dispatch(item.socket, item.frame);
+    },
+    releaseFirst: () => {
+      const item = parked.shift();
+      if (item) dispatch(item.socket, item.frame);
     },
     open: () => until(() => status() === 'open', 'the runtime is connected'),
     cut: async () => {

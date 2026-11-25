@@ -4,6 +4,7 @@ import {
   ChartEngine,
   DATA_FRAME_MS,
   GPU_DATA_FRAME_MS,
+  GPU_LOSS_WINDOW_MS,
   GPU_MAX_LOSSES,
   MAX_GPU_CONTEXTS,
   SETTLE_MS,
@@ -424,6 +425,29 @@ describe('the gpu surface', () => {
     expect(bare.gpuState()).toBe('failed');
     expect(l.draw).toHaveBeenCalledTimes(1);
     bare.destroy();
+  });
+
+  it('counts a lost context as a blip once the window since the last loss has passed', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const { chart, made, heat } = gpuChart();
+      chart.addLayer(heat);
+      chart.render();
+      const canvas = made[0]!;
+      canvas.fire('webglcontextlost');
+      canvas.fire('webglcontextrestored');
+      chart.render();
+      vi.advanceTimersByTime(GPU_LOSS_WINDOW_MS);
+      canvas.fire('webglcontextlost');
+      chart.render();
+      expect(chart.gpuState()).toBe('fallback');
+      canvas.fire('webglcontextrestored');
+      chart.render();
+      expect(chart.gpuState()).toBe('active');
+      chart.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('falls back while a lost context waits, re-uploads on restore, and gives up after two losses', () => {

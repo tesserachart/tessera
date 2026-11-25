@@ -89,7 +89,7 @@ describe('an alert, by mouse', () => {
   it('a new alert’s form has neither', () => {
     show();
     patch(alertFormStore, {
-      open: { form: { ...formOf(alert()), id: null }, at: null, price: 20870.75 },
+      open: { form: { ...formOf(alert()), id: null }, at: null, price: 20870.75, seq: 1 },
     });
     render(
       <TestRuntime client={client}>
@@ -131,6 +131,107 @@ describe('an alert, by mouse', () => {
     expect(items.map((i) => i.textContent)).toEqual(['Edit…', 'Pause', 'All alerts', 'Delete']);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
     await waitFor(() => expect(calls).toContainEqual({ name: 'alerts.delete', input: { id: 'al_1' } }));
+  });
+});
+
+describe('an alert line dragged on the chart', () => {
+  it('leaves a newer drag alone when the move it replaced is refused', async () => {
+    let refuse: (e: Error) => void = () => undefined;
+    const held = answeringClient({
+      'alerts.update': () =>
+        new Promise((_resolve, reject) => {
+          refuse = reject;
+        }),
+    });
+    setTestServices(held.client);
+    seedTools(['alerts.update']);
+    const second = alert({
+      id: 'al_2',
+      title: 'NQ Z6 crosses 20850.00',
+      steps: [{ subject: { kind: 'price' }, op: 'crosses', target: { kind: 'value', value: 20850 }, on: 'trade' }],
+      live: { price: 20850, step: 0, bars: 0, problem: null },
+    });
+    show(alert(), second);
+    const yOf = (p: number) => 200 - (p - 20870.75) * 8;
+    const chart = {
+      coords: () => ({
+        plot: { x: 0, y: 0, w: 600, h: 400 },
+        priceAxis: { x: 600, w: 70 },
+        yOfPrice: yOf,
+        priceOfY: (y: number) => 20870.75 + (200 - y) / 8,
+      }),
+      on: () => () => undefined,
+    } as unknown as ChartApi;
+    render(
+      <TestRuntime client={held.client}>
+        <TooltipProvider>
+          <ChartAlerts
+            chart={chart}
+            ids={new Set(['NQZ6.CME'])}
+            decimals={2}
+            tick={0.25}
+            target={{ layoutId: 'l', tileId: 't' }}
+          />
+        </TooltipProvider>
+      </TestRuntime>,
+    );
+    vi.useRealTimers();
+    const tag = (title: string) => screen.getByRole('button', { name: `Alert: ${title}` });
+    const first = tag('NQ Z6 crosses 20870.75');
+    fireEvent.pointerDown(first, { button: 0, pointerId: 1, clientY: yOf(20870.75) });
+    fireEvent.pointerMove(first, { pointerId: 1, clientY: yOf(20875) });
+    fireEvent.pointerUp(first, { pointerId: 1, clientY: yOf(20875) });
+    await waitFor(() => expect(held.calls.map((c) => c.name)).toContain('alerts.update'));
+    const other = tag('NQ Z6 crosses 20850.00');
+    fireEvent.pointerDown(other, { button: 0, pointerId: 2, clientY: yOf(20850) });
+    fireEvent.pointerMove(other, { pointerId: 2, clientY: yOf(20852) });
+    expect(other.textContent).toContain('20,852.00');
+    await act(async () => {
+      refuse(new Error('refused'));
+      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(tag('NQ Z6 crosses 20850.00').textContent).toContain('20,852.00');
+  });
+});
+
+describe('an alert form whose save is still on its way', () => {
+  it('leaves the next form open, with nothing of the old answer, when the old save answers', async () => {
+    let answer: (a: unknown) => void = () => undefined;
+    const held = answeringClient({
+      'alerts.update': () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }) as never,
+    });
+    setTestServices(held.client);
+    seedTools(['alerts.update']);
+    const first = alert();
+    const second = alert({ id: 'al_2', title: 'NQ Z6 crosses 20850.00' });
+    show(first, second);
+    render(
+      <TestRuntime client={held.client}>
+        <TooltipProvider>
+          <AlertFormHost />
+        </TooltipProvider>
+      </TestRuntime>,
+    );
+    act(() => {
+      editAlert(first, { decimals: 2, tick: 0.25 });
+      vi.advanceTimersByTime(0);
+    });
+    vi.useRealTimers();
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(held.calls.map((c) => c.name)).toContain('alerts.update'));
+    act(() => {
+      editAlert(second, { decimals: 2, tick: 0.25 });
+    });
+    await waitFor(() => expect(read(alertFormStore).open?.form.id).toBe('al_2'));
+    await act(async () => {
+      answer(first);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(read(alertFormStore).open?.form.id).toBe('al_2');
   });
 });
 

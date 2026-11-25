@@ -12,6 +12,7 @@ use tessera_core::session::SessionCalendar;
 use tessera_core::time::{NANOS_PER_DAY, NANOS_PER_MINUTE};
 use tessera_core::{InstrumentId, SharedClock, Timeframe, Timestamp};
 use tessera_protocol::cards::Held;
+pub use tessera_protocol::cards::PullState;
 use tessera_store::ticks::Span;
 use ts_rs::TS;
 
@@ -65,18 +66,6 @@ pub struct PullRequest {
     pub to: NaiveDate,
     /// `rth` for regular trading hours, `session` for the whole session.
     pub scope: Scope,
-}
-
-/// Where a pull stands.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum PullState {
-    /// Fetching, or queued behind another pull.
-    Running,
-    /// Stopped by the trader; resume carries on where it stopped.
-    Cancelled,
-    /// Every day has an answer (some may have failed; resume retries those once).
-    Done,
 }
 
 /// What happened to one trading day of a pull.

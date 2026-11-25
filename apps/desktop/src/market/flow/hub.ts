@@ -235,6 +235,11 @@ export class Uses {
   }
 }
 
+function feedErrorAfter(signal: Runtime.TopicSignal<unknown>, current: string | null): string | null {
+  if (signal._tag === 'Ended' || signal._tag === 'Refused') return feedErrorWords(signal.error);
+  return signal._tag === 'Event' ? null : current;
+}
+
 const FLOW_KEEP_MS = 2 * 60_000;
 
 const FLOW_KEEP_MAX = 2;
@@ -298,10 +303,8 @@ export class InstrumentFlow {
       'market.depth',
       { instrument: this.instrument },
       (e) => {
-        if (e._tag === 'Ended') {
-          this.depthError = feedErrorWords(e.error);
-          this.statusChanged.emit();
-        } else if (!this.onBook(e)) {
+        this.noteFeed('depthError', e);
+        if (e._tag !== 'Ended' && !this.onBook(e)) {
           stop();
           this.followBook();
         }
@@ -313,10 +316,6 @@ export class InstrumentFlow {
   private onBook(e: SubscriptionEvent<DepthUpdate>): boolean {
     if (e._tag === 'Gap') return false;
     if (e._tag === 'Resubscribed') this.book.reset();
-    if (e._tag === 'Refused') {
-      this.depthError = feedErrorWords(e.error);
-      this.statusChanged.emit();
-    }
     if (e._tag !== 'Event') return true;
     const u = e.data;
     if (e.meta.seq === 0) this.book.reset();
@@ -325,6 +324,13 @@ export class InstrumentFlow {
     if (r === 'gap') return false;
     if (r === 'applied' || r === 'alive') this.bookChanged.emit();
     return true;
+  }
+
+  private noteFeed(feed: 'depthError' | 'tradesError', signal: Runtime.TopicSignal<unknown>): void {
+    const error = feedErrorAfter(signal, this[feed]);
+    if (error === this[feed]) return;
+    this[feed] = error;
+    this.statusChanged.emit();
   }
 
   useTrades(): () => void {
@@ -336,10 +342,8 @@ export class InstrumentFlow {
       'market.trades',
       { instruments: [this.instrument] },
       (e) => {
-        if (e._tag === 'Ended') {
-          this.tradesError = feedErrorWords(e.error);
-          this.statusChanged.emit();
-        } else if (!this.onTrades(e)) {
+        this.noteFeed('tradesError', e);
+        if (e._tag !== 'Ended' && !this.onTrades(e)) {
           stop();
           this.followTrades();
         }
@@ -350,10 +354,6 @@ export class InstrumentFlow {
 
   private onTrades(e: SubscriptionEvent<TradesUpdate>): boolean {
     if (e._tag === 'Gap') return false;
-    if (e._tag === 'Refused') {
-      this.tradesError = feedErrorWords(e.error);
-      this.statusChanged.emit();
-    }
     if (e._tag !== 'Event') return true;
     const u = e.data;
     const reconnected = u.segment !== undefined && this.segment !== undefined && u.segment !== this.segment;
@@ -371,10 +371,6 @@ export class InstrumentFlow {
     if (r === 'applied') {
       this.agg.sync();
       for (const g of this.groupedAggs.values()) g.agg.sync();
-      if (this.tradesError) {
-        this.tradesError = null;
-        this.statusChanged.emit();
-      }
     }
     if (r === 'applied' || found > 0) this.tradesChanged.emit();
     return true;

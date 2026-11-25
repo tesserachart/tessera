@@ -23,7 +23,7 @@ export function installResponsive(
     for (const pos of [...auto]) {
       if (!api.getEdgeGroup(pos)?.isCollapsed()) {
         auto.delete(pos);
-        markMomentary(pos, false);
+        markMomentary(api, pos, false);
       }
     }
     const plan = planResponsive(responsiveInputOf(api, host, auto, held, remembered, roomOf), { settled });
@@ -56,11 +56,11 @@ export function installResponsive(
   const load = api.onDidLayoutFromJSON(() => {
     auto.clear();
     held.clear();
-    clearMomentary();
+    clearMomentary(api);
     schedule();
   });
   const added = api.onDidAddGroup(schedule);
-  const user = onUserEdgeChange((pos, collapsed) => {
+  const user = onUserEdgeChange(api, (pos, collapsed) => {
     if (pos === 'right') {
       if (!collapsed) makeRoom(pos);
       return;

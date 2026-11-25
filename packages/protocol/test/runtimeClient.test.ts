@@ -11,6 +11,7 @@ import {
   type SequenceGap,
   type SubscriptionSignal,
   type TopicOptions,
+  waitingToRetry,
 } from '../src/index.ts';
 import {
   elapse,
@@ -361,6 +362,26 @@ describe('RuntimeClient connection lifecycle', () => {
       () => ({ backoff: { initialDelayMs: 60_000, maxDelayMs: 60_000, factor: 1, jitter: 0 } }),
     ));
 
+  it('offers Retry now only while waiting between attempts, and a press the moment it is offered retries', () =>
+    withClient(
+      async (client, server) => {
+        await opened(client);
+        const offered: boolean[] = [];
+        client.state.subscribe(() => {
+          const s = client.state.getSnapshot();
+          if (s.status !== 'reconnecting') return;
+          offered.push(waitingToRetry(s));
+          if (waitingToRetry(s)) client.retryNow();
+        });
+        server.dropAll();
+        await waitFor(() => offered.length > 0);
+        await opened(client);
+        expect(offered).toContain(true);
+        expect(waitingToRetry({ status: 'reconnecting', nextRetryAt: null })).toBe(false);
+      },
+      () => ({ backoff: { initialDelayMs: 60_000, maxDelayMs: 60_000, factor: 1, jitter: 0 } }),
+    ));
+
   it('fails the attempt when hello is refused', () =>
     withClient(async (client, server) => {
       let refuseHello = true;
@@ -440,6 +461,31 @@ describe('RuntimeClient subscriptions', () => {
       await waitFor(() => quotes.data().length === 1);
       expect(quotes.data()[0]).toEqual({ last: 487.85 });
       expect(quotes.got.map((e) => e._tag)).toEqual(['Active', 'Event']);
+    }));
+
+  it('drops what an ended subscription still sends, so a new one keeps its first events however often the chart switches', () =>
+    withClient(async (client, server) => {
+      let subscribed = 0;
+      server.handlers.set('subscribe', (_p, conn) => {
+        subscribed++;
+        const id = `q${String(subscribed)}`;
+        if (subscribed > 1) conn.push('market.quotes', 1, { last: subscribed }, id);
+        return { subscriptionId: id, topic: 'market.quotes' };
+      });
+      server.handlers.set('unsubscribe', (p, conn) => {
+        const { subscriptionId } = p as { subscriptionId: string };
+        for (let seq = 1; seq <= 600; seq++) conn.push('market.quotes', seq, { last: 0 }, subscriptionId);
+        return { removed: true };
+      });
+      await opened(client);
+      let shown = follow(client, 'market.quotes', { instruments: ['QQQ'] });
+      await waitFor(() => shown.count('Active') === 1);
+      for (let turn = 2; turn <= 4; turn++) {
+        shown.stop();
+        shown = follow(client, 'market.quotes', { instruments: [`Q${String(turn)}`] });
+        await waitFor(() => shown.count('Active') === 1);
+        expect(shown.data()).toEqual([{ last: turn }]);
+      }
     }));
 
   it('reports a seq gap before the event that revealed it, and drops duplicates', () =>

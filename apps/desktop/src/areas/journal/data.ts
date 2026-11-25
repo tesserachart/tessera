@@ -10,6 +10,8 @@ import { useDisplayZone } from '../../state/timeZone.ts';
 
 const JOURNAL = 'journal.*';
 
+export const JOURNAL_CHANGES = { refresh: [JOURNAL] };
+
 export function useJournalLive(): void {
   const has = useHasTool('journal.get_catalog');
   useTopicEffect('journal.changes', has ? {} : null, (change) => {

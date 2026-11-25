@@ -965,7 +965,7 @@ async fn financial_from_agent_is_a_draft_with_one_live_per_account_and_symbol() 
     {
         let drafts = h.obs.drafts.lock();
         assert_eq!(drafts.len(), 1);
-        assert!(drafts[0].live);
+        assert!(drafts[0].is_live());
         assert_eq!(drafts[0].account, "paper-main");
     }
     let a = h.inv.approvals().get(&p1.approval_id).unwrap();
@@ -994,7 +994,7 @@ async fn financial_from_agent_is_a_draft_with_one_live_per_account_and_symbol() 
         .await
         .unwrap();
     assert_eq!(res.approval.status, ApprovalStatus::Rejected);
-    assert!(!h.obs.drafts.lock().last().unwrap().live);
+    assert!(!h.obs.drafts.lock().last().unwrap().is_live());
     let mut third = order("QQQ");
     third["qty"] = json!(5);
     let r4 = h.inv.invoke(req("orders.submit", third, agent())).await;

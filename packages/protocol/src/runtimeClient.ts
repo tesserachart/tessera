@@ -48,6 +48,10 @@ export interface ConnectionState {
   endpoint: string | null;
 }
 
+export function waitingToRetry(state: Pick<ConnectionState, 'status' | 'nextRetryAt'>): boolean {
+  return state.status === 'reconnecting' && state.nextRetryAt !== null;
+}
+
 export interface WebSocketLike {
   readonly readyState: number;
   send(data: string): void;
@@ -272,6 +276,7 @@ export function createRuntimeClient(config: RuntimeClientConfig): RuntimeClient 
   const byServerId = new Map<string, SubRecord>();
   const lastSeq = new Map<string, number>();
   let orphanEvents: InboundEvent[] = [];
+  const ending = new Set<string>();
   let subscribesInFlight = 0;
   const listeners = new Set<(e: ClientEvent) => void>();
   let retry: (() => void) | null = null;
@@ -489,6 +494,7 @@ export function createRuntimeClient(config: RuntimeClientConfig): RuntimeClient 
     if (typeof env.subscriptionId === 'string') {
       const rec = byServerId.get(env.subscriptionId);
       if (!rec) {
+        if (ending.has(env.subscriptionId)) return;
         if (subscribesInFlight > 0 && orphanEvents.length < ORPHAN_BUFFER_LIMIT) orphanEvents.push(env);
         return;
       }
@@ -575,7 +581,11 @@ export function createRuntimeClient(config: RuntimeClientConfig): RuntimeClient 
 
   const unsubscribeOnRuntime = (serverId: string) => {
     if (!established) return;
-    request('unsubscribe', { subscriptionId: serverId }).catch(() => undefined);
+    ending.add(serverId);
+    orphanEvents = orphanEvents.filter((e) => e.subscriptionId !== serverId);
+    request('unsubscribe', { subscriptionId: serverId })
+      .catch(() => undefined)
+      .finally(() => ending.delete(serverId));
   };
 
   const onSubscribed = (rec: SubRecord, subscriptionId: string) => {
@@ -713,6 +723,7 @@ export function createRuntimeClient(config: RuntimeClientConfig): RuntimeClient 
     byServerId.clear();
     lastSeq.clear();
     orphanEvents = [];
+    ending.clear();
     subscribesInFlight = 0;
     stopPulse();
     conn.markLost(reason);
@@ -841,6 +852,13 @@ export function createRuntimeClient(config: RuntimeClientConfig): RuntimeClient 
     new Promise<void>((resolve) => {
       const attempt = store.getSnapshot().attempt + 1;
       const delay = computeBackoffDelay(attempt, backoff, random);
+      const timer = setTimeout(wake, delay);
+      function wake() {
+        clearTimeout(timer);
+        retry = null;
+        resolve();
+      }
+      retry = wake;
       store.update((s) => ({
         ...s,
         status: 'reconnecting',
@@ -850,13 +868,6 @@ export function createRuntimeClient(config: RuntimeClientConfig): RuntimeClient 
         nextRetryAt: Date.now() + delay,
         connectedAt: null,
       }));
-      const timer = setTimeout(wake, delay);
-      function wake() {
-        clearTimeout(timer);
-        retry = null;
-        resolve();
-      }
-      retry = wake;
     });
 
   /** TypeScript's narrowing cannot see an await change `closed`. */
@@ -902,8 +913,8 @@ export function createRuntimeClient(config: RuntimeClientConfig): RuntimeClient 
   };
 
   const retryNow = () => {
-    if (closed || socket || store.getSnapshot().status !== 'reconnecting' || !retry) return;
-    retry();
+    if (closed || !waitingToRetry(store.getSnapshot())) return;
+    retry?.();
   };
 
   const onEvent = (listener: (e: ClientEvent) => void) => {

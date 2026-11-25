@@ -285,7 +285,7 @@ impl<'a> DraftRepo<'a> {
                 d.account,
                 d.instrument.as_ref().map(|i| i.as_str()),
                 d.tool,
-                d.live,
+                d.is_live(),
                 d.created_at.0,
                 now.0,
                 to_json(d)?,
@@ -1258,7 +1258,6 @@ mod tests {
             environment: None,
             instrument: Some(InstrumentId::new("QQQ").unwrap()),
             preview: json!({"restatement": "BUY 25 QQQ LMT 487.25 DAY"}),
-            live: true,
             status: DraftStatus::Live,
             origin: Origin::User,
             created_at: Timestamp(2),
@@ -1268,10 +1267,10 @@ mod tests {
         d.upsert(&info, Timestamp(2)).unwrap();
         assert_eq!(d.live(Some("paper-main")).unwrap().len(), 1);
         assert_eq!(d.live(Some("other")).unwrap().len(), 0);
-        info.live = false;
+        info.status = DraftStatus::Submitted;
         d.upsert(&info, Timestamp(3)).unwrap();
         assert!(d.live(None).unwrap().is_empty());
-        assert!(!d.get("d_1").unwrap().unwrap().live);
+        assert!(!d.get("d_1").unwrap().unwrap().is_live());
     }
 
     #[test]

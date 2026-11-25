@@ -129,12 +129,9 @@ export function ChartAlerts({
     const sending = { ...drag, sending: true };
     setDrag(sending);
     void moveAlert(a.id, Number(drag.price.toFixed(decimals))).then((why) => {
-      if (why) {
-        setDrag(null);
-        noteOnChart(target, { tone: 'err', text: why });
-        return;
-      }
-      setDrag((cur) => (cur === sending ? { ...sending, settleUntil: Date.now() + SETTLE_MS } : cur));
+      if (why) noteOnChart(target, { tone: 'err', text: why });
+      const next = why ? null : { ...sending, settleUntil: Date.now() + SETTLE_MS };
+      setDrag((cur) => (cur === sending ? next : cur));
     });
   };
 

@@ -3,7 +3,7 @@ import { formatMoney, formatPrice } from '@tessera/ui';
 import { askAnalyst } from '../../shell/tradeActions.ts';
 import { setChartInstrument } from '../../workspace/controller.ts';
 import { showArea } from '../store.ts';
-import { dayLabel, pct, plural, rLabel, sideWord } from './model/format.ts';
+import { dayLabel, pct, plural, rLabel, sideWord, tradeOpen } from './model/format.ts';
 import { runTool } from '../../app/tools.ts';
 
 function ask(text: string): void {
@@ -12,7 +12,7 @@ function ask(text: string): void {
 
 export function askAboutTrade(t: JournalTrade): void {
   const dp = t.priceDecimals;
-  const exit = t.exitPrice === null ? 'still open' : `exit ${formatPrice(t.exitPrice, dp)}`;
+  const exit = tradeOpen(t) || t.exitPrice === null ? 'still open' : `exit ${formatPrice(t.exitPrice, dp)}`;
   ask(
     `Review my ${t.symbol} ${sideWord(t.side).toLowerCase()} of ${dayLabel(t.tradeDate)} (journal trade ${t.id}): ` +
       `${String(t.qty)} at ${formatPrice(t.entryPrice, dp)}, ${exit}, net ${formatMoney(t.netPnl, { signed: true })}` +

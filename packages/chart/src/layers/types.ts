@@ -100,7 +100,7 @@ export interface ViewHints {
 }
 
 export interface LayerPointerEvent {
-  type: 'down' | 'move' | 'up' | 'hover' | 'leave' | 'dblclick';
+  type: 'down' | 'move' | 'up' | 'cancel' | 'hover' | 'leave' | 'dblclick';
   x: number;
   y: number;
   shift: boolean;

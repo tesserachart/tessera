@@ -33,9 +33,13 @@ export function useTradeSettings<T>(selector: (s: TradeSettingsState) => T): T {
 
 let writer: Writer | null = null;
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
+const unsent = new Map<string, unknown>();
 
 function writeSetting(key: string, value: unknown, delay = 0): void {
-  if (!writer) return;
+  if (!writer) {
+    unsent.set(key, value);
+    return;
+  }
   const w = writer;
   const prev = timers.get(key);
   if (prev) clearTimeout(prev);
@@ -54,6 +58,9 @@ function writeSetting(key: string, value: unknown, delay = 0): void {
 
 function attachWriter(w: Writer | null): void {
   writer = w;
+  if (!w) return;
+  for (const [key, value] of unsent) w(key, value as JsonValue);
+  unsent.clear();
 }
 
 export function rememberOco(key: string, oco: OcoConfig): void {
@@ -76,7 +83,7 @@ async function load(): Promise<void> {
       keys: [SETTING_LEVELS],
     });
     const values = Object.fromEntries(Object.entries(out.settings).map(([k, info]) => [k, info.value]));
-    patch(tradeSettingsStore, { ...applyStored(values), status: 'ready' });
+    patch(tradeSettingsStore, { ...applyStored({ ...values, ...Object.fromEntries(unsent) }), status: 'ready' });
     attachWriter((key, value) => {
       writeRuntimeSetting(key, value).catch((err: unknown) => {
         console.warn(`[settings] ${key} not saved`, err);

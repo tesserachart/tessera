@@ -324,6 +324,9 @@ describe('ChartEngine (headless)', () => {
     chart.engine.pointerDown(200, y);
     chart.engine.pointerUp(200, y);
     expect(clicks).toEqual([[{ layerId: 'gex', objectId: 'mg', distance: expect.closeTo(0, 5) as number }]]);
+    chart.engine.pointerDown(200, y);
+    chart.engine.pointerCancel();
+    expect(clicks, 'a cancelled press is no click').toHaveLength(1);
     expect(chart.engine.cursorAt(200, y)).toBe('pointer');
     chart.destroy();
   });

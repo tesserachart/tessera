@@ -232,7 +232,7 @@ function StudyBody({ study, onSaved, onDeleted }: StudyPaneProps) {
   const changes = { refresh: ['research.list_studies', 'research.get_study'] };
   const save = useToolAction('research.save_study', changes);
   const freeze = useToolAction('research.freeze_study', changes);
-  const run = useToolAction('research.run_study', changes);
+  const run = useToolAction('research.run_study', changes, study ? { id: study.id } : null);
   const remove = useToolAction('research.delete_study', changes);
   const detail = useToolValue('research.get_study', study ? { id: study.id } : null);
   const runs = detail?.runs ?? [];

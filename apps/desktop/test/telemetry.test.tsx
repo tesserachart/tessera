@@ -1,12 +1,24 @@
 import type { TelemetryConfigOutput, TelemetryStatusOutput, TelemetryWindowEvent } from '@tessera/protocol';
 import { act, cleanup, render } from '@testing-library/react';
+import type * as PostHogModule from 'posthog-js/no-external';
 import type { ReactNode } from 'react';
+import { TELEMETRY_AGAIN_MS } from '../src/app/telemetry.ts';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-const posthog = vi.hoisted(() => ({ loads: 0 }));
+const posthog = vi.hoisted(() => ({ loads: 0, refusing: false, refused: 0 }));
 vi.mock('posthog-js/no-external', async (importOriginal) => {
   posthog.loads += 1;
-  return importOriginal();
+  const original = await importOriginal<typeof PostHogModule>();
+  class RefusedOnce extends original.PostHog {
+    constructor() {
+      if (posthog.refusing) {
+        posthog.refused += 1;
+        throw new Error('blocked by the network');
+      }
+      super();
+    }
+  }
+  return { ...original, PostHog: RefusedOnce };
 });
 
 const requests = vi.hoisted(() => ({ fetch: vi.fn(), xhr: vi.fn(), beacon: vi.fn() }));
@@ -213,6 +225,19 @@ describe('crash reports and usage analytics from the window', { timeout: 2 * LOA
       ['panel opened', 'dom'],
     ]);
     unwatch();
+    w.stop();
+  });
+
+  it('loads again a while after posthog-js failed to load, instead of staying off', async () => {
+    posthog.refusing = true;
+    const w = await openWindow(EVERYTHING);
+    await w.statusAsked();
+    await vi.waitFor(() => expect(posthog.refused).toBeGreaterThan(0), { timeout: LOADING_HANG_GUARD_MS });
+    await pause(5_000);
+    expect(w.names()).toEqual([]);
+    posthog.refusing = false;
+    await pause(TELEMETRY_AGAIN_MS);
+    await w.on();
     w.stop();
   });
 

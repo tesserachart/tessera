@@ -1,3 +1,4 @@
+import { tradeOpen } from './format.ts';
 import type { JournalTrade, TradeSortKey } from '@tessera/protocol';
 
 export type ColumnId =
@@ -68,7 +69,7 @@ export function groupByDay(trades: readonly JournalTrade[]): DayGroup[] {
       out.push(g);
     }
     g.trades.push(t);
-    if (t.status === 'closed') {
+    if (!tradeOpen(t)) {
       g.n += 1;
       g.net = Math.round((g.net + t.netPnl) * 100) / 100;
       if (t.outcome === 'win') g.wins += 1;

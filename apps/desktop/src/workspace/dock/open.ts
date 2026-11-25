@@ -179,21 +179,30 @@ export function quietly(fn: () => void): void {
   }
 }
 
-const userEdgeListeners = new Set<(pos: EdgePos, collapsed: boolean) => void>();
-export function onUserEdgeChange(l: (pos: EdgePos, collapsed: boolean) => void): () => void {
-  userEdgeListeners.add(l);
-  return () => userEdgeListeners.delete(l);
+type UserEdgeListener = (pos: EdgePos, collapsed: boolean) => void;
+const userEdgeListeners = new WeakMap<DockviewApi, Set<UserEdgeListener>>();
+function userEdgeListenersOf(api: DockviewApi): Set<UserEdgeListener> {
+  let listeners = userEdgeListeners.get(api);
+  if (!listeners) {
+    listeners = new Set();
+    userEdgeListeners.set(api, listeners);
+  }
+  return listeners;
+}
+export function onUserEdgeChange(api: DockviewApi, l: UserEdgeListener): () => void {
+  userEdgeListenersOf(api).add(l);
+  return () => userEdgeListenersOf(api).delete(l);
 }
 
 export function collapseForNow(api: DockviewApi, pos: EdgePos): void {
   const g = api.getEdgeGroup(pos);
   if (!g || g.isCollapsed()) return;
   quietly(() => collapseEdge(api, pos, 'key'));
-  markMomentary(pos, true);
+  markMomentary(api, pos, true);
 }
 
 export function restoreForNow(api: DockviewApi, pos: EdgePos): void {
-  markMomentary(pos, false);
+  markMomentary(api, pos, false);
   quietly(() => expandEdge(api, pos, 'key'));
 }
 
@@ -209,8 +218,8 @@ export function installCollapseRecorder(api: DockviewApi, layoutId: string): () 
           if (transient > 0 || focusSnapshot) return;
           // dockview collapses an edge its last tile left
           if (isCollapsed && (edgeGroup(api, pos)?.panels.length ?? 0) === 0) return;
-          markMomentary(pos, false);
-          for (const l of userEdgeListeners) l(pos, isCollapsed);
+          markMomentary(api, pos, false);
+          for (const l of userEdgeListenersOf(api)) l(pos, isCollapsed);
           const view = read(layoutsStore).views[layoutId] ?? DEFAULT_VIEW;
           if (view.collapsed[pos] === isCollapsed) return;
           setStageView(layoutId, { collapsed: { ...view.collapsed, [pos]: isCollapsed } });

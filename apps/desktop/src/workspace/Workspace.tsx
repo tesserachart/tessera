@@ -12,7 +12,7 @@ import {
 } from 'react';
 import { LoadCover } from '@tessera/ui';
 import { InSight, SightSwitch } from '../app/inSight.ts';
-import { runTool, toolCode, useHasTool, useToolValue, useTools } from '../app/tools.ts';
+import { toolCode, useHasTool, useToolValue, useTools } from '../app/tools.ts';
 import { useServer } from '../app/runtimeContext.ts';
 import { useClock } from '../app/clock.ts';
 import { watchPanelOpens } from '../app/telemetry.ts';
@@ -39,9 +39,11 @@ import {
   activateChart,
   activeChartTarget,
   attachWorkspace,
+  forgetLayoutRead,
   mountWorkspace,
   noteDockInStep,
   popped,
+  readLayout,
   saveLayout,
   type WorkspaceContext,
 } from './controller.ts';
@@ -270,17 +272,17 @@ function WorkspaceDock({
   const load = useEffectEvent(async (api: DockviewApi) => {
     loaded.current = false;
     if (shownRef.current) resetFocusMode();
+    forgetLayoutRead(layoutId);
     let layout: Layout | null = takeSeededLayout(layoutId);
     if (!layout && tools?.has('layout.get')) {
-      try {
-        layout = await runTool('layout.get', { layoutId });
-      } catch (err) {
-        if (toolCode(err) !== 'not_found') {
-          console.warn(`[workspace] layout.get ${layoutId} failed; using a local layout`, err);
-        } else if (!isDefault) {
-          if (apiRef.current === api) setWorkspace(null);
-          return;
-        }
+      const reply = await readLayout(layoutId);
+      if (reply.kind === 'superseded') return;
+      if (reply.kind === 'done') layout = reply.value;
+      else if (toolCode(reply.error) !== 'not_found') {
+        console.warn(`[workspace] layout.get ${layoutId} failed; using a local layout`, reply.error);
+      } else if (!isDefault) {
+        if (apiRef.current === api) setWorkspace(null);
+        return;
       }
     }
     if (apiRef.current !== api) return;

@@ -20,7 +20,7 @@ import { useCalendar, useJournalAction, useToday } from '../data.ts';
 import { Empty, PageHead, ProgressBar, Section, StatRow } from '../kit/index.ts';
 import { monthBounds } from '../model/calendar.ts';
 import { checklistShare, journalCompletion } from '../model/dashboard.ts';
-import { clock, longDate, pct, plural, rLabel, tone } from '../model/format.ts';
+import { clock, longDate, pct, plural, rLabel, tone, tradeOpen } from '../model/format.ts';
 import { MonthCalendar } from '../parts/Calendar.tsx';
 import { ChecklistSettings } from '../parts/ChecklistSettings.tsx';
 import { Filmstrip } from '../parts/Common.tsx';
@@ -323,7 +323,7 @@ function ChecklistBody({
 
 function DayTradesBody({ trades }: { trades: readonly JournalTrade[] }) {
   if (!trades.length) return <p className="text-t3 jr-quiet">No trades on this day.</p>;
-  const net = trades.reduce((a, t) => a + (t.status === 'closed' ? t.netPnl : 0), 0);
+  const net = trades.reduce((a, t) => a + (!tradeOpen(t) ? t.netPnl : 0), 0);
   return (
     <>
       <ol className="jd-list jy-trades">
@@ -333,8 +333,8 @@ function DayTradesBody({ trades }: { trades: readonly JournalTrade[] }) {
               <span className={cx('jd-arrow', t.side === 'buy' ? 'up' : 'down')}>{t.side === 'buy' ? '↑' : '↓'}</span>
               <span className="nm">{t.symbol}</span>
               <span className="text-t3">{clock(t.openedAt)}</span>
-              <span className={cx('r', t.status === 'open' ? 'text-t3' : tone(t.netPnl))}>
-                {t.status === 'open' ? 'Open' : formatMoney(t.netPnl, { signed: true })}
+              <span className={cx('r', tradeOpen(t) ? 'text-t3' : tone(t.netPnl))}>
+                {tradeOpen(t) ? 'Open' : formatMoney(t.netPnl, { signed: true })}
               </span>
             </button>
           </li>

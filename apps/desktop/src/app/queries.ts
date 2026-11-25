@@ -17,6 +17,7 @@ export const queryClient = new QueryClient({
 
 export const TOOL_READS = 'tool';
 export const TOOL_LIST = 'tools';
+export const TOOL_WRITES = 'tool-write';
 
 connectionEpoch.subscribe((epoch, previous) => {
   if (epoch === null || previous === null) return;

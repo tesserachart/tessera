@@ -731,6 +731,29 @@ describe('drawing tools on the chart (headless)', () => {
     expect(e?.type === 'move' && e.points[0]!.t).toBe(bars[200]!.t);
   });
 
+  it('leaves a drawing where it was when the pointer is cancelled mid-drag, and pans nothing after', () => {
+    const { chart, layer, events, c, engine, bars } = setup();
+    layer.setDrawings([
+      spec({
+        kind: 'trend_line',
+        points: [
+          { t: bars[200]!.t, price: c.priceOfY(300) },
+          { t: bars[240]!.t, price: c.priceOfY(200) },
+        ],
+      }),
+    ]);
+    chart.render();
+    const before = chart.getViewport();
+    engine.pointerDown(c.xOfIndex(240), 200);
+    engine.pointerMove(c.xOfIndex(260), 150);
+    expect(engine.pointerCancel()).toBe(true);
+    engine.pointerMove(c.xOfIndex(100), 100);
+    expect(events.filter((e) => e.type === 'move')).toEqual([]);
+    expect(layer.getDrawings()[0]!.points[1]!.t).toBe(bars[240]!.t);
+    expect(chart.getViewport().rightEdgeSlot).toBe(before.rightEdgeSlot);
+    expect(engine.pointerCancel()).toBe(false);
+  });
+
   it('removes the selected drawing with Delete, cancels with Escape, and a locked drawing does not move', () => {
     const { chart, layer, events, c, engine, bars } = setup();
     const locked = spec({

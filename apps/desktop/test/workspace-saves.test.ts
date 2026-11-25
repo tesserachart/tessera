@@ -5,8 +5,10 @@ import { defaultChartState, layoutsStore, putLayout, seedLayout, takeSeededLayou
 import { read } from '../src/app/store.ts';
 import {
   attachWorkspace,
+  forgetLayoutRead,
   layoutSaved,
   mountWorkspace,
+  readLayout,
   saveLayout,
   workspaceContext,
   type WorkspaceContext,
@@ -99,6 +101,20 @@ describe('saves of the workspaces kept mounted', () => {
     expect(rt.toolCalls('layout.save')).toHaveLength(3);
   });
 
+  it('still sends a save asked for while one was on its way, when that one fails', async () => {
+    const rt = fakeRuntime();
+    const a = workspace('a', 'NQZ6.CME');
+    cleanups.push(attachWorkspace(a));
+    const first = saveLayout(a);
+    const again = saveLayout(a);
+    await Promise.resolve();
+    expect(rt.toolCalls('layout.save')).toHaveLength(1);
+    rt.toolCalls('layout.save')[0]!.fail('internal', 'The disk is full');
+    await vi.waitFor(() => expect(rt.toolCalls('layout.save')).toHaveLength(2));
+    rt.toolCalls('layout.save')[1]!.ok({ layoutId: 'a', revision: 2 });
+    await Promise.all([first, again]);
+  });
+
   it('holds the saves of a workspace the runtime is still making until it is made, then saves on its revision', async () => {
     const rt = fakeRuntime();
     const layout: Layout = {
@@ -130,6 +146,33 @@ describe('saves of the workspaces kept mounted', () => {
     rt.toolCalls('layout.save')[0]!.ok({ layoutId: 'made', revision: 2 });
     await saving;
     await vi.waitFor(() => expect(settled).toBe(true));
+  });
+});
+
+describe('reading a workspace’s layout', () => {
+  const stored = (revision: number): Layout => ({
+    id: 'a',
+    name: 'a',
+    revision,
+    updatedAt: 0,
+    activeChartId: null,
+    dock: null,
+    trade: null,
+    charts: {},
+  });
+
+  it('takes only the newest read, whichever answers last, and none once a newer load has begun', async () => {
+    const rt = fakeRuntime();
+    const older = readLayout('a');
+    const newer = readLayout('a');
+    await vi.waitFor(() => expect(rt.toolCalls('layout.get')).toHaveLength(2));
+    rt.toolCalls('layout.get')[1]!.ok(stored(3));
+    rt.toolCalls('layout.get')[0]!.ok(stored(2));
+    expect(await newer).toMatchObject({ kind: 'done', value: { revision: 3 } });
+    expect(await older).toEqual({ kind: 'superseded' });
+    const dropped = readLayout('a');
+    forgetLayoutRead('a');
+    expect(await dropped).toEqual({ kind: 'superseded' });
   });
 });
 

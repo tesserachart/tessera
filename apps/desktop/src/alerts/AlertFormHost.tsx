@@ -3,27 +3,32 @@ import { useState } from 'react';
 import { deleteAlert, pauseAlert, saveAlert } from './actions.ts';
 import { AlertFormView } from './AlertForm.tsx';
 import { VALUE_KEY } from './form.ts';
-import { closeAlertForm, setAlertForm, useAlertForm } from './formStore.ts';
+import { closeAlertForm, formStillOpen, setAlertForm, useAlertForm } from './formStore.ts';
 import { useAlerts } from './store.ts';
 
 export function AlertFormHost() {
   const open = useAlertForm();
   const discord = useAlerts((s) => s.discord);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [busyFor, setBusyFor] = useState<number | null>(null);
+  const [errorFor, setErrorFor] = useState<{ seq: number; why: string } | null>(null);
   const id = open?.form.id ?? null;
   const live = useAlerts((s) => (id ? s.alerts?.get(id) : undefined));
   if (!open) return null;
+  const { seq } = open;
+  const busy = busyFor === seq;
+  const error = errorFor?.seq === seq ? errorFor.why : null;
+  const setError = (why: string | null) => setErrorFor(why === null ? null : { seq, why });
   const at = open.at ?? { x: window.innerWidth / 2, y: 96 };
   const close = () => {
     setError(null);
-    closeAlertForm();
+    closeAlertForm(seq);
   };
   const act = (go: Promise<string | null>, closing: boolean) => {
-    setBusy(true);
+    setBusyFor(seq);
     setError(null);
     void go.then((why) => {
-      setBusy(false);
+      if (!formStillOpen(seq)) return;
+      setBusyFor(null);
       if (why) setError(why);
       else if (closing) close();
     });
@@ -64,14 +69,7 @@ export function AlertFormHost() {
             setAlertForm(() => f);
           }}
           onCancel={close}
-          onSubmit={() => {
-            setBusy(true);
-            void saveAlert(open.form, Date.now()).then((why) => {
-              setBusy(false);
-              if (why) setError(why);
-              else close();
-            });
-          }}
+          onSubmit={() => act(saveAlert(open.form, Date.now()), true)}
         />
       </PopoverContent>
     </Popover>

@@ -3,4 +3,4 @@
 /**
  * Coarse state for the transcript status line.
  */
-export type AgentState = "idle" | "thinking" | "running_tool" | "waiting_approval" | "writing";
+export type AgentState = "idle" | "thinking" | "running_tool" | "writing";

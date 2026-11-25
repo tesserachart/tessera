@@ -22,6 +22,8 @@ The e2e session cannot cut the page's link, so `../scripts/feed-drop.ts <port>` 
 
 - **Position out of the sentence.** After the drop, `status "Status"` has source `Runtime`, fact `dropped.`, and exposure `Long 1 NQ Z6 open.` The concatenated line is not `Runtime Long 1 NQ Z6 open. dropped.`
 - **DOM while loading.** Before the first book the ladder shows `status "Loading the book"` and no header; after a drop the strip is the dropped line. Neither ever shows a second count.
+- **DOM after the link returns.** The book and the tape drop their dropped line on the first update that arrives, so once the link is back the ladder shows its book again, not `dropped`.
+- **Retry now.** Offered only while the desk waits between attempts: the annunciator shows it with the countdown, the splash's button and its R key work. While an attempt runs the annunciator offers no action, and the splash's button is off with the tooltip `Already trying to reach the runtime`.
 - **Footprint.** While it asks again the footprint keeps what it drew and paints nothing over the bars (`order-flow.md`, `of-loading`); once it gives up, its note is `stopped:` in trader words. It does not contain `tools.invoke` or `20000ms`.
 - **Palette.** While the runtime is down: Ctrl+K `Connections` Enter opens Settings › Connections and never labels a chart, DOM, T&S or ticket with that word. Unknown text shows `Search could not reach the feed` and changes no instrument. `ES` Enter charts ES; DOM, T&S and ticket do not keep NQ prices or prints under the ES name. After the link returns, the desk still shows ES so the switch can be undone.
 

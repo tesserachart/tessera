@@ -1,5 +1,5 @@
 import { Button, ConfirmButton, SettingsRow, StatusDot } from '@tessera/ui';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AddConnection, AddForm, ConnectionForms } from '../../../accounts/AddConnection.tsx';
 import {
   focusConnections,
@@ -9,7 +9,13 @@ import {
 } from '../../../accounts/accountsUi.ts';
 import { Elapsed } from '../../../accounts/ConnectionForm.tsx';
 import { useConnectionCall } from '../../../accounts/connectionCall.ts';
-import { connectionItem, type ConnectionItem, type Listed } from '../../../accounts/connections.ts';
+import {
+  answerNow,
+  connectionItem,
+  type ConnectionItem,
+  type Heard,
+  type Listed,
+} from '../../../accounts/connections.ts';
 import { LoginEditor } from '../../../accounts/ConnectionSetup.tsx';
 import { LevelsEditor } from '../../../accounts/LevelsEditor.tsx';
 import { connectionTarget } from '../../../accounts/navigate.ts';
@@ -46,14 +52,21 @@ export function Connections() {
 
 function ConnectionEntry({ listed, item, focus }: { listed: Listed; item: ConnectionItem; focus: ConnectionsFocus }) {
   const { since, run } = useConnectionCall();
-  const [said, setSaid] = useState<Said>(null);
+  const [heard, setHeard] = useState<Heard | null>(null);
+  const status = useRef(item.status);
+  useEffect(() => {
+    status.current = item.status;
+  });
+  const said = answerNow(heard, item.status);
   const [verb, setVerb] = useState('');
   const editing = focus?.kind === 'edit' && focus.id === item.id ? focus : null;
   const busy = since !== null;
   const call = (v: string, p: Promise<Said>) => {
     setVerb(v);
-    setSaid(null);
-    void p.then(setSaid);
+    setHeard(null);
+    void p.then((answer) => {
+      setHeard({ said: answer, under: status.current });
+    });
   };
   const failed = (r: { ok: true } | { ok: false; why: string }): Said =>
     r.ok ? null : { ok: false, text: endSentence(r.why) };

@@ -62,7 +62,6 @@ const draft = (id: string, live: boolean, req: OrderRequest): DraftInfo => ({
   environment: 'paper',
   instrument: req.instrument,
   preview: preview(req),
-  live,
   status: live ? 'live' : 'cancelled',
   origin: { kind: 'agent', sessionId: 's1', provider: 'codex' },
   createdAt: 1,

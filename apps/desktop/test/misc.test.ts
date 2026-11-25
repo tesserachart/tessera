@@ -129,7 +129,7 @@ describe('agent sessions', () => {
       session('a', 'idle'),
       session('b', 'running'),
       session('c', 'needs_you'),
-      session('d', 'closed'),
+      session('d', 'idle'),
     ]);
     expect(groups.map((g) => [g.label, g.sessions.map((s) => s.id)])).toEqual([
       ['Needs you', ['c']],
@@ -139,7 +139,7 @@ describe('agent sessions', () => {
   });
 
   it('lists the sessions that need you first, then the running ones, then the rest', () => {
-    const list = [session('a', 'idle'), session('b', 'running'), session('c', 'needs_you'), session('d', 'closed')];
+    const list = [session('a', 'idle'), session('b', 'running'), session('c', 'needs_you'), session('d', 'idle')];
     expect(orderSessions(list).map((s) => s.id)).toEqual(['c', 'b', 'a', 'd']);
   });
 

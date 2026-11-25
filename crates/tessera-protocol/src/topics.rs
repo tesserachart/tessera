@@ -28,7 +28,6 @@ pub mod names {
     pub const SETTINGS: &str = "settings";
     pub const TOOL_CALLS: &str = "tool.calls";
     pub const HEALTH: &str = "health";
-    pub const RESEARCH_RUN: &str = "research.run";
     pub const CARDS: &str = "cards";
     pub const NOTIFICATIONS: &str = "notifications";
     pub const LAYOUT: &str = "layout";
@@ -101,14 +100,6 @@ pub struct ToolCallsParams {
     /// Only calls from this origin kind (`user`, `agent`, `external`).
     #[serde(default)]
     pub origin: Option<String>,
-}
-
-/// Params for research run progress.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct ResearchRunParams {
-    /// Run id.
-    pub run_id: String,
 }
 
 /// Params for layout changes.

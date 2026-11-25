@@ -2,7 +2,7 @@ import type { AccountUpdate, Environment, Side } from '@tessera/protocol';
 import { formatPrice } from '@tessera/ui';
 import { limitLockWords } from '../../accounts/limits.ts';
 import { breakevenOf, breakevenOffset, type BreakevenView } from '../../chart/breakeven.ts';
-import { joinStopOf, restingPrice, type Bracket, type BracketMode } from '../../chart/brackets.ts';
+import { joinStopOf, type Bracket, type BracketMode } from '../../chart/brackets.ts';
 import {
   clickAt,
   entryKindAt,
@@ -23,15 +23,16 @@ import {
 import { runPlaceStep } from '../../chart/placementRun.ts';
 import { reverseBracket, reverseOf, reverseWhat, type TicketSend } from '../../chart/ticket/send.ts';
 import { legMoney, planOco, planOk, type ContractMath, type OcoConfig } from '../../shell/oco.ts';
-import { toTick, type EntryKind } from '../../shell/ticket.ts';
+import type { EntryKind } from '../../shell/ticket.ts';
 import {
   attachLeg,
   breakeven,
   cancelAll,
   cancelOrders,
   flatten,
-  modifyOrderPrice,
+  moveOrders,
   reverse,
+  shiftedBy,
   type ActionResult,
 } from '../../shell/tradeActions.ts';
 import { placementStore, startPlacement } from '../../state/placement.ts';
@@ -298,13 +299,8 @@ export async function moveTag(
   if (s.gate.kind !== 'open' || !env || !s.math || tag.orders.length === 0) return null;
   const delta = toPrice - fromPrice;
   if (delta === 0) return null;
-  for (const o of tag.orders) {
-    const from = restingPrice(o.request);
-    if (from === null) continue;
-    const r = await modifyOrderPrice(env, o, toTick(from + delta, s.math.tick));
-    if (r.tone !== 'ok') return r;
-  }
-  return null;
+  const r = await moveOrders(env, shiftedBy(tag.orders, delta, s.math.tick));
+  return r.tone === 'ok' ? null : r;
 }
 
 export async function spawnFromPosition(
@@ -319,14 +315,8 @@ export async function spawnFromPosition(
   if (!plan) return null;
   const decimals = s.math.decimals;
   if (plan.move) {
-    const delta = toPrice - plan.move.from;
-    for (const o of plan.move.orders) {
-      const from = restingPrice(o.request);
-      if (from === null) continue;
-      const r = await modifyOrderPrice(env, o, toTick(from + delta, s.math.tick));
-      if (r.tone !== 'ok') return r;
-    }
-    return null;
+    const r = await moveOrders(env, shiftedBy(plan.move.orders, toPrice - plan.move.from, s.math.tick));
+    return r.tone === 'ok' ? null : r;
   }
   const host = legHostOf(position, s.account.account.id);
   if (!host) return null;

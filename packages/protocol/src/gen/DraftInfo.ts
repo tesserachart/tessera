@@ -9,4 +9,4 @@ import type { Timestamp } from "./Timestamp";
 import type { ToolErrorInfo } from "./ToolErrorInfo";
 import type { JsonValue } from "./serde_json/JsonValue";
 
-export type DraftInfo = { draftId: DraftId, approvalId: ApprovalId, tool: string, account: string, environment: Environment | null, instrument: InstrumentId | null, preview: JsonValue, live: boolean, status: DraftStatus, origin: Origin, createdAt: Timestamp, staleAt: Timestamp, error: ToolErrorInfo | null, };
+export type DraftInfo = { draftId: DraftId, approvalId: ApprovalId, tool: string, account: string, environment: Environment | null, instrument: InstrumentId | null, preview: JsonValue, status: DraftStatus, origin: Origin, createdAt: Timestamp, staleAt: Timestamp, error: ToolErrorInfo | null, };

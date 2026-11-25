@@ -475,7 +475,6 @@ describe('ladder tags', () => {
         estPrice: null,
         referencePrice: 5812,
       },
-      live: true,
       status: 'pending',
       origin: 'agent',
       createdAt: 0,

@@ -43,6 +43,7 @@ import {
   rLabel,
   shortDate,
   tone,
+  tradeOpen,
 } from '../model/format.ts';
 import { roiPct, ticksPerContract } from '../model/trade.ts';
 import { Filmstrip, Rating, TagPicker } from '../parts/Common.tsx';
@@ -145,7 +146,7 @@ function TradePage({ d: read, catalog, Chart }: { d: Detail; catalog: JournalCat
           <div className="jt-title-row">
             <h2>{t.symbol}</h2>
             <Badge tone={t.side === 'buy' ? 'profit' : 'loss'}>{t.side === 'buy' ? 'Long' : 'Short'}</Badge>
-            <Badge tone="outline">{t.status === 'open' ? 'Open' : 'Closed'}</Badge>
+            <Badge tone="outline">{tradeOpen(t) ? 'Open' : 'Closed'}</Badge>
             {t.origin === 'import' ? <Badge tone="mist">Imported</Badge> : null}
             {t.origin === 'manual' ? <Badge tone="mist">Logged</Badge> : null}
           </div>
@@ -279,7 +280,7 @@ function StatsTabBody({
           <span className="jk-caps">Net P&amp;L</span>
           <div className={cx('jt-hero-v', tone(t.netPnl))}>{formatMoney(t.netPnl, { signed: true })}</div>
           <span className="text-t3 text-(length:--text-meta)">
-            {t.status === 'open' ? 'Realized so far · open' : `${resultWord(t.result)} · ${rLabel(t.rMultiple)}`}
+            {tradeOpen(t) ? 'Realized so far · open' : `${resultWord(t.result)} · ${rLabel(t.rMultiple)}`}
           </span>
           {t.reportedPnl !== null ? (
             <span className="text-t3 jt-hero-rep text-(length:--text-meta)">

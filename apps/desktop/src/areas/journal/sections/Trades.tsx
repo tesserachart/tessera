@@ -36,7 +36,18 @@ import { useCatalog, useJournalAction, useScopedFilter, useTrades } from '../dat
 import { updateTrade, useTradesShown } from '../tradeEdits.ts';
 import { ago } from '../model/dashboard.ts';
 import { Badge, DirectionChip, Empty, PageHead, ResultBadge } from '../kit/index.ts';
-import { clock, dayLabel, holdLabel, pct, plural, rLabel, shortDate, tone } from '../model/format.ts';
+import {
+  clock,
+  dayLabel,
+  holdLabel,
+  pct,
+  plural,
+  rLabel,
+  shortDate,
+  tone,
+  tradeClosed,
+  tradeOpen,
+} from '../model/format.ts';
 import { COLUMNS, deletePicks, groupByDay, shownColumns, stepRow, type ColumnId } from '../model/table.ts';
 import { Rating, TagPicker } from '../parts/Common.tsx';
 import { FilterBar } from '../parts/FilterBar.tsx';
@@ -693,7 +704,7 @@ function TradeRow({
           </Td>
         );
       case 'exit':
-        return t.status === 'open' || t.exitPrice === null || t.closedAt === null ? (
+        return !tradeClosed(t) || t.exitPrice === null ? (
           <Td className="col-px t3">Open</Td>
         ) : (
           <Td className="col-px">
@@ -706,7 +717,7 @@ function TradeRow({
       case 'net':
         return (
           <Td align="right" className={cx('col-net', tone(t.netPnl))}>
-            {t.status === 'open' ? <span className="text-t3">—</span> : formatMoney(t.netPnl, { signed: true })}
+            {tradeOpen(t) ? <span className="text-t3">—</span> : formatMoney(t.netPnl, { signed: true })}
           </Td>
         );
       case 'r':

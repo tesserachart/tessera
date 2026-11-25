@@ -71,7 +71,7 @@ export function installEdgeRest(api: DockviewApi, layoutId: string, loadingLayou
       focus: isFocusMode(),
       visible: api.isEdgeGroupVisible('bottom'),
       collapsed: g.isCollapsed(),
-      momentary: isMomentary('bottom'),
+      momentary: isMomentary(api, 'bottom'),
       empty,
       short: api.height > 0 && api.height < RESPONSIVE.bottomBelow,
       settled,

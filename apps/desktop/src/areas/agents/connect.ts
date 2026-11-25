@@ -97,6 +97,19 @@ export function providerChange(
   return { [id]: out };
 }
 
+type ProviderPatch = ReturnType<typeof providerChange>;
+
+function fieldsOf(value: unknown): { [field: string]: JsonValue } {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as { [field: string]: JsonValue }) : {};
+}
+
+export function withProviderChange(stored: unknown, patch: ProviderPatch): JsonValue {
+  const providers = fieldsOf(stored);
+  const out: { [id: string]: JsonValue } = { ...providers };
+  for (const [id, fields] of Object.entries(patch)) out[id] = { ...fieldsOf(providers[id]), ...fields };
+  return out;
+}
+
 export function parseArgs(text: string): string[] {
   const out: string[] = [];
   let cur = '';

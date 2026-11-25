@@ -194,6 +194,23 @@ describe('the list', () => {
     expect(list.row(0)?.size).toBe(3);
   });
 
+  it('stays paused through a reconnect that starts the tape over, until the trader resumes', () => {
+    const { t, add } = tape();
+    const list = new TapeList();
+    add([[ns(T0), 5812, 1, 1]]);
+    list.sync(printsOf(t));
+    list.freeze();
+    t.reset();
+    t.applySnapshot({ seq: 0, trades: [[ns(T0 + 5), 5813, 4, -1]] });
+    list.sync(printsOf(t));
+    expect(list.frozen).toBe(true);
+    t.apply({ seq: 1, trades: [[ns(T0 + 6), 5813.25, 2, 1]] });
+    list.sync(printsOf(t));
+    expect(list.row(0)?.size).toBe(4);
+    list.resume();
+    expect(list.row(0)?.size).toBe(2);
+  });
+
   it('follows the live rows with history only while nothing between them was lost', () => {
     const { t, add } = tape();
     const list = new TapeList();

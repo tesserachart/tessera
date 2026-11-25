@@ -142,7 +142,6 @@ impl Shared {
     }
 
     fn draft_executed(&self, mut info: DraftInfo, result: &ToolResult) {
-        info.live = false;
         info.status = if result.ok {
             DraftStatus::Submitted
         } else if outcome_unknown(result) {
@@ -520,7 +519,7 @@ impl Invoker {
             .draft_info
             .lock()
             .values()
-            .filter(|d| d.live)
+            .filter(|d| d.is_live())
             .cloned()
             .collect();
         v.sort_by(|a, b| {
@@ -868,7 +867,6 @@ impl Invoker {
                 environment: t.environment,
                 instrument: t.instrument.clone(),
                 preview: approval.preview.clone(),
-                live: true,
                 status: DraftStatus::Live,
                 origin: approval.origin.clone(),
                 created_at: approval.created_at,
@@ -1506,13 +1504,13 @@ impl Invoker {
         self.drafts.release_approval(&approval.id);
         self.told(&event);
         let mut info = self.draft_info.lock().remove(&approval.id)?;
-        info.live = false;
         info.status = match approval.status {
-            ApprovalStatus::Pending => DraftStatus::Live,
+            ApprovalStatus::Pending | ApprovalStatus::Superseded | ApprovalStatus::Cancelled => {
+                DraftStatus::Cancelled
+            }
             ApprovalStatus::Approved => DraftStatus::Approved,
             ApprovalStatus::Rejected => DraftStatus::Rejected,
             ApprovalStatus::Stale => DraftStatus::Stale,
-            ApprovalStatus::Superseded | ApprovalStatus::Cancelled => DraftStatus::Cancelled,
         };
         self.shared.observer.draft(&info);
         Some(info)

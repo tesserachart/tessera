@@ -1,5 +1,6 @@
-import { valueOf } from '../../../app/tools.ts';
-import type { ImportResult, Platform, Side } from '@tessera/protocol';
+import { useLatestWrite } from '../../../app/mutations.ts';
+import { useToolAction, valueOf } from '../../../app/tools.ts';
+import type { ImportInput, ImportResult, Platform, Side } from '@tessera/protocol';
 import {
   Button,
   Combobox,
@@ -17,7 +18,7 @@ import {
   formatMoney,
 } from '@tessera/ui';
 import { useRef, useState } from 'react';
-import { useCatalog, useJournalAction, useToday } from '../data.ts';
+import { JOURNAL_CHANGES, useCatalog, useJournalAction, useToday } from '../data.ts';
 import { clock, dayLabel, plural, sideWord, todayIn } from '../model/format.ts';
 import { Empty, PageHead, Panel } from '../kit/index.ts';
 import { openTrade, setJournal } from '../store.ts';
@@ -38,26 +39,31 @@ function ImportBody() {
   const [file, setFile] = useState<{ name: string; text: string } | null>(null);
   const [platform, setPlatform] = useState<Platform | 'auto'>('auto');
   const [account, setAccount] = useState('');
-  const [preview, setPreview] = useState<ImportResult | null>(null);
+  const [previewed, setPreviewed] = useState<{ result: ImportResult; input: ImportInput } | null>(null);
+  const preview = previewed?.result ?? null;
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<ImportResult | null>(null);
   const [over, setOver] = useState(false);
   const imported = (cat?.accounts ?? []).filter((a) => a.origin !== 'broker');
+  const previewer = useLatestWrite((input: ImportInput) => act('journal.preview_import', input));
+  const importing = useToolAction('journal.import_csv', JOURNAL_CHANGES);
   const run = async (f: { name: string; text: string }, p: Platform | 'auto', acct: string) => {
     setError(null);
     setDone(null);
-    try {
-      const r = await act('journal.preview_import', {
-        csv: f.text,
-        filename: f.name,
-        ...(p === 'auto' ? {} : { platform: p }),
-        ...(acct ? { account: imported.some((a) => a.id === acct) ? { id: acct } : { name: acct } } : {}),
-      });
-      setPreview(r);
-    } catch (e) {
-      setPreview(null);
-      setError(e instanceof Error ? e.message : String(e));
+    const input: ImportInput = {
+      csv: f.text,
+      filename: f.name,
+      ...(p === 'auto' ? {} : { platform: p }),
+      ...(acct ? { account: imported.some((a) => a.id === acct) ? { id: acct } : { name: acct } } : {}),
+    };
+    const reply = await previewer.write.send(input);
+    if (reply.kind === 'superseded') return;
+    if (reply.kind === 'done') {
+      setPreviewed({ result: reply.value, input });
+      return;
     }
+    setPreviewed(null);
+    setError(reply.error instanceof Error ? reply.error.message : String(reply.error));
   };
   const take = async (files: FileList | null) => {
     const f = files?.[0];
@@ -67,16 +73,11 @@ function ImportBody() {
     void run(next, platform, account);
   };
   const commit = async () => {
-    if (!file || !preview) return;
+    if (!previewed || importing.running() || previewer.write.pending) return;
     try {
-      const r = await act('journal.import_csv', {
-        csv: file.text,
-        filename: file.name,
-        ...(platform === 'auto' ? {} : { platform }),
-        ...(account ? { account: imported.some((a) => a.id === account) ? { id: account } : { name: account } } : {}),
-      });
+      const r = await importing.run(previewed.input);
       setDone(r);
-      setPreview(null);
+      setPreviewed(null);
       setFile(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -200,7 +201,19 @@ function ImportBody() {
             title="Before it is imported"
             description="Net from the contract spec, beside the platform’s own P&L"
             actions={
-              <Button variant="primary" size="s" disabled={!preview.newFills} onClick={() => void commit()}>
+              <Button
+                variant="primary"
+                size="s"
+                disabled={!preview.newFills || importing.pending || previewer.pending}
+                title={
+                  importing.pending
+                    ? 'Importing these trades'
+                    : previewer.pending
+                      ? 'Reading the file again'
+                      : undefined
+                }
+                onClick={() => void commit()}
+              >
                 {preview.newFills ? `Import ${plural(preview.trades, 'trade')}` : 'Nothing new'}
               </Button>
             }
@@ -307,7 +320,7 @@ function ImportBody() {
 }
 
 function LogTrade() {
-  const act = useJournalAction();
+  const logging = useToolAction('journal.log_trade', JOURNAL_CHANGES);
   const cat = valueOf(useCatalog());
   const [side, setSide] = useState<Side>('buy');
   const [msg, setMsg] = useState<string | null>(null);
@@ -332,6 +345,7 @@ function LogTrade() {
         className="jr-logform"
         onSubmit={(e) => {
           e.preventDefault();
+          if (logging.running()) return;
           const f = new FormData(e.currentTarget);
           const s = (k: string) => {
             const v = f.get(k);
@@ -346,25 +360,27 @@ function LogTrade() {
           }
           const exitTime = at('exitDate', 'exitTime');
           const exitPrice = n('exitPrice');
-          void act('journal.log_trade', {
-            account: s('account') || 'Logged by hand',
-            symbol: s('symbol'),
-            side,
-            qty: n('qty') ?? 1,
-            entryPrice: n('entryPrice') ?? 0,
-            entryTime,
-            ...(exitPrice !== undefined && exitTime ? { exitPrice, exitTime } : {}),
-            ...(n('fees') !== undefined ? { fees: n('fees') } : {}),
-            ...(n('stop') !== undefined ? { stopPrice: n('stop') } : {}),
-            ...(n('target') !== undefined ? { targetPrice: n('target') } : {}),
-          }).then(
-            (t) => {
-              setMsg(null);
-              setOpen(false);
-              openTrade(t.id);
-            },
-            (err: unknown) => setMsg(err instanceof Error ? err.message : String(err)),
-          );
+          void logging
+            .run({
+              account: s('account') || 'Logged by hand',
+              symbol: s('symbol'),
+              side,
+              qty: n('qty') ?? 1,
+              entryPrice: n('entryPrice') ?? 0,
+              entryTime,
+              ...(exitPrice !== undefined && exitTime ? { exitPrice, exitTime } : {}),
+              ...(n('fees') !== undefined ? { fees: n('fees') } : {}),
+              ...(n('stop') !== undefined ? { stopPrice: n('stop') } : {}),
+              ...(n('target') !== undefined ? { targetPrice: n('target') } : {}),
+            })
+            .then(
+              (t) => {
+                setMsg(null);
+                setOpen(false);
+                openTrade(t.id);
+              },
+              (err: unknown) => setMsg(err instanceof Error ? err.message : String(err)),
+            );
         }}
       >
         <Field label="Account" htmlFor="jr-l-acct">
@@ -427,7 +443,12 @@ function LogTrade() {
           <Button variant="quiet" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button variant="primary" type="submit">
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={logging.pending}
+            title={logging.pending ? 'Logging this trade' : undefined}
+          >
             Log the trade
           </Button>
         </div>

@@ -88,7 +88,7 @@ try {
   if (box) await page.screenshot({ path: join(dir, '3b-status-bar.png'), clip: box });
   const src = ((await annun.locator('.src').textContent()) ?? '').trim();
   const fact = ((await annun.locator('.t-annun-message').textContent()) ?? '').trim();
-  const exposure = ((await annun.locator('.ex').textContent()) ?? '').trim();
+  const exposure = ((await annun.locator('.text-brass').textContent()) ?? '').trim();
   const line = ((await annun.textContent()) ?? '').replace(/\s+/g, ' ').trim();
   report(`status: src="${src}" fact="${fact}" exposure="${exposure}" line="${line}"`);
 

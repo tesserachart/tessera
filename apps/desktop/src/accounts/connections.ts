@@ -338,3 +338,12 @@ export const typedSystem = (q: string): ComboboxOption => ({ value: q, label: `U
 export function defaultGateway(gateways: readonly string[]): string | null {
   return gateways.find((g) => /chicago/i.test(g)) ?? gateways[0] ?? null;
 }
+
+export interface Heard {
+  readonly said: { readonly ok: boolean; readonly text: string } | null;
+  readonly under: string;
+}
+
+export function answerNow(heard: Heard | null, status: string): Heard['said'] {
+  return heard?.under === status ? heard.said : null;
+}

@@ -211,6 +211,10 @@ export function createChart(container: HTMLElement, options: ChartOptions = {}):
   const onLeave = () => {
     engine.pointerLeave();
   };
+  const onCancel = (e: PointerEvent) => {
+    if (overlay.hasPointerCapture(e.pointerId)) overlay.releasePointerCapture(e.pointerId);
+    if (engine.pointerCancel()) overlay.style.cursor = '';
+  };
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
     const p = local(e);
@@ -228,7 +232,8 @@ export function createChart(container: HTMLElement, options: ChartOptions = {}):
   overlay.addEventListener('pointermove', onPointerMove);
   overlay.addEventListener('pointerdown', onPointerDown);
   overlay.addEventListener('pointerup', onPointerUp);
-  overlay.addEventListener('pointercancel', onPointerUp);
+  overlay.addEventListener('pointercancel', onCancel);
+  overlay.addEventListener('lostpointercapture', onCancel);
   overlay.addEventListener('pointerleave', onLeave);
   overlay.addEventListener('wheel', onWheel, { passive: false });
   overlay.addEventListener('dblclick', onDblClick);
@@ -268,7 +273,8 @@ export function createChart(container: HTMLElement, options: ChartOptions = {}):
     overlay.removeEventListener('pointermove', onPointerMove);
     overlay.removeEventListener('pointerdown', onPointerDown);
     overlay.removeEventListener('pointerup', onPointerUp);
-    overlay.removeEventListener('pointercancel', onPointerUp);
+    overlay.removeEventListener('pointercancel', onCancel);
+    overlay.removeEventListener('lostpointercapture', onCancel);
     overlay.removeEventListener('pointerleave', onLeave);
     overlay.removeEventListener('wheel', onWheel);
     overlay.removeEventListener('dblclick', onDblClick);

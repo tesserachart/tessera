@@ -56,6 +56,7 @@ function show(key: string, value: unknown): void {
 export interface WriteOptions {
   refresh?: string[];
   merge?: boolean;
+  shown?: JsonValue;
 }
 
 export async function writeSetting(key: string, value: JsonValue, options: WriteOptions = {}): Promise<JsonValue> {
@@ -64,8 +65,9 @@ export async function writeSetting(key: string, value: JsonValue, options: Write
     const out = await runTool('settings.set', { key, value }, refresh ? { refresh } : {});
     return out.value;
   }
-  show(key, value);
-  const done = guard.write(key, value);
+  const optimistic = options.shown ?? value;
+  show(key, optimistic);
+  const done = guard.write(key, optimistic);
   try {
     const out = await runTool('settings.set', { key, value }, refresh ? { refresh } : {});
     if (done(out.value)) show(key, out.value);
@@ -85,9 +87,9 @@ export function useRuntimeSettingsLoaded(): boolean {
   return useStore(runtimeSettingsStore, (s) => s.loaded);
 }
 
-export async function setRuntimeSetting(key: string, value: JsonValue): Promise<string | null> {
+export async function setRuntimeSetting(key: string, value: JsonValue, shown?: JsonValue): Promise<string | null> {
   try {
-    await writeSetting(key, value, { refresh: ['settings.get'] });
+    await writeSetting(key, value, { refresh: ['settings.get'], ...(shown === undefined ? {} : { shown }) });
     return null;
   } catch (e) {
     return refusal(key, failureText(e));

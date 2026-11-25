@@ -10,7 +10,7 @@ import {
   type FootprintUpdate,
   type Timeframe,
 } from '@tessera/protocol';
-import { Lifetime, retrying } from '../../app/lifetime.ts';
+import { Lifetime, READ_AGAIN_MS, retrying } from '../../app/lifetime.ts';
 import { onMarketServed } from '../../app/health.ts';
 import { appClient } from '../../app/services.ts';
 import { feedErrorWords, retryFeedError } from '../../shell/deskWords.ts';
@@ -172,6 +172,9 @@ export class FootprintFeed {
         this.buffer = [];
         this.error = feedErrorWords(e);
         this.changed.emit();
+        this.running.after(READ_AGAIN_MS, () => {
+          if (current()) this.load();
+        });
       },
     );
   }

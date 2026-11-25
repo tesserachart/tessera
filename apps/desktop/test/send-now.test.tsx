@@ -301,6 +301,29 @@ describe('an order is sent now or not at all', () => {
     restore();
   });
 
+  it('an earlier click’s late answer never frees a later click’s hold, so a third click is not sent', async () => {
+    const restore = useOrderFreshMs(80);
+    link = runtimeLink({ 'orders.submit': filled }, { requestTimeoutMs: 80 });
+    await link.open();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    link.hold();
+    const first = submitOrder('paper', BUY_1_NQ, 'Buy 1 NQ Z6 market', 2);
+    await vi.advanceTimersByTimeAsync(orderHoldBoundMs());
+    expect(noticeWords(await first)).toEqual(NO_ANSWER);
+    const second = submitOrder('paper', BUY_1_NQ, 'Buy 1 NQ Z6 market', 2);
+    await vi.advanceTimersByTimeAsync(1);
+    const late = onceLate();
+    link.releaseFirst();
+    expect(noticeWords(await late)).toEqual(TOO_LATE);
+    const third = submitOrder('paper', BUY_1_NQ, 'Buy 1 NQ Z6 market', 2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(link.received('tools.invoke')).toHaveLength(2);
+    link.release();
+    expect(noticeWords(await second)).toEqual({ title: 'Filled at 20,641.50', detail: 'Buy 1 NQ Z6 market' });
+    expect(noticeWords(await third)).toEqual({ title: 'Not sent', detail: 'Already sending this order' });
+    restore();
+  });
+
   it('a request that is only slow, still inside its deadline, goes once', async () => {
     const restore = useOrderFreshMs(200);
     link = runtimeLink({ 'orders.submit': filled }, { requestTimeoutMs: 200 });

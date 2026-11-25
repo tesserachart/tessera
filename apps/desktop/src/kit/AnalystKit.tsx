@@ -231,7 +231,6 @@ function events(scene: Scene): AgentEvent[] {
               },
             ] as AgentEvent[])
           : []),
-        { type: 'status', state: 'waiting_approval', text: null, step: null, totalSteps: null },
       ];
     case 'error':
       return [

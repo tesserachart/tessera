@@ -83,11 +83,15 @@ const WRITTEN: FeedbackWriteUpOutput = {
   writer: { provider: 'claude-code', name: 'Claude Code' },
 };
 
-function mount(ctx: FeedbackContextOutput, out: FeedbackSendOutput = SENT) {
+function mount(
+  ctx: FeedbackContextOutput,
+  out: FeedbackSendOutput = SENT,
+  writeUp: () => FeedbackWriteUpOutput | Promise<FeedbackWriteUpOutput> = () => WRITTEN,
+) {
   const { client, calls } = answeringClient({
     'feedback.context': () => ctx,
     'feedback.send': () => out,
-    'feedback.write_up': () => WRITTEN,
+    'feedback.write_up': writeUp,
   });
   setTestServices(client);
   seedTools(['feedback.context', 'feedback.send', 'feedback.write_up']);
@@ -227,6 +231,33 @@ describe('the feedback box', () => {
     expect(input?.steps).toEqual(['Buy 1 NQ at market', 'Look at the DOM']);
     expect(input?.actual).toBe('It shows flat');
     expect(input?.writtenUp).toBe(true);
+  });
+
+  it('drops a write-up still on its way when the box is closed and opened again', async () => {
+    let finish: (w: FeedbackWriteUpOutput) => void = () => undefined;
+    mount(
+      context(true),
+      SENT,
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    act(() => openFeedback());
+    await within(sheet()).findByText('Order and protect events');
+    fireEvent.change(note(), { target: { value: 'dom wrong after buy' } });
+    fireEvent.click(within(sheet()).getByRole('button', { name: /Write it up for me/ }));
+    await within(sheet()).findByText('Writing it up…');
+    act(() => closeFeedback());
+    act(() => openFeedback());
+    await within(sheet()).findByText('Order and protect events');
+    await act(async () => {
+      finish(WRITTEN);
+      await Promise.resolve();
+    });
+    expect(within(sheet()).queryByDisplayValue(WRITTEN.title)).toBeNull();
+    expect((note() as HTMLTextAreaElement).value).toBe('');
+    expect(within(sheet()).getByRole('button', { name: /Write it up for me/ })).toBeTruthy();
   });
 
   it('says a queued report is saved and why it waits', async () => {

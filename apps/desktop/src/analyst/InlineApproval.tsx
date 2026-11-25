@@ -2,8 +2,8 @@ import { type Approval, type ApprovalDecision } from '@tessera/protocol';
 import { Button, FormRow, TextInput, cx, useShown } from '@tessera/ui';
 import { useEffect, useRef, useState } from 'react';
 import { ARM_MS, applyEdit, describeApproval, editFields } from '../shell/approval.ts';
-import { approve, failureText, ranUnread } from '../app/tools.ts';
-import { runtimeFailureWords } from '../shell/tradeActions.ts';
+import { failureText, ranUnread } from '../app/tools.ts';
+import { AlreadySending, resolveNow, runtimeFailureWords } from '../shell/tradeActions.ts';
 
 export function InlineApproval({ approval }: { approval: Approval }) {
   const view = describeApproval(approval);
@@ -33,14 +33,14 @@ export function InlineApproval({ approval }: { approval: Approval }) {
     setBusy(decision);
     setError(null);
     try {
-      await approve({
+      await resolveNow({
         approvalId: approval.id,
         decision,
         previewHash: approval.previewHash,
         ...(input === undefined ? {} : { input }),
       });
     } catch (err) {
-      if (ranUnread(err)) return;
+      if (err instanceof AlreadySending || ranUnread(err)) return;
       setError(runtimeFailureWords(err) ?? failureText(err));
       setBusy(null);
     }

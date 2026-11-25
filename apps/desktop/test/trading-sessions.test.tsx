@@ -3,7 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { putRuntimeSettings } from '../src/state/runtimeSettings.ts';
 import { TradingSessionCard } from '../src/analyst/cards/TradingSessionCard.tsx';
-import { issueWords, sessionMeta, sessionTitle, tradeWords } from '../src/analyst/cards/session.ts';
+import { issueWords, sessionMeta, sessionTitle, tradeMark, tradeWords } from '../src/analyst/cards/session.ts';
 import {
   canStartNow,
   readRunnerSetting,
@@ -145,6 +145,9 @@ describe('the trading session card', () => {
   it('words the session, its trades and its issues', () => {
     expect(sessionMeta(report)).toBe('09:30–15:51 · 1 trade · +$37.50');
     expect(tradeWords(report.trades[0]!)).toBe('10:02 · 21,000.25 → 21,010.00 · +$37.50 · 0.94R');
+    const scaledOut = { ...report.trades[0]!, exitPrice: 21_010, closedAt: null };
+    expect(tradeMark(scaledOut)).toBe('running');
+    expect(tradeWords(scaledOut)).toContain('→ open');
     expect(issueWords(report.issues[0]!)).toBe('Filed');
     expect(issueWords(report.issues[1]!)).toBe('Not filed: gh is not signed in');
   });

@@ -126,7 +126,9 @@ export function provideTestServices(services: AppServices): void {
   provideServices(services);
 }
 
-export function answeringClient(answers: { readonly [N in ToolName]?: (input: ToolInput<N>) => ToolOutput<N> }) {
+export function answeringClient(answers: {
+  readonly [N in ToolName]?: (input: ToolInput<N>) => ToolOutput<N> | Promise<ToolOutput<N>>;
+}) {
   const calls: { name: string; input: unknown }[] = [];
   const client: FakeClient = {
     request: (method: string, params: { name?: string; input?: unknown } | undefined) => {
@@ -134,7 +136,7 @@ export function answeringClient(answers: { readonly [N in ToolName]?: (input: To
       calls.push({ name: params.name, input: params.input });
       const answer = (answers as Record<string, ((input: unknown) => unknown) | undefined>)[params.name];
       return answer
-        ? Promise.resolve({ ok: true, status: 'ok', output: answer(params.input) })
+        ? Promise.resolve(answer(params.input)).then((output) => ({ ok: true, status: 'ok', output }))
         : new Promise(() => undefined);
     },
   };

@@ -9,7 +9,8 @@ import {
 import { patch, read, makeStore, useStore } from '../../app/store.ts';
 import { catalogGroups } from '../../chart/settings/catalog.ts';
 import { customRef, putCustom, setCatalog, customStore } from '../../indicators/custom.ts';
-import { runTool, toolCode, toolDetails, toolReason } from '../../app/tools.ts';
+import { LatestWrite } from '../../app/mutations.ts';
+import { runTool, toolCode, toolDetails, toolReason, type ToolInput, type ToolOutput } from '../../app/tools.ts';
 
 export type Selection = { kind: 'builtin'; key: string } | { kind: 'custom'; id: string } | { kind: 'new' } | null;
 
@@ -146,6 +147,19 @@ function logsOf(e: unknown): string {
 
 export const PREVIEW_BARS = 500;
 
+type PreviewInput = ToolInput<'indicators.preview'>;
+
+const previews = new Map<string, LatestWrite<PreviewInput, ToolOutput<'indicators.preview'>>>();
+
+function previewOf(key: string): LatestWrite<PreviewInput, ToolOutput<'indicators.preview'>> {
+  let latest = previews.get(key);
+  if (!latest) {
+    latest = new LatestWrite((input: PreviewInput) => runTool('indicators.preview', input));
+    previews.set(key, latest);
+  }
+  return latest;
+}
+
 export async function run(key: string, instrument: string, tf: Timeframe): Promise<void> {
   const s = read(pageStore);
   const code = codeOf(s, key);
@@ -159,37 +173,36 @@ export async function run(key: string, instrument: string, tf: Timeframe): Promi
     logs: prev?.logs ?? '',
     at: Date.now(),
   });
-  try {
-    const series = await runTool('indicators.preview', {
-      code,
-      inputs,
-      instrument,
-      tf,
-      limit: PREVIEW_BARS,
-    });
-    if (read(pageStore).runs[key]?.code !== code) return;
+  const reply = await previewOf(key).send({ code, inputs, instrument, tf, limit: PREVIEW_BARS });
+  if (reply.kind === 'superseded') return;
+  if (reply.kind === 'done') {
+    const series = reply.value;
     const known = new Set(series.spec.inputs.map((i) => i.key));
-    const kept = Object.fromEntries(Object.entries(inputs).filter(([k]) => known.has(k)));
-    if (Object.keys(kept).length !== Object.keys(inputs).length) setEntry('inputs', key, kept);
+    const now = read(pageStore).inputs[key] ?? {};
+    const kept = Object.fromEntries(Object.entries(now).filter(([k]) => known.has(k)));
+    if (Object.keys(kept).length !== Object.keys(now).length) setEntry('inputs', key, kept);
     setEntry('runs', key, { code, status: 'ok', series, problem: null, logs: series.logs, at: Date.now() });
-  } catch (e) {
-    if (read(pageStore).runs[key]?.code !== code) return;
-    setEntry('runs', key, {
-      code,
-      status: 'error',
-      series: prev?.series ?? null,
-      problem: problemOf(e),
-      logs: logsOf(e),
-      at: Date.now(),
-    });
+    return;
+  }
+  setEntry('runs', key, {
+    code,
+    status: 'error',
+    series: prev?.series ?? null,
+    problem: problemOf(reply.error),
+    logs: logsOf(reply.error),
+    at: Date.now(),
+  });
+}
+
+export function keepLoaded(id: string, detail: IndicatorDetail): void {
+  if (detail.custom && detail.code !== null) {
+    setEntry('saved', id, { version: detail.custom.version, code: detail.code, detail });
   }
 }
 
-export async function load(id: string, version?: number): Promise<IndicatorDetail> {
+async function load(id: string, version?: number): Promise<IndicatorDetail> {
   const detail = await runTool('indicators.get', { id, ...(version === undefined ? {} : { version }) });
-  if (version === undefined && detail.custom && detail.code !== null) {
-    setEntry('saved', id, { version: detail.custom.version, code: detail.code, detail });
-  }
+  if (version === undefined) keepLoaded(id, detail);
   return detail;
 }
 
@@ -211,18 +224,21 @@ export async function save(key: string): Promise<string | null> {
     if (!c) return null;
     putCustom(c);
     setEntry('saved', c.id, { version: c.version, code: detail.code ?? code, detail });
+    const typed = read(pageStore).drafts[key];
+    const typedSince = typed !== undefined && typed !== code ? typed : null;
     if (key === 'new') {
       const st = read(pageStore);
       const r = st.runs.new;
       const inputs = st.inputs.new;
       if (r) setEntry('runs', c.id, r);
       if (inputs) setEntry('inputs', c.id, inputs);
+      setEntry('drafts', c.id, typedSince);
       setEntry('drafts', 'new', null);
       setEntry('runs', 'new', null);
       setEntry('inputs', 'new', null);
       select({ kind: 'custom', id: c.id });
     } else {
-      setEntry('drafts', key, null);
+      setEntry('drafts', key, typedSince);
     }
     return c.id;
   } catch (e) {

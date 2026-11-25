@@ -151,6 +151,17 @@ describe('agent transcript', () => {
     expect(t.suggestions).toEqual([]);
   });
 
+  it('stops streaming an answer whose turn ended without its closing message, as a stop or a failure ends it', () => {
+    const t = fold([
+      { type: 'turn_started', turnId: 't_1' },
+      { type: 'assistant_delta', messageId: 'm_1', text: 'Reading the' },
+      { type: 'turn_finished', turnId: 't_1', end: 'interrupted', durationMs: 900, toolCalls: 0 },
+    ]);
+    expect(t.items.filter((it) => it.kind === 'assistant')).toEqual([
+      expect.objectContaining({ text: 'Reading the', streaming: false }),
+    ]);
+  });
+
   it('counts the live line from the turn’s start, and starts a clock for a status that comes without one', () => {
     let t = fold([
       { type: 'turn_started', turnId: 't_1' },

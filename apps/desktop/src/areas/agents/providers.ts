@@ -5,9 +5,9 @@ import { useAnalyst } from '../../analyst/analystStore.ts';
 import { openExternal } from '../../app/host.ts';
 import { failureText, refreshTools, runTool, useHasTool, useToolValue } from '../../app/tools.ts';
 import { runtimeSettingsStore, setRuntimeSetting, useRuntimeSetting } from '../../state/runtimeSettings.ts';
-import { useStore } from '../../app/store.ts';
+import { read, useStore } from '../../app/store.ts';
 import { sayFailed } from '../../workspace/dock/deskToasts.ts';
-import { enabledIds, providerChange } from './connect.ts';
+import { enabledIds, providerChange, withProviderChange } from './connect.ts';
 import { providerViews, type ProviderView } from './models.ts';
 
 export const PROVIDERS_KEY = 'agent.providers';
@@ -39,15 +39,20 @@ export function useProviders(): { list: readonly AgentProviderInfo[] | undefined
   return { list, views };
 }
 
+function changeProvider(patch: ReturnType<typeof providerChange>): Promise<string | null> {
+  const stored = read(runtimeSettingsStore).values[PROVIDERS_KEY];
+  return setRuntimeSetting(PROVIDERS_KEY, patch, withProviderChange(stored, patch));
+}
+
 export function setProviderEnabled(id: string, enabled: boolean): Promise<string | null> {
-  return setRuntimeSetting(PROVIDERS_KEY, providerChange(id, { enabled }));
+  return changeProvider(providerChange(id, { enabled }));
 }
 
 export function setProviderLaunch(
   id: string,
   change: Partial<{ binaryPath: string; configDir: string; args: readonly string[] }>,
 ): Promise<string | null> {
-  return setRuntimeSetting(PROVIDERS_KEY, providerChange(id, change));
+  return changeProvider(providerChange(id, change));
 }
 
 export function recheckProviders(): Promise<void> {

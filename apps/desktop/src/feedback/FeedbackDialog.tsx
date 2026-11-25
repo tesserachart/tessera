@@ -5,7 +5,8 @@ import { afterPaint, useLoadOnceShown } from '../app/onceShown.ts';
 import { useAccountList } from '../app/portfolio.ts';
 import { APP_COMMIT, APP_VERSION } from '../app/runtime.ts';
 import { appHost } from '../app/services.ts';
-import { failureText, runTool } from '../app/tools.ts';
+import { useLatestWrite } from '../app/mutations.ts';
+import { failureText, runTool, type ToolInput } from '../app/tools.ts';
 import { LEFT_OUT_ATTR, captureWindow, privateWordsOf } from './capture.ts';
 import {
   KINDS,
@@ -266,13 +267,17 @@ export function FeedbackDialog() {
   const shot = useShot(open, opened, wordKey);
   const [draft, setDraft] = useState<Draft>(blankDraft);
   const [phase, setPhase] = useState<Phase>({ kind: 'writing' });
-  const [writing, setWriting] = useState<{ busy: boolean; why: string | null }>({ busy: false, why: null });
+  const upWriter = useLatestWrite((input: ToolInput<'feedback.write_up'>) => runTool('feedback.write_up', input));
+  const [whyNotWritten, setWhyNotWritten] = useState<string | null>(null);
+  const writing = { busy: upWriter.pending, why: whyNotWritten };
+  const upWrite = upWriter.write;
+  useEffect(() => () => upWrite.drop(), [opened, upWrite]);
   const [seen, setSeen] = useState(opened);
   if (seen !== opened) {
     setSeen(opened);
     setDraft(blankDraft());
     setPhase({ kind: 'writing' });
-    setWriting({ busy: false, why: null });
+    setWhyNotWritten(null);
   }
 
   const items = context?.items ?? [];
@@ -301,13 +306,13 @@ export function FeedbackDialog() {
 
   const writeUp = () => {
     if (!canWriteUp(draft, context) || writing.busy) return;
-    setWriting({ busy: true, why: null });
-    runTool('feedback.write_up', { kind: draft.kind, text: draft.text, context: keptItems(items, draft.removed) })
-      .then((w) => {
-        setDraft((d) => ({ ...d, writeUp: fromWriteUp(w) }));
-        setWriting({ busy: false, why: null });
-      })
-      .catch((e: unknown) => setWriting({ busy: false, why: failureText(e) }));
+    setWhyNotWritten(null);
+    void upWriter.write
+      .send({ kind: draft.kind, text: draft.text, context: keptItems(items, draft.removed) })
+      .then((reply) => {
+        if (reply.kind === 'done') setDraft((d) => ({ ...d, writeUp: fromWriteUp(reply.value) }));
+        if (reply.kind === 'failed') setWhyNotWritten(failureText(reply.error));
+      });
   };
 
   const keys = (e: KeyboardEvent) => {

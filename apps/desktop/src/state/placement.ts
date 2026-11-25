@@ -14,7 +14,7 @@ export function updatePlacement(seq: number, p: Placement | null): void {
   if (read(placementStore).seq === seq) patch(placementStore, { placing: p });
 }
 
-export const endPlacement = () => patch(placementStore, { placing: null });
+export const endPlacement = () => patch(placementStore, (s) => ({ placing: null, seq: s.seq + 1 }));
 
 export function usePlacement<T>(selector: (s: PlacementState) => T): T {
   return useStore(placementStore, selector);

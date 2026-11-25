@@ -12,7 +12,7 @@ const MAX_GAIN = 1.25;
 
 const director = new VoiceDirector();
 let timer: ReturnType<typeof setTimeout> | null = null;
-const decoded = new Map<string, AudioBuffer | null>();
+const decoded = new Map<string, AudioBuffer>();
 const decoding = new Map<string, Promise<AudioBuffer | null>>();
 let preview: AudioBufferSourceNode | null = null;
 
@@ -44,7 +44,7 @@ function load(clip: VoiceClip): Promise<AudioBuffer | null> {
       return null;
     }
   })().then((buf) => {
-    decoded.set(clip.url, buf);
+    if (buf) decoded.set(clip.url, buf);
     decoding.delete(clip.url);
     return buf;
   });

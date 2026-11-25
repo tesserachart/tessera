@@ -133,19 +133,27 @@ export function fitEdges(api: DockviewApi, roomOf: (kind: string) => number): vo
   }
 }
 
-const momentary = new Set<EdgePos>();
-export function markMomentary(pos: EdgePos, on: boolean): void {
-  if (on) momentary.add(pos);
-  else momentary.delete(pos);
+const momentary = new WeakMap<DockviewApi, Set<EdgePos>>();
+function momentaryOf(api: DockviewApi): Set<EdgePos> {
+  let edges = momentary.get(api);
+  if (!edges) {
+    edges = new Set();
+    momentary.set(api, edges);
+  }
+  return edges;
 }
-export function isMomentary(pos: EdgePos): boolean {
-  return momentary.has(pos);
+export function markMomentary(api: DockviewApi, pos: EdgePos, on: boolean): void {
+  if (on) momentaryOf(api).add(pos);
+  else momentaryOf(api).delete(pos);
 }
-export function momentaryOpen(): Partial<Record<EdgePos, boolean>> {
-  return Object.fromEntries([...momentary].map((p) => [p, false]));
+export function isMomentary(api: DockviewApi, pos: EdgePos): boolean {
+  return momentaryOf(api).has(pos);
 }
-export function clearMomentary(): void {
-  momentary.clear();
+export function momentaryOpen(api: DockviewApi): Partial<Record<EdgePos, boolean>> {
+  return Object.fromEntries([...momentaryOf(api)].map((p) => [p, false]));
+}
+export function clearMomentary(api: DockviewApi): void {
+  momentaryOf(api).clear();
 }
 
 let revision = 0;

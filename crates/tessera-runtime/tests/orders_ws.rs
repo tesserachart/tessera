@@ -411,8 +411,7 @@ async fn an_order_draft_goes_stale_by_ticks() {
         })
         .await;
     assert!(stale["data"]["approval"]["ticksSeen"].as_u64().unwrap() >= 3);
-    let d = c.event(&drafts, |p| p["data"]["status"] == "stale").await;
-    assert_eq!(d["data"]["live"], false);
+    c.event(&drafts, |p| p["data"]["status"] == "stale").await;
     let e = c
         .call(
             "approvals.resolve",

@@ -9,7 +9,7 @@ import { areaStore } from '../src/areas/store.ts';
 import { ConnectionStatus } from '../src/shell/ConnectionStatus.tsx';
 import { EMPTY_SHELL_DATA, ShellDataContext } from '../src/shell/shellData.ts';
 import { uiStore } from '../src/state/ui.ts';
-import { connectionItem, connectionRows, listedConnections } from '../src/accounts/connections.ts';
+import { answerNow, connectionItem, connectionRows, listedConnections } from '../src/accounts/connections.ts';
 import { EMPTY_FORM, specFromForm } from '../src/accounts/levelSource.ts';
 import { useListedConnections } from '../src/accounts/useConnections.ts';
 import { DeskEmpty } from '../src/workspace/dock/DeskEmpty.tsx';
@@ -308,5 +308,14 @@ describe('the desk without a chart', () => {
     expect(screen.getByRole('button', { name: /Add panel/ })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Open a chart' }));
     expect(read(uiStore).paletteOpen).toBe(true);
+  });
+});
+
+describe('a connection’s Test answer', () => {
+  it('reads only while the connection’s live state is the one it was given under', () => {
+    const heard = { said: { ok: true, text: 'The vendor answered.' }, under: 'degraded' };
+    expect(answerNow(heard, 'degraded')).toEqual({ ok: true, text: 'The vendor answered.' });
+    expect(answerNow(heard, 'ok')).toBeNull();
+    expect(answerNow(null, 'ok')).toBeNull();
   });
 });

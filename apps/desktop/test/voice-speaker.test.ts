@@ -5,7 +5,7 @@ interface Played {
   clips: string[];
 }
 
-function fakeAudio(played: Played, decodes: boolean, decoding: Promise<unknown>[]) {
+function fakeAudio(played: Played, decodes: { ok: boolean }, decoding: Promise<unknown>[]) {
   const param = () => ({
     value: 0,
     setValueAtTime: () => undefined,
@@ -39,7 +39,7 @@ function fakeAudio(played: Played, decodes: boolean, decoding: Promise<unknown>[
       return src;
     };
     decodeAudioData = (bytes: ArrayBuffer) => {
-      const decoded = decodes
+      const decoded = decodes.ok
         ? Promise.resolve({ duration: 1.2, url: new TextDecoder().decode(bytes) })
         : Promise.reject(new Error('cannot decode'));
       decoding.push(decoded);
@@ -59,7 +59,8 @@ const broken = (): never => {
 async function load(settings: Record<string, unknown>, decodes = true, fails = false) {
   const played: Played = { tones: 0, clips: [] };
   const decoding: Promise<unknown>[] = [];
-  const Audio = fakeAudio(played, decodes, decoding);
+  const gate = { ok: decodes };
+  const Audio = fakeAudio(played, gate, decoding);
   g.AudioContext = fails
     ? class extends Audio {
         override createOscillator = broken;
@@ -78,7 +79,7 @@ async function load(settings: Record<string, unknown>, decodes = true, fails = f
     await Promise.allSettled(decoding);
     await vi.advanceTimersByTimeAsync(0);
   };
-  return { played, speaker, primed };
+  return { played, speaker, primed, gate };
 }
 
 async function warmModuleGraph(): Promise<void> {
@@ -127,6 +128,19 @@ describe('the speaker', () => {
     speaker.announce('stop_hit');
     await vi.advanceTimersByTimeAsync(200);
     expect(played).toEqual({ tones: 2, clips: [] });
+  });
+
+  it('decodes a clip again when it is next needed after a decode failed, so a line with no tone is not silent for good', async () => {
+    const { played, speaker, primed, gate } = await load({}, false);
+    speaker.primeVoice();
+    await primed();
+    gate.ok = true;
+    speaker.announce('connection_lost');
+    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(0);
+    speaker.announce('connection_lost');
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(played.clips.some((c) => c.includes('connection_lost'))).toBe(true);
   });
 
   it('never throws for a sound the audio fails to make', async () => {

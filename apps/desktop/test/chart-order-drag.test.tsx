@@ -370,3 +370,43 @@ describe('dragging a working limit on the chart', () => {
     );
   });
 });
+
+describe('a drag whose send is still on its way', () => {
+  const sendStopTo = (stop: HTMLElement, price: number) => {
+    fireEvent.pointerDown(stop, { button: 0, pointerId: 1, clientY: yOf(20631.5) });
+    fireEvent.pointerMove(stop, { pointerId: 1, clientY: yOf(price) });
+    fireEvent.pointerUp(stop, { pointerId: 1, clientY: yOf(price) });
+  };
+
+  it('leaves a newer drag alone when its answer comes back, after Esc or arrow keys took the tag', async () => {
+    const { rt, stop } = await desk();
+    sendStopTo(stop(), 20636);
+    await vi.waitFor(() => expect(rt.toolCalls('orders.modify')).toHaveLength(1));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.pointerDown(stop(), { button: 0, pointerId: 2, clientY: yOf(20631.5) });
+    fireEvent.pointerMove(stop(), { pointerId: 2, clientY: yOf(20634) });
+    expect(stop().textContent).toContain('SL 20,634.00');
+    await act(async () => {
+      rt.pending('orders.modify').fail('rejected', 'The broker refused the change');
+      await actPause();
+    });
+    expect(stop().textContent).toContain('SL 20,634.00');
+    fireEvent.pointerUp(stop(), { pointerId: 2, clientY: yOf(20634) });
+    await vi.waitFor(() => expect(rt.toolCalls('orders.modify')).toHaveLength(2));
+  });
+
+  it('leaves a tag moved by the keyboard alone when the send it replaced answers', async () => {
+    const { rt, stop } = await desk();
+    sendStopTo(stop(), 20636);
+    await vi.waitFor(() => expect(rt.toolCalls('orders.modify')).toHaveLength(1));
+    stop().focus();
+    fireEvent.keyDown(stop(), { key: 'ArrowUp' });
+    const moved = stop().textContent;
+    await act(async () => {
+      rt.pending('orders.modify').fail('rejected', 'The broker refused the change');
+      await actPause();
+    });
+    expect(stop().textContent).toBe(moved);
+    expect(stop().classList.contains('is-moving')).toBe(true);
+  });
+});

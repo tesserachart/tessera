@@ -33,7 +33,7 @@ use tessera_protocol::tools::{
 use tessera_protocol::topics::{
     AccountParams, AccountUpdate, AgentSessionParams, BarsParams, HealthUpdate, InstrumentParams,
     InstrumentsParams, LayoutParams, LevelsUpdate, NoParams, Notification, OrderUpdate,
-    PositionUpdate, ResearchRunParams, ToolCallsParams,
+    PositionUpdate, ToolCallsParams,
 };
 
 use crate::ts::TsExports;
@@ -75,7 +75,6 @@ pub fn protocol_exports() -> TsExports {
         .ty::<AccountParams>()
         .ty::<AgentSessionParams>()
         .ty::<ToolCallsParams>()
-        .ty::<ResearchRunParams>()
         .ty::<LayoutParams>()
         .ty::<LevelsUpdate>()
         .ty::<OrderUpdate>()

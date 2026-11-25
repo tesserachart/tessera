@@ -143,6 +143,9 @@ export class AnnotationLayer implements Layer {
       case 'up':
         this.editor.up(e.x, e.y, mods, axes);
         return true;
+      case 'cancel':
+        this.editor.cancel();
+        return true;
       case 'hover':
         this.editor.hover(e.x, e.y, mods, axes);
         return false;

@@ -1,7 +1,7 @@
 import type { Approval, Attachment, Delivery, QueuedMessage, SessionMode, Suggestion } from '@tessera/protocol';
 import { useLoadPending } from '@tessera/ui';
 import { readerOf, sendBlock, sendable, type Reader } from '../../analyst/attachments.ts';
-import { clearSentFiles, composerFiles, composerToasts } from '../../analyst/composerFiles.ts';
+import { clearSentFiles, composerFiles, composerToasts, typedSince } from '../../analyst/composerFiles.ts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Transcript } from '../../app/agentTranscript.ts';
 import { useHasTool, useTool } from '../../app/tools.ts';
@@ -144,6 +144,7 @@ export function useChat(): Chat {
   }, [edit, sessionId, items, endEdit]);
 
   const send = async (text = draftNow().trim(), clear = true, again?: readonly Attachment[], delivery?: Delivery) => {
+    const typed = draftNow();
     const files = clear ? composerFiles() : [];
     const attachments = again ?? sendable(files);
     if ((!text && attachments.length === 0) || sending) return;
@@ -163,8 +164,8 @@ export function useChat(): Chat {
       if (out.notice) composerToasts.push({ tone: 'info', title: out.notice, key: 'steer-queued' });
       if (!session) setNextMode(null);
       if (clear) {
-        setComposerDraft('');
-        clearSentFiles();
+        setComposerDraft(typedSince(typed, draftNow()));
+        clearSentFiles(files);
       }
     } catch (err) {
       note(errorText(err));

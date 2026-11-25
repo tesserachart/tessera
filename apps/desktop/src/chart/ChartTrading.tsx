@@ -123,9 +123,11 @@ import {
   breakeven,
   cancelOrders,
   flatten,
-  modifyOrderPrice,
+  moveOrders,
   openHome,
+  resolveNow,
   runtimeFailureWords,
+  shiftedBy,
   submitOrder,
   type ActionResult,
 } from '../shell/tradeActions.ts';
@@ -133,7 +135,7 @@ import { toTick } from '../shell/ticket.ts';
 import { read } from '../app/store.ts';
 import { SETTLE_MS } from '../app/settle.ts';
 import { chartPanels, openBesideChart } from '../workspace/chartPanels.ts';
-import { approve, failureText, ranUnread } from '../app/tools.ts';
+import { failureText, ranUnread } from '../app/tools.ts';
 import { TRADING_STATE_ATTR } from '../share/quiet.ts';
 import { displayZone } from '../state/timeZone.ts';
 
@@ -252,6 +254,10 @@ interface Drag {
   settleUntil?: number;
   spawn?: string;
   draft?: { draftId: string; part: DraftPart };
+}
+
+function settling(sending: Drag): Drag {
+  return { ...sending, phase: 'settling', settleUntil: Date.now() + SETTLE_MS };
 }
 
 interface MenuTarget {
@@ -628,6 +634,10 @@ export function ChartTrading(props: ChartTradingProps) {
     return Math.min(x, fallback);
   };
 
+  const answered = (sending: Drag, next: Drag | null) => {
+    setDrag((cur) => (cur === sending ? next : cur));
+  };
+
   const commit = async (d: Drag) => {
     if (!environment) return;
     const delta = d.price - d.from;
@@ -641,27 +651,16 @@ export function ChartTrading(props: ChartTradingProps) {
       setShelf({ tone: 'err', text: `${refused}. Nothing sent.` });
       return;
     }
-    const settle = d.orders.flatMap((o) => {
-      const from = restingPrice(o.request);
-      return from === null ? [] : [{ id: o.id, price: snap(from + delta) }];
-    });
-    const sending: Drag = { ...d, phase: 'sending', settle };
+    const moves = shiftedBy(d.orders, delta, math.tick);
+    const sending: Drag = { ...d, phase: 'sending', settle: moves.map((m) => ({ id: m.order.id, price: m.price })) };
     setDrag(sending);
-    let result: ActionResult = { tone: 'ok', text: 'Moved' };
-    for (const t of settle) {
-      const o = d.orders.find((x) => x.id === t.id)!;
-      const r = await modifyOrderPrice(environment, o, t.price);
-      if (r.tone !== 'ok') {
-        result = r;
-        break;
-      }
-    }
+    const result = await moveOrders(environment, moves);
     if (result.tone !== 'ok') {
-      setDrag(null);
+      answered(sending, null);
       setShelf(result);
       return;
     }
-    setDrag((cur) => (cur === sending ? { ...sending, phase: 'settling', settleUntil: Date.now() + SETTLE_MS } : cur));
+    answered(sending, settling(sending));
   };
 
   const release = (d: Drag) => {
@@ -684,15 +683,16 @@ export function ChartTrading(props: ChartTradingProps) {
       setShelf({ tone: 'err', text: 'This draft cannot be moved here; review it on its card.' });
       return;
     }
-    setDrag({ ...d, phase: 'sending' });
+    const sending: Drag = { ...d, phase: 'sending' };
+    setDrag(sending);
     try {
-      await approve({ approvalId: approval.id, decision: 'edit', previewHash: approval.previewHash, input });
+      await resolveNow({ approvalId: approval.id, decision: 'edit', previewHash: approval.previewHash, input });
       setShelf({ tone: 'ok', text: draftEditWords(at.part, formatPrice(price, math.decimals)) });
     } catch (err) {
       if (ranUnread(err)) setShelf({ tone: 'ok', text: draftEditWords(at.part, formatPrice(price, math.decimals)) });
       else setShelf({ tone: 'err', text: runtimeFailureWords(err) ?? `${failureText(err)}. The draft is as it was.` });
     }
-    setDrag(null);
+    answered(sending, null);
   };
 
   const spawnLeg = async (d: Drag) => {
@@ -719,11 +719,7 @@ export function ChartTrading(props: ChartTradingProps) {
     const what = `${plan.role === 'stop' ? 'Stop' : 'Target'} ${formatPrice(price, math.decimals)} on ${symbol}`;
     const r = await attachLeg(environment, host, plan.role, price, what, math.decimals);
     setShelf(r);
-    setDrag((cur) =>
-      cur === sending && r.tone !== 'err'
-        ? { ...sending, phase: 'settling', settleUntil: Date.now() + SETTLE_MS }
-        : null,
-    );
+    answered(sending, r.tone === 'err' ? null : settling(sending));
   };
 
   useEffect(() => {

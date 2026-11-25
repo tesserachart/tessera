@@ -11,6 +11,7 @@ import {
   useConnection,
   useNow,
 } from '../app/runtimeContext.ts';
+import { waitingToRetry } from '@tessera/protocol';
 import { connectionNow, retryNow } from '../app/connection.ts';
 import { useHostKind } from '../app/host.ts';
 import { introElapsed, introPlayed, seamCut, useDropBoot, type SeamCut } from './boot.ts';
@@ -78,13 +79,13 @@ export function Splash() {
   const code = conn.lastErrorCode;
   const expired = code === SESSION_EXPIRED;
   const missing = code === SESSION_MISSING;
-  const canRetry = conn.status === 'reconnecting';
+  const canRetry = waitingToRetry(conn);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === 'r' || e.key === 'R') {
-        if (connectionNow().status === 'reconnecting') retryNow();
+        if (waitingToRetry(connectionNow())) retryNow();
       } else if (e.key === 'd' || e.key === 'D') setDetails((d) => !d);
     };
     window.addEventListener('keydown', onKey);
@@ -185,7 +186,12 @@ export function Splash() {
         ) : null}
       </div>
       <div className="acts">
-        <button type="button" onClick={retryNow} disabled={!canRetry}>
+        <button
+          type="button"
+          onClick={retryNow}
+          disabled={!canRetry}
+          title={canRetry ? undefined : 'Already trying to reach the runtime'}
+        >
           <Key shortcut="r" aria-hidden="true" className="text-on-petrol-2 in-[.show-keys]:text-on-petrol-2" />
           Retry now
         </button>

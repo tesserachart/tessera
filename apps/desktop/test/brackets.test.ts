@@ -247,7 +247,7 @@ describe('chart brackets', () => {
     const lone = order({ side: 'sell', type: 'stop', price: 20600 });
     const draft = {
       draftId: 'd1',
-      live: true,
+      status: 'live',
       preview: {
         request: {
           ...e.request,

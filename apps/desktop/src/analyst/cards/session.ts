@@ -1,3 +1,4 @@
+import { tradeOpen } from '../../areas/journal/model/format.ts';
 import type { SessionIssue, SessionTrade, TradingSessionReport } from '@tessera/protocol';
 import { formatMoney, formatPrice, type ChatCardMark } from '@tessera/ui';
 import { dateWords, sessionClock } from '../tradingSessions.ts';
@@ -18,7 +19,7 @@ export function tradeLabel(t: SessionTrade): string {
 }
 
 export function tradeWords(t: SessionTrade): string {
-  const exit = t.exitPrice === null ? 'open' : formatPrice(t.exitPrice, t.priceDecimals);
+  const exit = tradeOpen(t) || t.exitPrice === null ? 'open' : formatPrice(t.exitPrice, t.priceDecimals);
   const r = t.rMultiple === null ? null : `${t.rMultiple.toFixed(2)}R`;
   return [
     sessionClock(t.openedAt),
@@ -31,7 +32,7 @@ export function tradeWords(t: SessionTrade): string {
 }
 
 export function tradeMark(t: SessionTrade): ChatCardMark {
-  if (t.exitPrice === null) return 'running';
+  if (tradeOpen(t)) return 'running';
   return t.netPnl < 0 ? 'failed' : 'done';
 }
 

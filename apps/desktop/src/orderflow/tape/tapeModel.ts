@@ -376,6 +376,7 @@ export class TapeList {
 
   private rebuild(src: TapeSource): void {
     this.dirty = false;
+    const paused = this.top !== null;
     const found: number[] = [];
     for (let i = src.end - 1; i >= src.start && found.length < SCROLLBACK; i--) {
       if (this.passes(src.sizeAt(i), src.sideAt(i))) found.push(i);
@@ -385,7 +386,7 @@ export class TapeList {
     for (let k = found.length - 1; k >= 0; k--) this.push(found[k]!);
     this.cut = src.start > 0 || (found.length >= SCROLLBACK && found[found.length - 1]! > src.start);
     this.settled = src.settled;
-    this.top = null;
+    this.top = paused ? this.liveTop : null;
     if (this.shownBefore !== null) this.shownBefore = src.end;
     this.placeShown();
     this.version++;

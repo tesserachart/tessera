@@ -164,3 +164,11 @@ export function tone(v: number | null | undefined): 'up' | 'down' | undefined {
 export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
 }
+
+export function tradeClosed<T extends { readonly closedAt: number | null }>(t: T): t is T & { closedAt: number } {
+  return t.closedAt !== null;
+}
+
+export function tradeOpen(t: { readonly closedAt: number | null }): boolean {
+  return !tradeClosed(t);
+}

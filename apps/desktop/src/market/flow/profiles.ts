@@ -16,7 +16,7 @@ import {
   type TpoOutput,
   type VolumeProfileOutput,
 } from '@tessera/protocol';
-import { Lifetime, retrying } from '../../app/lifetime.ts';
+import { Lifetime, READ_AGAIN_MS, retrying } from '../../app/lifetime.ts';
 import { onMarketServed } from '../../app/health.ts';
 import { appClient } from '../../app/services.ts';
 import { feedErrorWords, retryFeedError } from '../../shell/deskWords.ts';
@@ -40,6 +40,13 @@ const PAGE_PERIODS = 10;
 const REFRESH_MS = 60_000;
 export const OPEN_SPAN_REFRESH_MS = 5_000;
 const SPAN_KEEP_MS = 120_000;
+
+function readDue(held: Held, now: number): boolean {
+  if (held.reading) return false;
+  if (held.at === 0) return true;
+  const age = held.error === null ? held.maxAge : Math.min(held.maxAge, READ_AGAIN_MS);
+  return now - held.at >= age;
+}
 const DAY_MS = 86_400_000;
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -486,6 +493,10 @@ class PeriodList {
       if (!live()) return;
       this.olderError = feedErrorWords(e);
       this.failedAt = this.wantFrom;
+      this.running.after(READ_AGAIN_MS, () => {
+        this.failedAt = null;
+        this.page();
+      });
     }
   }
 
@@ -687,7 +698,7 @@ export class ProfileFeed implements ProfileSource {
     }
     held.asked = now;
     held.maxAge = maxAge;
-    if (!held.reading && (held.at === 0 || now - held.at >= maxAge)) this.read(map, key, held);
+    if (readDue(held, now)) this.read(map, key, held);
     return held;
   }
 
@@ -745,7 +756,7 @@ export class ProfileFeed implements ProfileSource {
     for (const map of [this.spans, this.composites])
       for (const [key, held] of map) {
         if (now - held.asked > SPAN_KEEP_MS) map.delete(key);
-        else if (!held.reading && now - held.at >= held.maxAge) this.read(map, key, held);
+        else if (readDue(held, now)) this.read(map, key, held);
       }
   }
 }

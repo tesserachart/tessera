@@ -34,6 +34,7 @@ import {
   type RefObject,
 } from 'react';
 import { useClock } from '../../app/clock.ts';
+import { useTool } from '../../app/tools.ts';
 import { addCustomToChart } from '../../chart/settings/actions.ts';
 import {
   Check,
@@ -57,7 +58,7 @@ import {
   duplicate,
   edit,
   isDirty,
-  load,
+  keepLoaded,
   NEW_INDICATOR_CODE,
   remove,
   restore,
@@ -93,13 +94,19 @@ type EditorProps = {
 
 export function CustomEditor(props: EditorProps) {
   const loaded = usePage((s) => props.id === 'new' || props.id in s.saved);
+  const stored = useTool('indicators.get', loaded ? null : { id: props.id });
+  const { id } = props;
+  useEffect(() => {
+    if (stored.data) keepLoaded(id, stored.data);
+  }, [id, stored.data]);
+  const missing = !loaded && stored.isError;
   return (
     <Loaded
       label="Loading the indicator"
-      pending={!loaded}
+      pending={!loaded && !missing}
       sample={<EditorSample title={props.indicator?.spec.title ?? 'Custom indicator'} preview={props.preview} />}
     >
-      <EditorBody {...props} />
+      {missing ? <p className="px-4 py-3 text-t2">This indicator could not be opened.</p> : <EditorBody {...props} />}
     </Loaded>
   );
 }
@@ -210,10 +217,6 @@ function EditorBody({ id, indicator, chart, preview, unavailable }: EditorProps)
   const [confirmDelete, setConfirmDelete] = useState(false);
   const body = useRef<HTMLDivElement>(null);
   const split = useCodeSplit(body);
-
-  useEffect(() => {
-    if (!isNew && !loaded) void load(id).catch(() => undefined);
-  }, [id, isNew, loaded]);
 
   const runCode = () => {
     if (unavailable || !loaded) return;

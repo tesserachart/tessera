@@ -68,6 +68,18 @@ pub struct DataCoverage {
     pub download: Option<CoverageDownload>,
 }
 
+/// Where a pull stands.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PullState {
+    /// Fetching, or queued behind another pull.
+    Running,
+    /// Stopped by the trader; resume carries on where it stopped.
+    Cancelled,
+    /// Every day has an answer (some may have failed; resume retries those once).
+    Done,
+}
+
 /// A download of a market's missing prints through the connection's tick replay, one day at a
 /// time in the background, following the roll for a root.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]
@@ -75,8 +87,8 @@ pub struct DataCoverage {
 pub struct CoverageDownload {
     /// The pull it is (`market.list_pulls`, `market.cancel_pull`).
     pub pull_id: String,
-    /// `running`, `cancelled` or `done`.
-    pub state: String,
+    /// Where the download stands.
+    pub state: PullState,
     /// Trading days it covers.
     pub days: u32,
     /// Days with an answer: fetched, found already saved, or without trades.

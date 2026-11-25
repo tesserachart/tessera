@@ -36,8 +36,6 @@ import type { OrderUpdate } from "./OrderUpdate";
 import type { PositionUpdate } from "./PositionUpdate";
 import type { ProtectionNote } from "./ProtectionNote";
 import type { Quote } from "./Quote";
-import type { ResearchRunParams } from "./ResearchRunParams";
-import type { ResearchRunUpdate } from "./ResearchRunUpdate";
 import type { SeriesParams } from "./SeriesParams";
 import type { SeriesUpdate } from "./SeriesUpdate";
 import type { ServerCapabilities } from "./ServerCapabilities";
@@ -108,8 +106,6 @@ export interface TopicMap {
   "positions": { params: AccountParams; data: PositionUpdate };
   /** tessera-broker */
   "protection": { params: AccountParams; data: ProtectionNote };
-  /** tessera-research */
-  "research.run": { params: ResearchRunParams; data: ResearchRunUpdate };
   /** tessera-runtime (settings) */
   "settings": { params: NoParams; data: SettingsEvent };
   /** tessera-runtime (core) */

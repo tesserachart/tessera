@@ -96,6 +96,10 @@ async function upload(key: string, file: File, mimeType: string): Promise<void> 
       }
       update(key, { progress: out.received / file.size });
     }
+    if (!dropped.has(key)) {
+      forget(key);
+      refuse(`${file.name} was not attached`);
+    }
   } catch (err) {
     if (!dropped.has(key)) {
       forget(key);
@@ -109,7 +113,7 @@ async function upload(key: string, file: File, mimeType: string): Promise<void> 
 
 export async function attachFiles(files: readonly File[], reader: Reader | null): Promise<void> {
   for (const original of files) {
-    const prepared = await prepare(original);
+    const prepared = await prepare(original).catch(() => `${original.name} could not be read`);
     if (typeof prepared === 'string') {
       refuse(prepared);
       continue;
@@ -157,7 +161,12 @@ export function removeFile(key: string): void {
   else dropped.add(key);
 }
 
-export function clearSentFiles(): void {
-  for (const f of read(filesStore).files) if (f.preview) URL.revokeObjectURL(f.preview);
-  patch(filesStore, { files: [] });
+export function clearSentFiles(sent: readonly ComposerFile[]): void {
+  const keys = new Set(sent.map((f) => f.key));
+  for (const f of read(filesStore).files) if (keys.has(f.key) && f.preview) URL.revokeObjectURL(f.preview);
+  patch(filesStore, (s) => ({ files: s.files.filter((f) => !keys.has(f.key)) }));
+}
+
+export function typedSince(sent: string, now: string): string {
+  return now.startsWith(sent) ? now.slice(sent.length).trimStart() : now;
 }

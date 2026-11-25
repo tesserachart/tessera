@@ -47,7 +47,7 @@ export function reduceOrders(prev: ReadonlyMap<string, Order>, ev: OrderUpdate):
 
 export function reduceDrafts(prev: ReadonlyMap<string, DraftInfo>, ev: DraftInfo): Map<string, DraftInfo> {
   const next = new Map(prev);
-  if (ev.live) next.set(ev.draftId, ev);
+  if (ev.status === 'live') next.set(ev.draftId, ev);
   else next.delete(ev.draftId);
   return next;
 }

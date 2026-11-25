@@ -36,6 +36,7 @@ import { buildDockFromLayout, chartPanelIds, dockShape, isLoadableDock } from '.
 import { nextChartId, presetCount, storyCollapsed, storyPreset } from './presets.ts';
 import { restoreUnknownTiles } from './tiles/registry.ts';
 import { read } from '../app/store.ts';
+import { LatestWrite, type Reply } from '../app/mutations.ts';
 import { runTool, toolCode } from '../app/tools.ts';
 import { keepLocalChartChange } from '../shell/deskWords.ts';
 
@@ -130,6 +131,21 @@ export function activeChartTarget(ctx: WorkspaceContext | null = current): { lay
   return tileId ? { layoutId: ctx.layoutId, tileId } : null;
 }
 
+const layoutReads = new Map<string, LatestWrite<string, Layout>>();
+
+export function readLayout(layoutId: string): Promise<Reply<Layout>> {
+  let latest = layoutReads.get(layoutId);
+  if (!latest) {
+    latest = new LatestWrite((id: string) => runTool('layout.get', { layoutId: id }));
+    layoutReads.set(layoutId, latest);
+  }
+  return latest.send(layoutId);
+}
+
+export function forgetLayoutRead(layoutId: string): void {
+  layoutReads.get(layoutId)?.drop();
+}
+
 export async function saveLayout(target: WorkspaceContext | null = current): Promise<void> {
   const ctx = target;
   if (!ctx || writesStopped) return;
@@ -162,7 +178,7 @@ export async function saveLayout(target: WorkspaceContext | null = current): Pro
       try {
         const view = read(layoutsStore).views[ctx.layoutId] ?? DEFAULT_VIEW;
         const tree = withUserCollapse(restoreUnknownTiles(ctx.api.toJSON()), {
-          ...momentaryOpen(),
+          ...momentaryOpen(ctx.api),
           ...view.collapsed,
         }) as Record<string, JsonValue>;
         const withDock = ctx.canSaveDock();
@@ -187,7 +203,7 @@ export async function saveLayout(target: WorkspaceContext | null = current): Pro
           return;
         }
         console.warn(`[workspace] layout.save ${ctx.layoutId} failed`, err);
-        return;
+        if (!againRequested()) return;
       }
     } while (againRequested());
   };

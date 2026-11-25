@@ -169,8 +169,15 @@ let holdingErrors = true;
 let heldErrors: HeldError[] = [];
 let instance: Instance | null = null;
 let opened = false;
+let lastPlan: Plan | null = null;
+let loadAgain: ReturnType<typeof setTimeout> | null = null;
+
+export const TELEMETRY_AGAIN_MS = 30_000;
 
 function setTelemetry(plan: Plan): void {
+  lastPlan = plan;
+  if (loadAgain) clearTimeout(loadAgain);
+  loadAgain = null;
   const usage = plan.usage === true && plan.config !== null;
   allowed = { crashes: plan.crashes, usage };
   holding = plan.usage !== false;
@@ -201,7 +208,12 @@ function start(replay: TelemetryReplay | null): void {
       begin(posthog);
     },
     () => {
-      if (instance === mine) instance = null;
+      if (instance !== mine) return;
+      instance = null;
+      loadAgain = setTimeout(() => {
+        loadAgain = null;
+        if (instance === null && lastPlan) setTelemetry(lastPlan);
+      }, TELEMETRY_AGAIN_MS);
     },
   );
 }

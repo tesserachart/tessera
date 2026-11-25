@@ -1864,6 +1864,17 @@ export class ChartEngine {
     this.pointerMove(x, y);
   }
 
+  pointerCancel(): boolean {
+    const d = this.drag;
+    if (!d) return false;
+    this.drag = null;
+    if (d.kind === 'layer') {
+      d.layer.pointer!({ type: 'cancel', x: 0, y: 0, shift: false, alt: false, cmdOrCtrl: false }, this.mainContext());
+    }
+    this.pointerLeave();
+    return true;
+  }
+
   private dragSeparator(d: Extract<DragMode, { kind: 'pane' }>, y: number): void {
     const plotH = Math.max(1, this.layout().timeAxis.y);
     const min = PANE_MIN_H / plotH;

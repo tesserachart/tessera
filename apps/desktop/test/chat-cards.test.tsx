@@ -95,7 +95,7 @@ describe('the data coverage card', () => {
   it('says a download in the days it fetches, the day under way and the time left', () => {
     const d = {
       pullId: 'NQ-2026-10-19-2026-10-23-rth',
-      state: 'running',
+      state: 'running' as const,
       days: 5,
       done: 2,
       failed: 0,

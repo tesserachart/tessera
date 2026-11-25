@@ -1258,7 +1258,6 @@ fn loop_limits(settings: &SettingsService) -> LoopLimits {
 fn cancel_orphaned_drafts(store: &Store, now: tessera_core::Timestamp) -> anyhow::Result<()> {
     let repo = store.drafts();
     for mut d in repo.live(None)? {
-        d.live = false;
         d.status = tessera_core::orders::DraftStatus::Cancelled;
         repo.upsert(&d, now)?;
         tracing::info!(draft = %d.draft_id, "cancelled draft left live by a previous run");

@@ -3,4 +3,4 @@
 /**
  * Run state of an agent session.
  */
-export type AgentSessionStatus = "idle" | "running" | "needs_you" | "closed";
+export type AgentSessionStatus = "idle" | "running" | "needs_you";

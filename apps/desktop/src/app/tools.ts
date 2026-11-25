@@ -1,4 +1,13 @@
-import { keepPreviousData, queryOptions, useQuery, type Query, type UseQueryResult } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  queryOptions,
+  useIsMutating,
+  useMutation,
+  useQuery,
+  type Mutation,
+  type Query,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import {
   ContractError,
   Runtime,
@@ -13,10 +22,9 @@ import {
   type ToolName,
 } from '@tessera/protocol';
 import { useLoadPending } from '@tessera/ui';
-import { useCallback, useState } from 'react';
 import { stableStringify } from '../workspace/layouts.ts';
 import { everConnectedStore } from './connection.ts';
-import { queryClient, TOOL_LIST, TOOL_READS } from './queries.ts';
+import { queryClient, TOOL_LIST, TOOL_READS, TOOL_WRITES } from './queries.ts';
 import { appClient } from './services.ts';
 import { useStore } from './store.ts';
 
@@ -133,21 +141,25 @@ export async function runTool<N extends ToolName>(
   return output;
 }
 
-export function useToolAction<N extends ToolName>(name: N, options: RunToolOptions = {}) {
-  const [inFlight, setInFlight] = useState(0);
-  const key = stableStringify(options);
-  const run = useCallback(
-    async (input: ToolInput<N>): Promise<ToolOutput<N>> => {
-      setInFlight((n) => n + 1);
-      try {
-        return await runTool(name, input, JSON.parse(key) as RunToolOptions);
-      } finally {
-        setInFlight((n) => n - 1);
-      }
-    },
-    [name, key],
+function sameFields(input: unknown, fields: object): boolean {
+  if (!input || typeof input !== 'object') return false;
+  const given = input as Record<string, unknown>;
+  return Object.entries(fields).every(([key, value]) => given[key] === value);
+}
+
+export function useToolAction<N extends ToolName>(
+  name: N,
+  options: RunToolOptions = {},
+  busyWith?: Partial<ToolInput<N>> | null,
+) {
+  const mutationKey = [TOOL_WRITES, name];
+  const { mutateAsync } = useMutation<ToolOutput<N>, unknown, ToolInput<N>>(
+    { mutationKey, mutationFn: (input) => runTool(name, input, options), networkMode: 'always' },
+    queryClient,
   );
-  return { run, pending: inFlight > 0 };
+  const filters = { mutationKey, predicate: (m: Mutation) => sameFields(m.state.variables, busyWith ?? {}) };
+  const running = useIsMutating(filters, queryClient);
+  return { run: mutateAsync, pending: running > 0, running: () => queryClient.isMutating(filters) > 0 };
 }
 
 export async function runToolResult<N extends ToolName>(

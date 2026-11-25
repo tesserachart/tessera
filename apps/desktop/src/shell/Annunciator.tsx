@@ -1,3 +1,4 @@
+import { waitingToRetry } from '@tessera/protocol';
 import { StatusLine } from '@tessera/ui';
 import { retryNow } from '../app/connection.ts';
 import { useHoldings } from '../app/portfolio.ts';
@@ -70,7 +71,9 @@ export function Annunciator() {
     .join('\n');
   const action =
     first.action === 'retry'
-      ? { label: 'Retry now', onClick: retryNow }
+      ? waitingToRetry(conn)
+        ? { label: 'Retry now', onClick: retryNow }
+        : null
       : first.action === 'connections'
         ? { label: 'Connections', onClick: () => openConnection(first.key) }
         : null;

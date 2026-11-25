@@ -11,7 +11,10 @@ export interface FormOpen {
   form: AlertForm;
   at: { x: number; y: number } | null;
   price: number | null;
+  seq: number;
 }
+
+let opened = 0;
 
 export const alertFormStore = makeStore<{ open: FormOpen | null }>({ open: null });
 
@@ -31,7 +34,7 @@ function defaultDelivery(): AlertDelivery {
 
 /** A closing Radix menu hands the focus back to its trigger. */
 export function openAlertForm(seed: AlertSeed, at: { x: number; y: number } | null = null): void {
-  const open = { form: formFromSeed(seed, defaultDelivery()), at, price: seed.price };
+  const open = { form: formFromSeed(seed, defaultDelivery()), at, price: seed.price, seq: ++opened };
   setTimeout(() => patch(alertFormStore, { open }), 0);
 }
 
@@ -41,7 +44,7 @@ export function editAlert(
   at: { x: number; y: number } | null = null,
 ): void {
   const form = formFromAlert(a, { ...opts, symbol: displaySymbol(a.instrument) });
-  const open = { form, at, price: markPrice(a) };
+  const open = { form, at, price: markPrice(a), seq: ++opened };
   setTimeout(() => patch(alertFormStore, { open }), 0);
 }
 
@@ -50,6 +53,10 @@ export function setAlertForm(fn: (f: AlertForm) => AlertForm): void {
   if (open) patch(alertFormStore, { open: { ...open, form: fn(open.form) } });
 }
 
-export function closeAlertForm(): void {
-  patch(alertFormStore, { open: null });
+export function closeAlertForm(seq?: number): void {
+  if (seq === undefined || read(alertFormStore).open?.seq === seq) patch(alertFormStore, { open: null });
+}
+
+export function formStillOpen(seq: number): boolean {
+  return read(alertFormStore).open?.seq === seq;
 }

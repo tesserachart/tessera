@@ -28,6 +28,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Suggestion, { type SuggestionProps } from '@tiptap/suggestion';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createEchoGuard } from '../../../app/echoGuard.ts';
+import { noteSaves, type SaveState } from './noteSaves.ts';
 import { createPortal } from 'react-dom';
 import { useAttachmentUrl } from './hooks.ts';
 
@@ -173,8 +174,6 @@ const SlashCommand = Extension.create({
   },
 });
 
-type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
-
 export function RichEditor({
   value,
   onSave,
@@ -192,15 +191,15 @@ export function RichEditor({
 }) {
   const [state, setState] = useState<SaveState>('idle');
   const [slash, setSlash] = useState<SlashState | null>(null);
-  const saved = useRef(value);
   const [guard] = useState(() => {
     const g = createEchoGuard();
     g.agree(NOTE, value);
     return g;
   });
+  const [saves] = useState(() => noteSaves({ saved: value, key: NOTE, guard, show: setState }));
   const timer = useRef<number | null>(null);
+  const waiting = useRef<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const save = useRef<(md: string) => void>(() => undefined);
   const attach = useRef<(files: File[]) => void>(() => undefined);
   const editor = useEditor({
     extensions: [
@@ -234,30 +233,22 @@ export function RichEditor({
     onUpdate: ({ editor: ed }) => {
       if (timer.current) window.clearTimeout(timer.current);
       const md = ed.getMarkdown();
-      timer.current = window.setTimeout(() => save.current(md), 500);
+      waiting.current = md;
+      timer.current = window.setTimeout(() => {
+        timer.current = null;
+        waiting.current = null;
+        saves.save(md);
+      }, 500);
     },
     onBlur: ({ editor: ed }) => {
       if (timer.current) window.clearTimeout(timer.current);
-      save.current(ed.getMarkdown());
+      timer.current = null;
+      waiting.current = null;
+      saves.save(ed.getMarkdown());
     },
   });
   useEffect(() => {
-    save.current = (md: string) => {
-      if (md === saved.current) return;
-      saved.current = md;
-      const done = guard.write(NOTE, md);
-      setState('saving');
-      onSave(md).then(
-        () => {
-          done();
-          setState('saved');
-        },
-        () => {
-          done();
-          setState('failed');
-        },
-      );
-    };
+    saves.sendWith(onSave);
     attach.current = (files: File[]) => {
       if (!onAttach) return;
       void (async () => {
@@ -289,14 +280,16 @@ export function RichEditor({
   useEffect(() => {
     const own = editor.getMarkdown();
     if (!guard.admit(NOTE, value, own)) return;
-    saved.current = value;
+    saves.agree(value);
     if (value !== own) editor.commands.setContent(value, { contentType: 'markdown', emitUpdate: false });
-  }, [value, editor, guard]);
+  }, [value, editor, guard, saves]);
   useEffect(
     () => () => {
       if (timer.current) window.clearTimeout(timer.current);
+      if (waiting.current !== null) saves.save(waiting.current);
+      saves.stop();
     },
-    [],
+    [saves],
   );
   return (
     <div className="jk-editor" ref={box}>

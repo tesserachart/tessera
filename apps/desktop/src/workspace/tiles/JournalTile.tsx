@@ -3,7 +3,7 @@ import type { IDockviewPanelProps } from 'dockview-react';
 import { useHasTool, valueOf } from '../../app/tools.ts';
 import { showArea } from '../../areas/store.ts';
 import { useJournalLive, useToday, useTrades } from '../../areas/journal/data.ts';
-import { clock, pct, plural, rLabel, sideWord } from '../../areas/journal/model/format.ts';
+import { clock, pct, plural, rLabel, sideWord, tradeOpen } from '../../areas/journal/model/format.ts';
 import { Spark } from '../../areas/journal/parts/Charts.tsx';
 import { openDay, openTrade } from '../../areas/journal/store.ts';
 import { registerTile } from './registry.ts';
@@ -30,7 +30,7 @@ export function JournalTile(_props: IDockviewPanelProps) {
         <Spark
           values={[...trades]
             .reverse()
-            .filter((t) => t.status === 'closed')
+            .filter((t) => !tradeOpen(t))
             .map((t) => t.netPnl)}
           width={72}
           height={22}
@@ -59,7 +59,7 @@ export function JournalTile(_props: IDockviewPanelProps) {
               <span className="text-t3">{clock(t.openedAt)}</span>
               <b>{t.symbol}</b>
               <span className={t.side === 'buy' ? 'up' : 'down'}>{sideWord(t.side)}</span>
-              <span className="text-t3">{t.status === 'open' ? 'Open' : (t.setupName ?? '')}</span>
+              <span className="text-t3">{tradeOpen(t) ? 'Open' : (t.setupName ?? '')}</span>
               <span className={cx('r', t.netPnl > 0 ? 'up' : t.netPnl < 0 ? 'down' : null)}>
                 {formatMoney(t.netPnl, { signed: true })}
               </span>

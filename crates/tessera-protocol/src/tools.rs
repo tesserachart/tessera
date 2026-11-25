@@ -350,7 +350,6 @@ pub struct DraftInfo {
     pub environment: Option<Environment>,
     pub instrument: Option<InstrumentId>,
     pub preview: Value,
-    pub live: bool,
     #[serde(default = "legacy_draft_status")]
     pub status: DraftStatus,
     pub origin: Origin,
@@ -359,6 +358,12 @@ pub struct DraftInfo {
     pub stale_at: Timestamp,
     #[serde(default)]
     pub error: Option<ToolErrorInfo>,
+}
+
+impl DraftInfo {
+    pub fn is_live(&self) -> bool {
+        self.status == DraftStatus::Live
+    }
 }
 
 fn legacy_draft_status() -> DraftStatus {

@@ -1,4 +1,4 @@
-import type { IndicatorSeries } from '@tessera/protocol';
+import { INDICATOR_SPECS, type IndicatorDetail, type IndicatorSeries, type IndicatorSpec } from '@tessera/protocol';
 import { TooltipProvider } from '@tessera/ui';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -11,9 +11,9 @@ import {
   fitShare,
   PREVIEW_MIN_PX,
 } from '../src/areas/indicators/layout.ts';
-import { edit } from '../src/areas/indicators/model.ts';
+import { edit, pageStore, run, save, setPreviewInput } from '../src/areas/indicators/model.ts';
 import { read, write } from '../src/app/store.ts';
-import { answeringClient, TestRuntime } from './support/runtime.tsx';
+import { answeringClient, setTestServices, TestRuntime } from './support/runtime.tsx';
 
 vi.mock('../src/areas/indicators/PreviewChart.tsx', () => ({ PreviewChart: () => null }));
 
@@ -21,6 +21,7 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   write(editorLayout, { codeShare: DEFAULT_CODE_SHARE, codeOnly: false });
+  write(pageStore, { ...read(pageStore), drafts: {}, runs: {}, inputs: {}, saved: {} });
 });
 
 const editor = (value: string) => (
@@ -95,6 +96,110 @@ describe('a custom indicator’s editor', () => {
 });
 
 const SERIES = { spec: { title: 'Test', inputs: [], plots: [] }, logs: '' } as unknown as IndicatorSeries;
+
+function held<O>() {
+  const waiting: ((value: O) => void)[] = [];
+  const answer = () =>
+    new Promise<O>((resolve) => {
+      waiting.push(resolve);
+    });
+  return { waiting, answer };
+}
+
+const SPEC: IndicatorSpec = { ...INDICATOR_SPECS.find((s) => s.kind === 'sma')!, kind: 'custom', title: 'Stretch' };
+
+const seriesTitled = (title: string): IndicatorSeries => ({
+  indicator: 'new',
+  version: null,
+  spec: { ...SPEC, title },
+  description: null,
+  instrument: 'NQ',
+  tf: '1m',
+  inputs: {},
+  time: [],
+  plots: [],
+  objects: { lines: [], labels: [], boxes: [] },
+  bars: 0,
+  computedFrom: null,
+  computeMs: 0,
+  cpuMs: 0,
+  logs: '',
+  provider: 'test',
+});
+
+const savedDetail = (id: string, code: string, version: number): IndicatorDetail => ({
+  builtin: null,
+  custom: {
+    id,
+    version,
+    latest: version,
+    spec: SPEC,
+    description: null,
+    createdAt: 0,
+    updatedAt: 0,
+    createdBy: 'user',
+  },
+  code,
+  versions: [],
+});
+
+describe('a custom indicator’s preview and save', () => {
+  it('keeps the newest preview when an older one answers last', async () => {
+    const previews = held<IndicatorSeries>();
+    setTestServices(answeringClient({ 'indicators.preview': previews.answer }).client);
+    edit('new', 'export const indicator = { title: "One" };');
+    const first = run('new', 'NQ', '1m');
+    await Promise.resolve();
+    setPreviewInput('new', 'length', 9);
+    const second = run('new', 'NQ', '1m');
+    await vi.waitFor(() => expect(previews.waiting).toHaveLength(2));
+    previews.waiting[1]!(seriesTitled('Newer'));
+    await second;
+    previews.waiting[0]!(seriesTitled('Older'));
+    await first;
+    expect(read(pageStore).runs.new?.series?.spec.title).toBe('Newer');
+  });
+
+  it('keeps what was typed while a save was on its way as the draft, and saves only what it sent', async () => {
+    const saves = held<IndicatorDetail>();
+    setTestServices(answeringClient({ 'indicators.update_custom': saves.answer }).client);
+    write(pageStore, {
+      ...read(pageStore),
+      saved: { c1: { version: 1, code: 'v1', detail: savedDetail('c1', 'v1', 1) } },
+      drafts: {},
+    });
+    edit('c1', 'v2');
+    const saving = save('c1');
+    await vi.waitFor(() => expect(saves.waiting).toHaveLength(1));
+    edit('c1', 'v3');
+    saves.waiting[0]!(savedDetail('c1', 'v2', 2));
+    await saving;
+    expect(read(pageStore).saved.c1?.code).toBe('v2');
+    expect(read(pageStore).drafts.c1).toBe('v3');
+  });
+
+  it('says plainly that an indicator could not be opened, instead of loading for ever', async () => {
+    const { client } = answeringClient({
+      'indicators.get': () => {
+        throw new Error('gone');
+      },
+    });
+    render(
+      <TestRuntime client={client}>
+        <TooltipProvider>
+          <CustomEditor
+            id="c9"
+            indicator={null}
+            chart={null}
+            preview={{ instrument: 'NQ', tf: '1m' }}
+            unavailable={null}
+          />
+        </TooltipProvider>
+      </TestRuntime>,
+    );
+    expect(await screen.findByText('This indicator could not be opened.')).toBeTruthy();
+  });
+});
 
 describe('the code and its preview', () => {
   const open = () =>

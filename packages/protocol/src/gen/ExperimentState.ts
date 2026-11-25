@@ -3,4 +3,4 @@
 /**
  * Lifecycle state.
  */
-export type ExperimentState = "draft" | "frozen" | "running" | "recorded" | "failed";
+export type ExperimentState = "draft" | "frozen" | "recorded";

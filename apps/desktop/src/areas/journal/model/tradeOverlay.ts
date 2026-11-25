@@ -1,12 +1,12 @@
 import type { TradeOverlay, TradePlanStep } from '@tessera/chart';
 import type { PathStep, TradeDetail } from '@tessera/protocol';
 import { chartSteps } from './activity.ts';
-import { nsToMs } from './format.ts';
+import { nsToMs, tradeClosed } from './format.ts';
 
 export function tradeOverlayOf(d: TradeDetail, colors: TradeOverlay['colors']): TradeOverlay {
   const t = d.trade;
   const open = nsToMs(t.openedAt);
-  const closed = t.status === 'closed' && t.closedAt !== null;
+  const closed = tradeClosed(t);
   const leg = (path: readonly PathStep[] | undefined, planned: number | null): TradePlanStep[] => {
     if (path?.some((s) => s.price !== null)) return chartSteps(path);
     return planned === null ? [] : [{ t: open, price: planned }];
@@ -14,7 +14,7 @@ export function tradeOverlayOf(d: TradeDetail, colors: TradeOverlay['colors']): 
   return {
     long: t.side === 'buy',
     open,
-    close: closed ? nsToMs(t.closedAt!) : null,
+    close: closed ? nsToMs(t.closedAt) : null,
     entry: t.entryPrice,
     exit: closed ? t.exitPrice : null,
     stop: leg(d.activity?.stopPath, t.stopPrice),

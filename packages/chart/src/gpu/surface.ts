@@ -19,6 +19,7 @@ export const MAX_GPU_CONTEXTS = 4;
 export const GPU_TEXTURE_BYTES = 64 * 1024 * 1024;
 export const GPU_UPLOAD_BYTES_PER_FRAME = 256 * 1024;
 export const GPU_MAX_LOSSES = 2;
+export const GPU_LOSS_WINDOW_MS = 10 * 60_000;
 
 let contextsHeld = 0;
 
@@ -216,7 +217,7 @@ export class GpuController {
   state: GpuState = 'none';
   private surface: WebGlSurface | null = null;
   private canvas: GpuCanvasLike | null = null;
-  private losses = 0;
+  private losses: number[] = [];
   private holdsSlot = false;
   private readonly host: GpuHost | null;
   private readonly onChange: () => void;
@@ -283,8 +284,9 @@ export class GpuController {
   private readonly onLost = (e: { preventDefault(): void }) => {
     // without preventDefault the browser never restores the context
     e.preventDefault();
-    this.losses++;
-    if (this.losses >= GPU_MAX_LOSSES) {
+    const now = Date.now();
+    this.losses = [...this.losses.filter((at) => now - at < GPU_LOSS_WINDOW_MS), now];
+    if (this.losses.length >= GPU_MAX_LOSSES) {
       this.drop();
       this.state = 'failed';
     } else {

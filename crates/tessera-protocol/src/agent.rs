@@ -63,8 +63,6 @@ pub enum AgentState {
     /// Reasoning.
     Thinking,
     RunningTool,
-    /// Waiting for the user's approval.
-    WaitingApproval,
     /// Writing the answer.
     Writing,
 }
@@ -351,8 +349,6 @@ pub enum AgentSessionStatus {
     Running,
     /// Waiting for the user (approval or question).
     NeedsYou,
-    /// Ended.
-    Closed,
 }
 
 /// Summary of an agent session (`agent.sessions` topic, sidebar rows).
