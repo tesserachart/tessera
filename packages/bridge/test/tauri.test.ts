@@ -138,6 +138,15 @@ describe('Tauri bridge', () => {
     });
   });
 
+  it('builds a tile window hidden and shows it only once its page is in it, like the main window', async () => {
+    const bridge = makeTauriBridge();
+    await bridge.openWindow({ kind: 'chart', id: 'c1', title: 'NQ', width: 1600, height: 1000 });
+    const created = calls.find((c) => c.cmd === 'plugin:webview|create_webview_window');
+    expect((created?.args as { options: { visible: boolean } }).options.visible).toBe(false);
+    const order = calls.map((c) => c.cmd).filter((cmd) => /create_webview_window|\|show$|set_focus/.test(cmd));
+    expect(order).toEqual(['plugin:webview|create_webview_window', 'plugin:window|show', 'plugin:window|set_focus']);
+  });
+
   it('tells when a tile window it opened is destroyed; never for one that is not open, nor once stopped', async () => {
     const bridge = makeTauriBridge();
     await bridge.openWindow({ kind: 'chart', id: 'c1', title: 'NQ' });

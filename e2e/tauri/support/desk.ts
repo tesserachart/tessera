@@ -16,7 +16,7 @@ const UNDER_THE_POINTER = `
   if (!hit || !target.contains(hit)) {
     const name = (e) => e ? e.tagName.toLowerCase() + (e.getAttribute('aria-label') ? ' "' + e.getAttribute('aria-label') + '"' : '') + '.' + String(e.className).split(' ').filter(Boolean).slice(0, 2).join('.') : 'nothing';
     const style = getComputedStyle(target);
-    return 'at ' + at + ' in a ' + innerWidth + 'x' + innerHeight + ' window, ' + name(hit) + ' is on top of it' +
+    return 'at ' + at + ' in a ' + innerWidth + 'x' + innerHeight + ' page of a ' + outerWidth + 'x' + outerHeight + ' window, ' + name(hit) + ' is on top of it' +
       (style.visibility !== 'visible' ? ' (it is ' + style.visibility + (target.closest('[data-folded]') ? ', folded into More' : '') + ')' : '');
   }
   return settled ? target : 'it is still moving, at ' + at;`;

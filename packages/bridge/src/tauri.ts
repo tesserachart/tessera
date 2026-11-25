@@ -86,6 +86,7 @@ export function makeTauriBridge(): Bridge {
         height: tile.height ?? 900,
         ...(tile.x !== undefined && tile.y !== undefined ? { x: tile.x, y: tile.y } : {}),
         decorations: false,
+        visible: false,
         // Tauri's file-drop handler would take the page's own drag and drop.
         dragDropEnabled: false,
         ...(appearance?.mode ? { theme: appearance.mode } : {}),
@@ -103,6 +104,10 @@ export function makeTauriBridge(): Bridge {
             });
           }),
       );
+      await host('openWindow', async () => {
+        await win.show();
+        await win.setFocus();
+      });
       return true;
     },
 
