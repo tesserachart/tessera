@@ -16,6 +16,7 @@ export interface GlyphAtlasOptions {
 
 export const GLYPH_CACHE_BYTES = 6 * 1024 * 1024;
 const CACHE_W = 2048;
+const CACHE_PAGE_PX = 128;
 
 interface AtlasContext {
   font: string;
@@ -47,8 +48,10 @@ export class GlyphAtlas {
   private readonly column = new Int8Array(CODE_LIMIT).fill(-1);
   private readonly advance: Float32Array;
   private readonly inset: Float32Array;
-  private readonly cache: CanvasLike | null;
-  private readonly cacheCtx: Ctx2D | null;
+  private readonly createCanvas: (width: number, height: number) => CanvasLike;
+  private readonly shelves: number;
+  private readonly pageShelves: number;
+  private readonly pages: { canvas: CanvasLike; ctx: Ctx2D }[] = [];
   private readonly entries: Map<string, number>[] = [];
   private entryX = new Uint16Array(256);
   private entryW = new Uint16Array(256);
@@ -126,9 +129,9 @@ export class GlyphAtlas {
     this.inkTop = inkTop;
     this.inkH = Math.max(1, inkBottom - inkTop);
     const cacheBytes = o.cacheBytes ?? GLYPH_CACHE_BYTES;
-    const shelves = Math.floor(cacheBytes / 4 / CACHE_W / this.inkH);
-    this.cache = shelves > 0 ? o.createCanvas(CACHE_W, shelves * this.inkH) : null;
-    this.cacheCtx = this.cache ? (this.cache.getContext('2d') as Ctx2D) : null;
+    this.createCanvas = (w, h) => o.createCanvas(w, h);
+    this.shelves = Math.floor(cacheBytes / 4 / CACHE_W / this.inkH);
+    this.pageShelves = Math.max(1, Math.min(this.shelves, Math.floor(CACHE_PAGE_PX / this.inkH)));
   }
 
   beginFrame(): void {
@@ -143,10 +146,23 @@ export class GlyphAtlas {
     this.shelfX = 0;
     this.shelfY = 0;
     this.full = false;
-    if (this.cache && this.cacheCtx) {
-      this.cacheCtx.setTransform(1, 0, 0, 1, 0, 0);
-      this.cacheCtx.clearRect(0, 0, this.cache.width, this.cache.height);
+    for (const page of this.pages) {
+      page.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      page.ctx.clearRect(0, 0, page.canvas.width, page.canvas.height);
+      page.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     }
+  }
+
+  private pageOf(shelf: number): { canvas: CanvasLike; ctx: Ctx2D } {
+    const k = Math.floor(shelf / this.pageShelves);
+    while (this.pages.length <= k) {
+      const first = this.pages.length * this.pageShelves;
+      const canvas = this.createCanvas(CACHE_W, Math.min(this.pageShelves, this.shelves - first) * this.inkH);
+      const ctx = canvas.getContext('2d') as Ctx2D;
+      ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      this.pages.push({ canvas, ctx });
+    }
+    return this.pages[k]!;
   }
 
   get cached(): number {
@@ -171,6 +187,17 @@ export class GlyphAtlas {
     return w;
   }
 
+  prepare(text: string, color = 0, weight = 0): void {
+    if (text.length <= 1 || this.shelves === 0) return;
+    const row = this.rowOf(color, weight);
+    const map = (this.entries[row] ??= new Map());
+    if (!map.has(text)) this.compose(map, text, row);
+  }
+
+  private rowOf(color: number, weight: number): number {
+    return Math.min(weight, this.weights - 1) * this.colors + Math.min(color, this.colors - 1);
+  }
+
   /** Writing to the cache makes the next blit from it copy the whole bitmap. */
   draw(
     ctx: Ctx2D,
@@ -183,11 +210,11 @@ export class GlyphAtlas {
     reusable = true,
   ): void {
     const dpr = this.dpr;
-    const row = Math.min(weight, this.weights - 1) * this.colors + Math.min(color, this.colors - 1);
+    const row = this.rowOf(color, weight);
     const dh = this.cellH / dpr;
     // a blit between device pixels blurs the figure
     const dy = Math.round((y - dh / 2) * dpr) / dpr;
-    if (text.length > 1 && this.cache) {
+    if (text.length > 1 && this.shelves > 0) {
       const map = (this.entries[row] ??= new Map());
       const e = map.get(text) ?? (reusable ? this.compose(map, text, row) : undefined);
       if (e !== undefined) {
@@ -196,10 +223,11 @@ export class GlyphAtlas {
         const left = align === 'left' ? x : align === 'right' ? x - width : x - width / 2;
         const w = this.entryW[e]!;
         const dx = Math.round(left * dpr - this.pad) / dpr;
+        const shelf = this.entryShelf[e]!;
         ctx.drawImage(
-          this.cache as unknown as CanvasImageSource,
+          this.pageOf(shelf).canvas as unknown as CanvasImageSource,
           this.entryX[e]!,
-          this.entryShelf[e]! * this.inkH,
+          (shelf % this.pageShelves) * this.inkH,
           w,
           this.inkH,
           dx,
@@ -251,30 +279,33 @@ export class GlyphAtlas {
     const width = this.measure(text);
     const e = this.allocate(width);
     if (e === undefined) return undefined;
-    this.blitGlyphs(this.cacheCtx!, text, (this.entryX[e]! + this.pad) / this.dpr, this.shelfTop(e), row);
+    this.blitGlyphs(
+      this.pageOf(this.entryShelf[e]!).ctx,
+      text,
+      (this.entryX[e]! + this.pad) / this.dpr,
+      this.shelfTop(e),
+      row,
+    );
     map.set(text, e);
     return e;
   }
 
   private shelfTop(e: number): number {
-    return (this.entryShelf[e]! * this.inkH - this.inkTop) / this.dpr;
+    return ((this.entryShelf[e]! % this.pageShelves) * this.inkH - this.inkTop) / this.dpr;
   }
 
   private allocate(width: number): number | undefined {
-    const cache = this.cache;
-    const cctx = this.cacheCtx;
-    if (!cache || !cctx || this.full) return undefined;
+    if (this.full || this.shelves === 0) return undefined;
     const w = Math.ceil(width * this.dpr) + 2 * this.pad + 1;
-    if (w > cache.width) return undefined;
-    if (this.shelfX + w > cache.width) {
+    if (w > CACHE_W) return undefined;
+    if (this.shelfX + w > CACHE_W) {
       this.shelfX = 0;
       this.shelfY++;
     }
-    if ((this.shelfY + 1) * this.inkH > cache.height) {
+    if (this.shelfY >= this.shelves) {
       this.full = true;
       return undefined;
     }
-    cctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const e = this.entryCount++;
     if (e === this.entryX.length) {
       const grow = <T extends Uint16Array | Float32Array>(a: T, make: (n: number) => T): T => {
@@ -300,7 +331,9 @@ export class GlyphAtlas {
   }
 
   get cacheBytes(): number {
-    return this.cache ? this.cache.width * this.cache.height * 4 : 0;
+    let bytes = 0;
+    for (const page of this.pages) bytes += page.canvas.width * page.canvas.height * 4;
+    return bytes;
   }
 }
 

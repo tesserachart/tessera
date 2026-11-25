@@ -1,5 +1,5 @@
 import { INDICATOR_SPECS, type Timeframe } from '@tessera/protocol';
-import { Button, Icon, Loaded, Menu, MenuContent, MenuTrigger, Tooltip, useLoadPending } from '@tessera/ui';
+import { Button, Icon, Loaded, Menu, MenuContent, MenuTrigger, Tooltip, cx, useLoadPending } from '@tessera/ui';
 import { useEffect, useMemo } from 'react';
 import { useToolValue } from '../../app/tools.ts';
 import { ChartSetupItems, type ToolChart } from '../../chart/ChartTools.tsx';
@@ -10,6 +10,7 @@ import { useActiveChart } from '../../state/workspace.ts';
 import { BuiltinDetail, BuiltinView } from './BuiltinDetail.tsx';
 import { Catalog } from './Catalog.tsx';
 import { CustomEditor, EditorSample } from './CustomEditor.tsx';
+import { useEditorLayout } from './layout.ts';
 import { PreviewFrame } from './PreviewFrame.tsx';
 import { builtinSpec, countOnChart, firstSelection, keyOf, select, usePage, pageStore } from './model.ts';
 import { read } from '../../app/store.ts';
@@ -100,6 +101,7 @@ function IndicatorsBody() {
   const layers = useLayouts((s) => (chart ? s.layouts[chart.layoutId]?.charts[chart.tileId]?.layers : undefined));
   const onChart = useMemo(() => countOnChart(layers ?? []), [layers]);
   const preview = chart ? { instrument: chart.instrument, tf: chart.tf } : FALLBACK;
+  const codeOnly = useEditorLayout((s) => s.codeOnly);
   const sandbox = list?.sandbox ?? null;
   const unavailable = sandbox && !sandbox.available ? (sandbox.reason ?? 'Custom indicators cannot run here.') : null;
 
@@ -140,7 +142,7 @@ function IndicatorsBody() {
   }
 
   return (
-    <div className="ia-page-body">
+    <div className={cx('ia-page-body', codeOnly && key && 'is-code-only')}>
       <Catalog builtins={INDICATOR_SPECS} custom={custom} selection={selection} drafting={drafting} onChart={onChart} />
       <main className="ia-detail">{detail}</main>
     </div>

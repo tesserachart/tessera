@@ -214,6 +214,47 @@ describe('footprint layer', () => {
     chart.destroy();
   });
 
+  it('crosses where its numbers switch on, in and out, without making a canvas after the first time', () => {
+    const { bars, footprints } = market(40);
+    const busy = footprints.map((f) => ({
+      ...f,
+      cells: f.cells.map(([price, bid, ask]): [number, number, number] => [price, 1000 + 7 * bid, 1000 + 7 * ask]),
+    }));
+    const chart = chartWith(bars);
+    const store = new FootprintStore(GRID);
+    store.setHistory(busy);
+    let made = 0;
+    const fp = new FootprintLayer({
+      id: 'fp',
+      options: { rowTicks: 1 },
+      createCanvas: (w, h) => {
+        made++;
+        return createCanvas(w, h);
+      },
+    });
+    fp.setStore(store);
+    chart.addLayer(fp);
+    chart.setViewport({ price: { min: 5795, max: 5805 } });
+    const sizes = new Set<number | null>();
+    const sweep = () => {
+      for (const spacing of [
+        ...Array.from({ length: 81 }, (_, k) => 40 + k),
+        ...Array.from({ length: 81 }, (_, k) => 120 - k),
+      ]) {
+        chart.setViewport({ barSpacing: spacing });
+        chart.render();
+        sizes.add(fp.lod >= 2 ? fp.figureSize : null);
+      }
+    };
+    sweep();
+    expect([...sizes].sort()).toEqual([...FOOTPRINT_FIGURE_SIZES, null].sort());
+    const afterFirst = made;
+    sweep();
+    sweep();
+    expect(made).toBe(afterFirst);
+    chart.destroy();
+  });
+
   it('draws plain candles where the footprint history has not reached', () => {
     const { bars, footprints } = market(60);
     const chart = chartWith(bars);

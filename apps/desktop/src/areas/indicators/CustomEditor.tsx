@@ -18,10 +18,21 @@ import {
   MenuSubContent,
   MenuSubTrigger,
   MenuTrigger,
+  Splitter,
   Tooltip,
   cx,
 } from '@tessera/ui';
-import { useEffect, useEffectEvent, useId, useMemo, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { useClock } from '../../app/clock.ts';
 import { addCustomToChart } from '../../chart/settings/actions.ts';
 import {
@@ -38,6 +49,7 @@ import { askAnalyst } from '../../shell/tradeActions.ts';
 import type { ActiveChart } from '../../state/workspace.ts';
 import { showArea } from '../store.ts';
 import { CodeEditor, CodeSample } from './CodeEditor.tsx';
+import { resetCodeShare, setCodeShare, toggleCodeOnly, useEditorLayout } from './layout.ts';
 import {
   byWords,
   chartWords,
@@ -60,6 +72,7 @@ import { PreviewFrame } from './PreviewFrame.tsx';
 import { zonedFormat } from '../../state/timeZone.ts';
 
 const RUN_AFTER_TYPING_MS = 700;
+const CODE_ONLY_KEY = 'mod+shift+enter';
 
 const SAVED_DAY = zonedFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' });
 const SAVED_TIME = zonedFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -103,6 +116,42 @@ function EditorHead({ title, meta, children }: { title: string; meta: string; ch
   );
 }
 
+function CodeOnlyButton() {
+  const codeOnly = useEditorLayout((s) => s.codeOnly);
+  const label = codeOnly ? 'Show the chart' : 'Maximise the code';
+  return (
+    <Tooltip content={label} shortcut={CODE_ONLY_KEY}>
+      <IconButton label={label} icon={codeOnly ? 'restore' : 'maximise'} onClick={toggleCodeOnly} />
+    </Tooltip>
+  );
+}
+
+function useCodeSplit(body: RefObject<HTMLDivElement | null>) {
+  const share = useEditorLayout((s) => s.codeShare);
+  const start = useRef(share);
+  const width = () => body.current?.getBoundingClientRect().width ?? 0;
+  return {
+    style: { '--ia-code': `${(share * 100).toFixed(2)}%` } as CSSProperties,
+    splitter: {
+      onDragStart: () => {
+        start.current = share;
+      },
+      onDrag: (travel: number) => {
+        const w = width();
+        if (w > 0) setCodeShare(start.current + travel / w, w);
+      },
+      onStep: (delta: number) => {
+        const w = width();
+        if (w > 0) setCodeShare(share + delta / w, w);
+      },
+      onReset: resetCodeShare,
+      value: Math.round(share * 100),
+      min: 0,
+      max: 100,
+    },
+  };
+}
+
 function PreviewHead({ preview }: { preview: { instrument: string; tf: Timeframe } }) {
   return (
     <div className="ia-ed-preview-head">
@@ -127,6 +176,7 @@ export function EditorSample({ title, preview }: { title: string; preview: { ins
         <Button size="s" variant="quiet" className="text-aqua">
           Ask the analyst
         </Button>
+        <CodeOnlyButton />
         <IconButton label="More" icon="more" />
       </EditorHead>
       <div className="ia-ed-body">
@@ -136,6 +186,7 @@ export function EditorSample({ title, preview }: { title: string; preview: { ins
             <span className="quiet">1,200 bars in 4 ms</span>
           </div>
         </div>
+        <span className="ia-ed-split" aria-hidden />
         <div className="ia-ed-side">
           <PreviewHead preview={preview} />
           <PreviewFrame />
@@ -157,6 +208,8 @@ function EditorBody({ id, indicator, chart, preview, unavailable }: EditorProps)
   const savedDetail = usePage((s) => s.saved[id]?.detail ?? null);
   const loaded = usePage((s) => isNew || id in s.saved);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const body = useRef<HTMLDivElement>(null);
+  const split = useCodeSplit(body);
 
   useEffect(() => {
     if (!isNew && !loaded) void load(id).catch(() => undefined);
@@ -238,6 +291,7 @@ function EditorBody({ id, indicator, chart, preview, unavailable }: EditorProps)
         >
           Ask the analyst
         </Button>
+        <CodeOnlyButton />
         {!isNew && indicator ? (
           <Menu>
             <Tooltip content="More">
@@ -287,7 +341,7 @@ function EditorBody({ id, indicator, chart, preview, unavailable }: EditorProps)
         </div>
       ) : null}
       {unavailable ? <p className="ia-ed-unavailable">{unavailable}</p> : null}
-      <div className="ia-ed-body">
+      <div ref={body} className="ia-ed-body" style={split.style}>
         <div className="ia-ed-code">
           {loaded ? (
             <CodeEditor
@@ -297,10 +351,12 @@ function EditorBody({ id, indicator, chart, preview, unavailable }: EditorProps)
               onChange={(c) => edit(id, c)}
               onRun={runCode}
               onSave={onSave}
+              onCodeOnly={toggleCodeOnly}
             />
           ) : null}
           <Status run={runState} problem={problem} />
         </div>
+        <Splitter label="Resize the code" className="ia-ed-split" {...split.splitter} />
         <div className="ia-ed-side">
           <PreviewHead preview={preview} />
           <PreviewChart instrument={preview.instrument} tf={preview.tf} series={runState?.series ?? null} />

@@ -30,6 +30,7 @@ import {
   type FootprintInput,
   type SessionProfileData,
 } from '../src/index.ts';
+import { FOOTPRINT_FIGURE_SIZES } from '../src/layers/footprint.ts';
 import { equityBars, headless, rng, threadMs, valuesOf, vwapLayer } from './fixtures.ts';
 import { ManualTimers } from './gpu.ts';
 
@@ -83,6 +84,12 @@ const BUDGETS = {
     loose: 80,
     strict: 8,
     target: 'orderflow §12: pan/zoom frame with a full footprint ≤ 8 ms',
+    stat: 'p95',
+  },
+  footprintNumbersOn: {
+    loose: 80,
+    strict: 16.7,
+    target: '§8: a zoom step where footprint numbers switch on, off or change size stays a 60 fps frame',
     stat: 'p95',
   },
   bubbles500: { loose: 30, strict: 3, target: 'orderflow §12: 500 bubbles inside the 6 ms live frame', stat: 'p95' },
@@ -679,6 +686,63 @@ describe('perf: order-flow layers (orderflow spec §12, 1920×1080 at dpr 2)', (
       () => chart.render(),
     );
     check('footprintPan', stats(pan.slice(5)));
+    chart.destroy();
+  });
+
+  it('zooms a busy 5m footprint across the numbers threshold, in and out, within budget', () => {
+    const r = rng(5);
+    const bars: Bar[] = [];
+    const footprints: FootprintInput[] = [];
+    let tick = grid.toTick(21_000);
+    for (let i = 0; i < 600; i++) {
+      const range = 40 + Math.floor(r() * 120);
+      const low = tick - Math.floor(r() * range);
+      const cells: number[][] = [];
+      for (let k = 0; k <= range; k++)
+        cells.push([grid.toPrice(low + k), Math.floor(r() * r() * 400), Math.floor(r() * r() * 400)]);
+      const t = t0 + i * 300_000;
+      const close = low + Math.floor(r() * range);
+      bars.push({
+        t,
+        o: grid.toPrice(low + Math.floor(r() * range)),
+        h: grid.toPrice(low + range),
+        l: grid.toPrice(low),
+        c: grid.toPrice(close),
+        v: 1,
+      });
+      footprints.push({ t, row: 0.25, cells, deltaHigh: null, deltaLow: null });
+      tick = close;
+    }
+    const timers = new ManualTimers();
+    const chart = headless({ ...chartOpts, timeframeMs: 300_000, timers });
+    chart.setData('main', bars);
+    const store = new FootprintStore(grid);
+    store.setHistory(footprints, true);
+    const fp = new FootprintLayer({ id: 'fp', createCanvas: (w, h) => createCanvas(w, h) });
+    fp.setStore(store);
+    chart.addLayer(fp);
+    chart.setViewport({ barSpacing: 50 });
+    chart.render(true);
+    timers.advance(1000);
+    chart.render(true);
+    expect(fp.lod).toBe(1);
+    const figures = () => (fp.lod >= 2 ? fp.figureSize : 0);
+    const crossings: number[] = [];
+    const shown = new Set<number>();
+    let held = figures();
+    for (let pass = 0; pass < 3; pass++)
+      for (let i = 0; i < 60; i++) {
+        chart.engine.wheel(0, i < 30 ? -15 : 15, 900, 500);
+        const t = threadMs();
+        chart.render();
+        const ms = threadMs() - t;
+        if (figures() !== held) crossings.push(ms);
+        held = figures();
+        shown.add(held);
+      }
+    expect([...shown].sort()).toEqual([0, ...FOOTPRINT_FIGURE_SIZES].sort());
+    expect(crossings.length).toBeGreaterThanOrEqual(3 * 2 * FOOTPRINT_FIGURE_SIZES.length);
+    check('footprintNumbersOn', stats(crossings));
     chart.destroy();
   });
 

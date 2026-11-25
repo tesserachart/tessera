@@ -166,8 +166,8 @@ export class FootprintLayer implements Layer, FlowReadout, AskSource {
   private store: FootprintStore | null = null;
   private host: LayerHost | null = null;
   private readonly createCanvas: CanvasFactory | null;
-  private atlas: GlyphAtlas | null = null;
-  private atlasKey = '';
+  private readonly atlases = new Map<number, GlyphAtlas>();
+  private atlasLook = '';
   lod = 0;
   figureSize: number = FOOTPRINT_FIGURE_SIZES[0];
   rowTicks = 1;
@@ -231,6 +231,14 @@ export class FootprintLayer implements Layer, FlowReadout, AskSource {
 
   noteChanged(): void {
     this.host?.invalidate();
+  }
+
+  onViewSettled(): void {
+    const rc = this.lastRc;
+    const store = this.store;
+    if (!rc || !store || this.lod < 1 || rc.time.to < rc.time.from) return;
+    for (const size of FOOTPRINT_FIGURE_SIZES) this.atlasAt(rc, size);
+    if (this.options.extendZones) this.zones.inView(store, rc, this.options, this.detectionTicks());
   }
 
   viewHints(): ViewHints {
@@ -323,7 +331,7 @@ export class FootprintLayer implements Layer, FlowReadout, AskSource {
   }
 
   private measure(rc: RenderContext, text: string, weight = 400, size = this.figureSize): number {
-    const atlas = this.ensureAtlas(rc);
+    const atlas = this.atlasAt(rc, this.figureSize);
     if (atlas) return (atlas.measure(text) * size) / atlas.size;
     rc.ctx.font = font(size, rc.theme.fontFig, weight);
     return rc.ctx.measureText(text).width;
@@ -430,21 +438,26 @@ export class FootprintLayer implements Layer, FlowReadout, AskSource {
     return this.frameBars.some((b) => b !== undefined);
   }
 
-  private ensureAtlas(rc: RenderContext): GlyphAtlas | null {
+  private atlasAt(rc: RenderContext, size: number): GlyphAtlas | null {
     if (!this.createCanvas) return null;
     const fl = rc.theme.flow;
-    const key = `${String(rc.dpr)}|${String(this.figureSize)}|${rc.theme.fontFig}|${fl.text}|${fl.imbalanceAsk}|${fl.imbalanceBid}|${rc.theme.mutedText}`;
-    if (this.atlas && this.atlasKey === key) return this.atlas;
-    this.atlas = new GlyphAtlas({
+    const look = `${String(rc.dpr)}|${rc.theme.fontFig}|${fl.text}|${fl.imbalanceAsk}|${fl.imbalanceBid}|${rc.theme.mutedText}`;
+    if (look !== this.atlasLook) {
+      this.atlases.clear();
+      this.atlasLook = look;
+    }
+    const held = this.atlases.get(size);
+    if (held) return held;
+    const atlas = new GlyphAtlas({
       createCanvas: this.createCanvas,
       family: rc.theme.fontFig,
-      size: this.figureSize,
+      size,
       colors: [fl.text, fl.imbalanceAsk, fl.imbalanceBid, rc.theme.mutedText],
       weights: [400, ORDERFLOW_STYLE.imbalanceWeight],
       dpr: rc.dpr,
     });
-    this.atlasKey = key;
-    return this.atlas;
+    this.atlases.set(size, atlas);
+    return atlas;
   }
 
   draw(rc: RenderContext): void {
@@ -566,7 +579,7 @@ export class FootprintLayer implements Layer, FlowReadout, AskSource {
     const top = pane.y;
     const bottom = pane.y + pane.h;
     const tint = store.tintScale(rowTicks);
-    const atlas = lod >= 2 ? this.ensureAtlas(rc) : null;
+    const atlas = lod >= 2 ? this.atlasAt(rc, this.figureSize) : null;
     atlas?.beginFrame();
     const numbers = lod >= 2;
     const histogram = o.mode === 'histogram';
@@ -783,6 +796,7 @@ export class FootprintLayer implements Layer, FlowReadout, AskSource {
   private drawTexts(rc: RenderContext, atlas: GlyphAtlas | null, t: TextBuf): void {
     const { ctx, theme } = rc;
     if (atlas) {
+      for (let k = 0; k < t.n; k++) if (!t.live[k]) atlas.prepare(t.text[k]!, t.color[k], t.weight[k]);
       for (let k = 0; k < t.n; k++)
         atlas.draw(ctx, t.text[k]!, t.x[k]!, t.y[k]!, t.align[k]!, t.color[k], t.weight[k], !t.live[k]);
       return;

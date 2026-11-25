@@ -1,6 +1,14 @@
 import { createCanvas, type Canvas } from '@napi-rs/canvas';
 import { describe, expect, it } from 'vitest';
-import { FOOTPRINT_TEXT, GLYPHS, GlyphAtlas, TESSERA_THEME, formatCount, type Ctx2D } from '../src/index.ts';
+import {
+  FOOTPRINT_TEXT,
+  GLYPH_CACHE_BYTES,
+  GLYPHS,
+  GlyphAtlas,
+  TESSERA_THEME,
+  formatCount,
+  type Ctx2D,
+} from '../src/index.ts';
 
 const COLORS = [
   `rgba(238,243,244,${String(FOOTPRINT_TEXT.alpha)})`,
@@ -147,6 +155,42 @@ describe('GlyphAtlas', () => {
     expect(a.cached).toBe(0);
     a.draw(ctx, strings[399]!, 10, 10, 'left');
     expect(a.cached).toBe(1);
+  });
+
+  it('keeps no cache until a string arrives, then grows it a page at a time within its budget', () => {
+    const a = atlas(2);
+    expect(a.cacheBytes).toBe(0);
+    const canvas = createCanvas(400, 400);
+    const ctx = canvas.getContext('2d') as unknown as Ctx2D;
+    a.beginFrame();
+    a.draw(ctx, '1,234', 10, 10, 'left');
+    const page = a.cacheBytes;
+    expect(page).toBeGreaterThan(0);
+    expect(page).toBeLessThanOrEqual(GLYPH_CACHE_BYTES / 4);
+    for (let k = 0; k < 3000; k++) a.draw(ctx, formatCount(1000 + k * 3), 10, 10, 'left');
+    expect(a.cacheBytes).toBeGreaterThan(page);
+    expect(a.cacheBytes).toBeLessThanOrEqual(GLYPH_CACHE_BYTES);
+  });
+
+  it('draws a prepared string on the same pixels without composing it again', () => {
+    const dpr = 2;
+    const draw = (prepared: boolean) => {
+      const a = atlas(dpr);
+      const canvas = createCanvas(160 * dpr, 30 * dpr);
+      const ctx = canvas.getContext('2d') as unknown as Ctx2D;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      a.beginFrame();
+      if (prepared) {
+        a.prepare('12.4k', 2, 1);
+        a.prepare('−1,234');
+        expect(a.cached).toBe(2);
+      }
+      a.draw(ctx, '12.4k', 60, 15, 'right', 2, 1);
+      a.draw(ctx, '−1,234', 70, 15, 'left');
+      expect(a.cached).toBe(2);
+      return (canvas.getContext('2d') as unknown as Pixels).getImageData(0, 0, canvas.width, canvas.height).data;
+    };
+    expect(Buffer.from(draw(true)).equals(Buffer.from(draw(false)))).toBe(true);
   });
 
   it('draws a string that is not reusable without keeping it', () => {

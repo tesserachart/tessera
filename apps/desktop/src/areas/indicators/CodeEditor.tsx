@@ -11,8 +11,9 @@ import { javascript, javascriptLanguage } from '@codemirror/lang-javascript';
 import { bracketMatching, HighlightStyle, indentOnInput, indentUnit, syntaxHighlighting } from '@codemirror/language';
 import { lintGutter, setDiagnostics, type Diagnostic } from '@codemirror/lint';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
-import { Compartment, EditorState } from '@codemirror/state';
+import { Compartment, countColumn, EditorState, RangeSetBuilder } from '@codemirror/state';
 import {
+  Decoration,
   drawSelection,
   EditorView,
   highlightActiveLine,
@@ -20,6 +21,9 @@ import {
   highlightSpecialChars,
   keymap,
   lineNumbers,
+  ViewPlugin,
+  type DecorationSet,
+  type ViewUpdate,
 } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { useEffect, useEffectEvent, useLayoutEffect, useRef } from 'react';
@@ -32,6 +36,7 @@ export function CodeEditor({
   onChange,
   onRun,
   onSave,
+  onCodeOnly,
   problem,
   label,
 }: {
@@ -39,16 +44,17 @@ export function CodeEditor({
   onChange: (code: string) => void;
   onRun: () => void;
   onSave: () => void;
+  onCodeOnly?: () => void;
   problem: CodeProblem | null;
   label: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
-  const handlers = useRef({ onChange, onRun, onSave });
+  const handlers = useRef({ onChange, onRun, onSave, onCodeOnly });
   const look = useRef(new Compartment());
   const mode = useTheme((s) => s.resolved.mode);
   useLayoutEffect(() => {
-    handlers.current = { onChange, onRun, onSave };
+    handlers.current = { onChange, onRun, onSave, onCodeOnly };
   });
 
   const createView = useEffectEvent((parent: HTMLElement) => {
@@ -67,6 +73,8 @@ export function CodeEditor({
           bracketMatching(),
           closeBrackets(),
           highlightActiveLine(),
+          EditorView.lineWrapping,
+          hangingIndent,
           highlightSelectionMatches(),
           javascript(),
           javascriptLanguage.data.of({ autocomplete: completeTessera }),
@@ -76,6 +84,14 @@ export function CodeEditor({
           look.current.of(themeFor(mode)),
           EditorView.contentAttributes.of({ 'aria-label': label }),
           keymap.of([
+            {
+              key: 'Mod-Shift-Enter',
+              run: () => {
+                const toggle = handlers.current.onCodeOnly;
+                toggle?.();
+                return toggle !== undefined;
+              },
+            },
             {
               key: 'Mod-Enter',
               run: () => {
@@ -147,6 +163,46 @@ export function CodeEditor({
 
   return <div ref={host} className="ia-code" />;
 }
+
+const INDENT_VAR = '--ia-indent';
+const indentLines = new Map<number, Decoration>();
+
+function indentLine(columns: number): Decoration {
+  let deco = indentLines.get(columns);
+  if (!deco) {
+    deco = Decoration.line({ attributes: { style: `${INDENT_VAR}: ${String(columns)}ch` } });
+    indentLines.set(columns, deco);
+  }
+  return deco;
+}
+
+function indents(view: EditorView): DecorationSet {
+  const out = new RangeSetBuilder<Decoration>();
+  const { doc, tabSize } = view.state;
+  for (const { from, to } of view.visibleRanges) {
+    for (let pos = from; pos <= to;) {
+      const line = doc.lineAt(pos);
+      const lead = /^\s*/.exec(line.text)?.[0] ?? '';
+      const columns = countColumn(lead, tabSize);
+      if (columns > 0) out.add(line.from, line.from, indentLine(columns));
+      pos = line.to + 1;
+    }
+  }
+  return out.finish();
+}
+
+const hangingIndent = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = indents(view);
+    }
+    update(u: ViewUpdate) {
+      if (u.docChanged || u.viewportChanged) this.decorations = indents(u.view);
+    }
+  },
+  { decorations: (p) => p.decorations },
+);
 
 const fn = (pairs: readonly (readonly [string, string])[]): readonly Completion[] =>
   pairs.map(([label, detail]) => ({ label, detail, type: 'function' }));
@@ -234,7 +290,10 @@ const CODE_SIZE = 'var(--fs-body)';
 const CODE_FONT = "ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace";
 const CODE_LINE = '20px';
 const CODE_PAD = '10px 0';
-const LINE_PAD = '0 14px 0 6px';
+const LINE_START = '6px';
+const LINE_PAD = `0 14px 0 ${LINE_START}`;
+const WRAP_STEP = '4ch';
+const WRAP_INSET = `(var(${INDENT_VAR}, 0ch) + ${WRAP_STEP})`;
 const GUTTER_PAD = '0 8px 0 14px';
 const GUTTER_MIN = '36px';
 
@@ -271,7 +330,11 @@ const LOOK = {
     lineHeight: CODE_LINE,
   },
   '.cm-content': { padding: CODE_PAD, caretColor: 'var(--t1)' },
-  '.cm-line': { padding: LINE_PAD },
+  '.cm-line': {
+    padding: LINE_PAD,
+    paddingLeft: `calc(${LINE_START} + ${WRAP_INSET})`,
+    textIndent: `calc(-1 * ${WRAP_INSET})`,
+  },
   '.cm-gutters': { background: 'var(--ink)', color: 'var(--t3)', border: 'none' },
   '.cm-lineNumbers .cm-gutterElement': { padding: GUTTER_PAD, minWidth: GUTTER_MIN },
   '.cm-activeLine': { background: 'color-mix(in srgb, var(--color-t1) 3.5%, transparent)' },
