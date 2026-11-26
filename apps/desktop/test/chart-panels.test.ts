@@ -73,6 +73,8 @@ describe('a DOM, time & sales and the alerts list from a chart', () => {
       'Chart type',
       'Trade this chart',
       '—',
+      'Share chart…',
+      '—',
       'Open DOM',
       'Open Time & Sales',
       'Show Alerts',

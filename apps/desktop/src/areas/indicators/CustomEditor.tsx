@@ -33,7 +33,10 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
+import { useAccount } from '../../account/account.ts';
 import { useClock } from '../../app/clock.ts';
+import { canShare } from '../../share/model.ts';
+import { shareCustomIndicator } from '../../share/setup.ts';
 import { useTool } from '../../app/tools.ts';
 import { addCustomToChart } from '../../chart/settings/actions.ts';
 import {
@@ -215,6 +218,7 @@ function EditorBody({ id, indicator, chart, preview, unavailable }: EditorProps)
   const savedDetail = usePage((s) => s.saved[id]?.detail ?? null);
   const loaded = usePage((s) => isNew || id in s.saved);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const sharing = canShare(useAccount());
   const body = useRef<HTMLDivElement>(null);
   const split = useCodeSplit(body);
 
@@ -306,6 +310,7 @@ function EditorBody({ id, indicator, chart, preview, unavailable }: EditorProps)
               <MenuItem disabled={!!busy} onSelect={() => void duplicate(indicator)}>
                 Duplicate
               </MenuItem>
+              {sharing ? <MenuItem onSelect={() => void shareCustomIndicator(indicator)}>Share…</MenuItem> : null}
               {versions.length > 1 ? (
                 <MenuSub>
                   <MenuSubTrigger>Earlier versions</MenuSubTrigger>

@@ -870,13 +870,28 @@ export const SettingsGetInput: z.ZodType<T.SettingsGetInput> = struct({ keys: op
 export const SettingsGetOutput: z.ZodType<T.SettingsGetOutput> = z.object({ settings: z.record(z.string(), SettingInfo) });
 export const SettingsSetInput: z.ZodType<T.SettingsSetInput> = z.object({ key: z.string(), value: JsonValue });
 export const SettingsSetOutput: z.ZodType<T.SettingsSetOutput> = z.object({ key: z.string(), value: JsonValue, previous: JsonValue });
+export const SetupCode: z.ZodType<T.SetupCode> = z.object({ name: z.string(), code: z.string() });
+export const SetupLine: z.ZodType<T.SetupLine> = z.object({ label: z.string(), value: z.string() });
+export const SetupPart: z.ZodType<T.SetupPart> = z.object({ name: z.string(), lines: z.array(SetupLine) });
+export const SetupDisplay: z.ZodType<T.SetupDisplay> = z.object({ name: z.string(), about: z.string(), lines: z.array(SetupLine), parts: z.array(SetupPart), code: z.array(SetupCode) });
+export const SetupKind: z.ZodType<T.SetupKind> = z.enum(["indicator", "template", "layout"]);
+export const ShareAddInput: z.ZodType<T.ShareAddInput> = z.object({ url: z.string(), layoutId: z.string().nullable().default(null), tileId: z.string().nullable().default(null) });
+export const ShareAddOutput: z.ZodType<T.ShareAddOutput> = z.union([z.object({ kind: z.literal("indicator"), chart: ChartChangeOutput }), z.object({ kind: z.literal("template"), templates: ChartTemplates, templateId: z.string(), applied: ChartChangeOutput.nullable().default(null) }), z.object({ kind: z.literal("layout"), layout: Layout })]);
 export const ShareImageInput: z.ZodType<T.ShareImageInput> = z.object({ type: z.string(), data: z.string(), width: z.number(), height: z.number() });
 export const ShareChartInput: z.ZodType<T.ShareChartInput> = z.object({ image: ShareImageInput, instrument: z.string().nullable().default(null), timeframe: z.string().nullable().default(null) });
+export const ShareConversationInput: z.ZodType<T.ShareConversationInput> = z.object({ sessionId: z.string(), showPnl: z.boolean() });
 export const ShareDeleteInput: z.ZodType<T.ShareDeleteInput> = z.object({ id: z.string() });
 export const ShareDeleteOutput: z.ZodType<T.ShareDeleteOutput> = z.object({ id: z.string() });
 export const ShareLink: z.ZodType<T.ShareLink> = z.object({ id: z.string(), url: z.string(), kind: z.string(), title: z.string(), createdAt: z.string() });
 export const ShareListInput: z.ZodType<T.ShareListInput> = z.object({});
 export const ShareListOutput: z.ZodType<T.ShareListOutput> = z.object({ available: z.boolean(), shares: z.array(ShareLink) });
+export const ShareOpenInput: z.ZodType<T.ShareOpenInput> = z.object({ url: z.string() });
+export const ShareSetupInput: z.ZodType<T.ShareSetupInput> = z.union([z.object({ kind: z.literal("indicator"), layoutId: z.string(), tileId: z.string(), layerId: z.string() }), z.object({ kind: z.literal("custom_indicator"), id: z.string() }), z.object({ kind: z.literal("template"), id: z.string() }), z.object({ kind: z.literal("layout"), layoutId: z.string() })]);
+export const SharedBlock: z.ZodType<T.SharedBlock> = z.object({ kind: Epistemic, title: z.string().nullable().default(null), text: z.string(), rows: z.array(z.tuple([z.string(), z.string()])) });
+export const SharedWork: z.ZodType<T.SharedWork> = z.object({ ns: z.string(), label: z.string(), meta: z.string().nullable().default(null), failed: z.boolean() });
+export const SharedTurn: z.ZodType<T.SharedTurn> = z.union([z.object({ role: z.literal("user"), text: z.string(), files: z.number() }), z.object({ role: z.literal("analyst"), work: z.array(SharedWork), workedMs: z.number().nullable().default(null), answer: z.string(), blocks: z.array(SharedBlock) })]);
+export const SharedConversation: z.ZodType<T.SharedConversation> = z.object({ v: z.number(), title: z.string(), amounts: z.boolean(), turns: z.array(SharedTurn) });
+export const SharedItem: z.ZodType<T.SharedItem> = z.object({ id: z.string(), url: z.string(), kind: SetupKind, title: z.string(), display: SetupDisplay });
 export const StopMove: z.ZodType<T.StopMove> = z.object({ t: z.number(), orderId: z.string(), from: z.number(), to: z.number(), ticks: z.number(), direction: MoveDirection, replaced: z.boolean() });
 export const Study: z.ZodType<T.Study> = z.object({ id: z.string(), name: z.string(), family: z.string(), hypothesis: z.string(), notes: z.string().nullable().default(null), data: StudyData, strategy: Strategy, execution: Execution, gates: Gates, placeboRuns: z.number(), state: ExperimentState, generation: z.number(), manifestHash: z.string().nullable().default(null), frozenAt: z.number().nullable().default(null), lastVerdict: Verdict.nullable().default(null), origin: Origin.nullable().default(null) });
 export const StudyDetail: z.ZodType<T.StudyDetail> = z.object({ study: Study, runs: z.array(RunDigest) });
@@ -1218,9 +1233,14 @@ export const ToolOutputs = {
   "runtime.data_info": DataInfoOutput,
   "settings.get": SettingsGetOutput,
   "settings.set": SettingsSetOutput,
+  "share.add": ShareAddOutput,
   "share.chart": ShareLink,
+  "share.conversation": ShareLink,
   "share.delete": ShareDeleteOutput,
   "share.list": ShareListOutput,
+  "share.open": SharedItem,
+  "share.preview_conversation": SharedConversation,
+  "share.setup": ShareLink,
   "telemetry.capture": TelemetryCaptureOutput,
   "telemetry.config": TelemetryConfigOutput,
   "telemetry.status": TelemetryStatusOutput,

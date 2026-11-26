@@ -1,7 +1,10 @@
 import type { AgentSessionSummary } from '@tessera/protocol';
 import { Count, Icon, Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger, Tooltip } from '@tessera/ui';
 import { useState } from 'react';
+import { useAccount } from '../account/account.ts';
 import { useHasTool } from '../app/tools.ts';
+import { canShare } from '../share/model.ts';
+import { shareConversation } from '../share/store.ts';
 import { useNow } from '../app/runtimeContext.ts';
 import { groupSessions, relTime } from '../shell/sessions.ts';
 import { NEW_SESSION_KEY } from '../shell/keys.ts';
@@ -57,6 +60,7 @@ export function SessionMenu() {
   const busy = isWorking(useAnalystStatus().activity);
   const [turningOn, setTurningOn] = useState<string | null>(null);
   const [why, setWhy] = useState<string | null>(null);
+  const sharing = canShare(useAccount());
   if (!session && sessions.length === 0) return null;
   const title = session?.title ?? '';
   const named = title.trim() !== '' && title.trim().toLowerCase() !== 'analyst';
@@ -125,6 +129,9 @@ export function SessionMenu() {
           ) : null}
           {plan.kind === 'blocked' && plan.fix?.kind === 'settings' ? (
             <MenuItem onSelect={() => setSheet(true)}>Model settings…</MenuItem>
+          ) : null}
+          {session && sharing ? (
+            <MenuItem onSelect={() => void shareConversation(session.id)}>Share conversation…</MenuItem>
           ) : null}
           {why ? (
             <p className="an-sess-why err" role="alert">

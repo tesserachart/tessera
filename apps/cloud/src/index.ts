@@ -4,7 +4,7 @@ import { downloads, publishedPlatforms } from '@tessera/ui/downloads';
 import { DEFAULT_FEEDBACK_BRANCH, githubTracker, privateKeyPem } from './github.ts';
 import { cloudflareMailer } from './mail.ts';
 import { sessions } from './session.ts';
-import { r2Images } from './shares.ts';
+import { r2Bodies } from './shares.ts';
 import { store } from './store.ts';
 import { workos } from './workos.ts';
 
@@ -47,7 +47,7 @@ export default createApp<Env>((env) => ({
   sessions: sessions(env.SESSION_SECRET ?? ''),
   mailer: cloudflareMailer(env.EMAIL),
   issues: issueTracker(env),
-  shares: env.SHARE_IMAGES === undefined ? null : r2Images(env.SHARE_IMAGES),
+  shares: env.SHARE_IMAGES === undefined ? null : r2Bodies(env.SHARE_IMAGES),
   site: {
     url: env.SITE_URL.replace(/\/+$/, ''),
     downloads: downloads(env.UPDATES_URL ?? '', publishedPlatforms(env.PLATFORMS ?? '')),

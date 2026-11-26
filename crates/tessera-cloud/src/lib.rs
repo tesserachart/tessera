@@ -3,7 +3,8 @@ pub mod pkce;
 
 pub use client::{
     Access, Checkin, CloudAccount, CloudClient, CloudError, CloudUser, FeedbackContextItem,
-    FeedbackReport, FeedbackScreenshot, FiledIssue, NewShare, SessionSink, ShareImage, SharedLink,
+    FeedbackReport, FeedbackScreenshot, FiledIssue, NewShare, SessionSink, SetupBody, ShareBody,
+    ShareImage, SharedLink, SharedSetup,
 };
 
 pub const CLOUD_URL_ENV: &str = "TESSERA_CLOUD_URL";

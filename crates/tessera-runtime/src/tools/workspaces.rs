@@ -40,7 +40,7 @@ fn copy_name(name: &str, names: &[String]) -> String {
         .expect("unbounded")
 }
 
-fn new_id(now_ms: i64, taken: &[String]) -> String {
+pub(crate) fn new_id(now_ms: i64, taken: &[String]) -> String {
     let mut n = u64::try_from(now_ms).unwrap_or_default();
     loop {
         let mut digits = Vec::new();

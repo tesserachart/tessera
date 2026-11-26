@@ -13,6 +13,9 @@ import { applyApprovals, resetApprovals } from '../analyst/analystStore.ts';
 import { registerBuiltinWindowCommands } from '../commands/windowCommands.ts';
 import { commands } from '../commands/registry.ts';
 import { useKeybindings } from '../commands/useKeybindings.ts';
+import { listenForSharedLinks } from '../share/open.ts';
+import { ShareDialog } from '../share/ShareDialog.tsx';
+import { SharedLinkDialog } from '../share/SharedLinkDialog.tsx';
 import { RithmicMarks } from '../shell/RithmicMarks.tsx';
 import { ShellDataProvider } from '../shell/ShellData.tsx';
 import { useShellData } from '../shell/shellData.ts';
@@ -104,6 +107,7 @@ export function TileWindow({ tile }: { tile: Omit<TileSpec, 'width' | 'height'> 
   const hostRef = useRef<HTMLDivElement>(null);
   useKeybindings(commands);
   useEffect(() => registerBuiltinWindowCommands(commands), []);
+  useEffect(() => listenForSharedLinks('popout'), []);
   useWorkspaceTradeSync(state === 'ready' ? layoutId : null);
   useWindowSettings();
 
@@ -208,6 +212,8 @@ export function TileWindow({ tile }: { tile: Omit<TileSpec, 'width' | 'height'> 
           <DeskToasts />
           <RithmicMarks opensNotices={false} />
         </footer>
+        <ShareDialog />
+        <SharedLinkDialog />
       </div>
     </ShellDataProvider>
   );

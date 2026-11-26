@@ -32,6 +32,9 @@ import { relTime } from '../../shell/sessions.ts';
 import { groupSessions } from './sessions.ts';
 import { read } from '../../app/store.ts';
 import { deleteSession, renameSession } from '../../analyst/actions.ts';
+import { useAccount } from '../../account/account.ts';
+import { canShare } from '../../share/model.ts';
+import { shareConversation } from '../../share/store.ts';
 
 function RenameField({ session, onDone }: { session: AgentSessionSummary; onDone: () => void }) {
   const [title, setTitle] = useState(session.title);
@@ -93,11 +96,13 @@ function SessionRow({
   current,
   now,
   waiting,
+  sharing,
 }: {
   session: AgentSessionSummary;
   current: boolean;
   now: number;
   waiting: number;
+  sharing: boolean;
 }) {
   const [mode, setMode] = useState<'idle' | 'rename' | 'delete'>('idle');
   if (mode === 'rename')
@@ -119,6 +124,7 @@ function SessionRow({
   ) => (
     <>
       <Item onSelect={() => setMode('rename')}>Rename</Item>
+      {sharing ? <Item onSelect={() => void shareConversation(session.id)}>Share conversation…</Item> : null}
       <Sep />
       <Item onSelect={() => setMode('delete')}>Delete…</Item>
     </>
@@ -165,6 +171,7 @@ export function SessionList() {
   const current = useCurrentSession();
   const pending = usePending();
   const now = useNow();
+  const sharing = canShare(useAccount());
   const groups = groupSessions(sessions ?? [], now);
   if (sessions !== null && sessions.length === 0) return <p className="ag-side-none">No sessions yet</p>;
   return (
@@ -180,6 +187,7 @@ export function SessionList() {
                 current={s.id === current?.id}
                 now={now}
                 waiting={waitingIn(pending, s.id)}
+                sharing={sharing}
               />
             ))}
           </ul>

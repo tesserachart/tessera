@@ -1,5 +1,5 @@
 import type { IDockviewPanel } from 'dockview-react';
-import { TRADE_KEY } from '../../shell/keys.ts';
+import { SHARE_KEY, TRADE_KEY } from '../../shell/keys.ts';
 import { SERIES_TYPES, CHART_TYPE_WORD, DEFAULT_VIEW, chartTypeOf, layoutsStore } from '../../state/layouts.ts';
 import { CHART_TYPE_VIEWS, kindShown, toggleChartView } from '../../chart/orderflowCommands.ts';
 import { uiStore, openSymbolSearch } from '../../state/ui.ts';
@@ -11,8 +11,6 @@ import type { ChartTileParams } from '../layouts.ts';
 import { isTradeShownFor, tradeChart } from './trade.ts';
 import { openReplayPicker } from '../../chart/replay/actions.ts';
 import { read } from '../../app/store.ts';
-import { accountStore } from '../../account/account.ts';
-import { canShare } from '../../share/model.ts';
 import { shareChart } from '../../share/store.ts';
 
 export function chartMenu(panel: IDockviewPanel): TabEntry[] {
@@ -80,12 +78,8 @@ export function chartMenu(panel: IDockviewPanel): TabEntry[] {
       shortcut: TRADE_KEY,
       run: () => tradeChart(target, 'pointer', shown),
     },
-    ...(canShare(read(accountStore))
-      ? [
-          { type: 'sep' as const, id: 'chart-share-sep' },
-          { type: 'item' as const, id: 'chart-share', label: 'Share chart…', run: () => void shareChart(target) },
-        ]
-      : []),
+    { type: 'sep', id: 'chart-share-sep' },
+    { type: 'item', id: 'chart-share', label: 'Share chart…', shortcut: SHARE_KEY, run: () => void shareChart(target) },
     ...(panels.length > 0 ? [{ type: 'sep' as const, id: 'chart-panels' }, ...panels] : []),
   ];
 }

@@ -335,12 +335,19 @@ import type { SettingsGetOutput } from "./SettingsGetOutput";
 import type { SettingsSetInput } from "./SettingsSetInput";
 import type { SettingsSetOutput } from "./SettingsSetOutput";
 import type { Setup } from "./Setup";
+import type { ShareAddInput } from "./ShareAddInput";
+import type { ShareAddOutput } from "./ShareAddOutput";
 import type { ShareChartInput } from "./ShareChartInput";
+import type { ShareConversationInput } from "./ShareConversationInput";
 import type { ShareDeleteInput } from "./ShareDeleteInput";
 import type { ShareDeleteOutput } from "./ShareDeleteOutput";
 import type { ShareLink } from "./ShareLink";
 import type { ShareListInput } from "./ShareListInput";
 import type { ShareListOutput } from "./ShareListOutput";
+import type { ShareOpenInput } from "./ShareOpenInput";
+import type { ShareSetupInput } from "./ShareSetupInput";
+import type { SharedConversation } from "./SharedConversation";
+import type { SharedItem } from "./SharedItem";
 import type { SourceDraft } from "./SourceDraft";
 import type { Study } from "./Study";
 import type { StudyDetail } from "./StudyDetail";
@@ -885,11 +892,21 @@ export interface ToolMap {
   /** tessera-runtime (settings) */
   "settings.set": { input: SettingsSetInput; output: SettingsSetOutput };
   /** tessera-runtime (share) */
+  "share.add": { input: ShareAddInput; output: ShareAddOutput };
+  /** tessera-runtime (share) */
   "share.chart": { input: ShareChartInput; output: ShareLink };
+  /** tessera-runtime (share) */
+  "share.conversation": { input: ShareConversationInput; output: ShareLink };
   /** tessera-runtime (share) */
   "share.delete": { input: ShareDeleteInput; output: ShareDeleteOutput };
   /** tessera-runtime (share) */
   "share.list": { input: ShareListInput; output: ShareListOutput };
+  /** tessera-runtime (share) */
+  "share.open": { input: ShareOpenInput; output: SharedItem };
+  /** tessera-runtime (share) */
+  "share.preview_conversation": { input: ShareConversationInput; output: SharedConversation };
+  /** tessera-runtime (share) */
+  "share.setup": { input: ShareSetupInput; output: ShareLink };
   /** tessera-runtime (telemetry) */
   "telemetry.capture": { input: TelemetryCaptureInput; output: TelemetryCaptureOutput };
   /** tessera-runtime (telemetry) */

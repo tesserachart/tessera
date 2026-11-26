@@ -15,3 +15,5 @@ export const NEW_TAB_KEY = 'mod+t';
 export const SPLIT_CHART_KEY = 'mod+\\';
 
 export const BREAKEVEN_KEY = 'mod+shift+b';
+
+export const SHARE_KEY = 'mod+shift+s';

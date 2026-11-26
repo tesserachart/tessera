@@ -12,8 +12,11 @@ import {
   type IconName,
 } from '@tessera/ui';
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useAccount } from '../../account/account.ts';
 import { failureText, toolCode, toolReason, useHasTool } from '../../app/tools.ts';
 import { openSettings } from '../../areas/settings/store.ts';
+import { canShare } from '../../share/model.ts';
+import { shareTemplate } from '../../share/setup.ts';
 import { chartTypeOf, useChartState, useStageView } from '../../state/layouts.ts';
 import { useUi } from '../../state/ui.ts';
 import type { ChartRef } from '../settings/store.ts';
@@ -159,6 +162,7 @@ function TemplateMenuItems({ chart, now, type }: { chart: ChartRef; now: ChartTe
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const closeMenu = useCloseMenu();
+  const sharing = canShare(useAccount());
   const all = { templates, ...(defaultId ? { defaultId } : {}) };
   const current = now?.template ?? null;
   const own = current && !isBuiltin(current) ? current : null;
@@ -293,6 +297,11 @@ function TemplateMenuItems({ chart, now, type }: { chart: ChartRef; now: ChartTe
             </MenuItem>,
           )
         : null}
+      {own && sharing ? (
+        <MenuItem {...hold} onSelect={() => void shareTemplate(own)}>
+          Share…
+        </MenuItem>
+      ) : null}
       <MenuSeparator />
       {[...templates, ORDER_FLOW].map((t) => (
         <TemplateRow

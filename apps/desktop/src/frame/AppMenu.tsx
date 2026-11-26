@@ -18,7 +18,10 @@ import {
   Tooltip,
 } from '@tessera/ui';
 import { useState, type SyntheticEvent } from 'react';
+import { useAccount } from '../account/account.ts';
 import { refreshTools, useHasTool, useToolValue, runTool } from '../app/tools.ts';
+import { canShare } from '../share/model.ts';
+import { shareWorkspace } from '../share/setup.ts';
 import { FEEDBACK_KEY } from '../feedback/model.ts';
 import { openFeedback } from '../feedback/store.ts';
 import { readSetting, writeSetting } from '../state/runtimeSettings.ts';
@@ -133,6 +136,7 @@ export function AppMenu() {
   const picked = useUi((s) => s.workspace);
   const [ask, setAsk] = useState<Ask>(null);
   const [error, setError] = useState<string | null>(null);
+  const sharing = canShare(useAccount());
   const activeId = list?.activeId ?? server?.defaultLayoutId ?? 'default';
   const openId = picked ?? server?.defaultLayoutId ?? activeId;
   const rows = (list?.layouts ?? []).filter((l) => !RETIRED_AREA_LAYOUTS.includes(l.id));
@@ -316,6 +320,9 @@ export function AppMenu() {
                   {unsaved ? <MenuItem onSelect={() => run(() => revertWorkspace())}>Revert to saved</MenuItem> : null}
                   <MenuItem onSelect={() => setAsk({ kind: 'rename', w: current })}>Rename…</MenuItem>
                   {isDefault ? null : <MenuItem onSelect={() => makeDefault(current)}>Set as default</MenuItem>}
+                  {sharing ? (
+                    <MenuItem onSelect={() => void shareWorkspace(current.id, current.name)}>Share…</MenuItem>
+                  ) : null}
                 </>
               ) : null}
             </>

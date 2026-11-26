@@ -4,6 +4,7 @@ use serde_json::{Value, json};
 use tessera_core::Origin;
 use tessera_protocol::io::ChartChangeOutput;
 use tessera_protocol::layers::LayerKind;
+use tessera_protocol::layout::ChartType;
 use tessera_protocol::templates::{
     self as model, ChartApplyTemplateInput, ChartDeleteTemplateInput, ChartEditTemplateInput,
     ChartSaveTemplateInput, ChartTemplate, ChartTemplateSavedOutput, ChartTemplates, LAYERS_MAX,
@@ -113,6 +114,19 @@ pub async fn migrate_new_chart_layers(settings: &Arc<SettingsService>) -> Result
     Ok(())
 }
 
+pub fn unique_name(name: &str, taken: &[String], max: usize) -> String {
+    let fits = |base: &str, suffix: &str| {
+        let room = max.saturating_sub(suffix.chars().count());
+        let kept: String = base.trim().chars().take(room).collect();
+        format!("{}{suffix}", kept.trim_end())
+    };
+    std::iter::once(String::new())
+        .chain((2u64..).map(|n| format!(" ({n})")))
+        .map(|suffix| fits(name, &suffix))
+        .find(|c| !taken.iter().any(|t| model::same_name(t, c)))
+        .expect("unbounded")
+}
+
 pub struct TemplateService {
     settings: Arc<SettingsService>,
     layouts: Arc<LayoutService>,
@@ -210,6 +224,40 @@ impl TemplateService {
             replaced,
             default_id: all.default_id,
         })
+    }
+
+    pub async fn add(
+        &self,
+        name: &str,
+        chart_type: Option<ChartType>,
+        layers: Vec<TemplateLayer>,
+        origin: &Origin,
+    ) -> Result<(ChartTemplates, ChartTemplate), ToolError> {
+        let name = model::clean_name(name).map_err(invalid)?;
+        let layers = layers
+            .into_iter()
+            .take(LAYERS_MAX)
+            .map(|l| model::validate_layer(&l).map(|params| TemplateLayer { params, ..l }))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(invalid)?;
+        let _serial = self.writes.lock().await;
+        let mut all = self.list();
+        if all.templates.len() >= TEMPLATES_MAX {
+            return Err(ToolError::invalid_input(format!(
+                "You have {TEMPLATES_MAX} templates. Delete one first."
+            )));
+        }
+        let taken: Vec<String> = all.templates.iter().map(|t| t.name.clone()).collect();
+        let name = unique_name(&name, &taken, NAME_MAX);
+        let template = ChartTemplate {
+            id: model::new_id(&name, all.templates.iter().map(|t| t.id.as_str())),
+            name,
+            chart_type,
+            layers,
+        };
+        all.templates.push(template.clone());
+        self.store(&all, origin).await?;
+        Ok((all, template))
     }
 
     pub async fn apply(
@@ -341,6 +389,17 @@ mod tests {
         ] {
             assert!(validate(&s, &bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn a_name_already_taken_gets_the_next_number_and_still_fits() {
+        let taken = vec!["Scalp".to_owned(), "scalp (2)".to_owned()];
+        assert_eq!(unique_name("Swing", &taken, NAME_MAX), "Swing");
+        assert_eq!(unique_name(" Scalp ", &taken, NAME_MAX), "Scalp (3)");
+        let long = "x".repeat(NAME_MAX);
+        let named = unique_name(&long, std::slice::from_ref(&long), NAME_MAX);
+        assert_eq!(named.chars().count(), NAME_MAX);
+        assert!(named.ends_with(" (2)"), "{named}");
     }
 
     #[test]

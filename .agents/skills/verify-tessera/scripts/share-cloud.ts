@@ -6,7 +6,7 @@ import { createApp } from '../../../../apps/cloud/src/app.ts';
 import { sessions } from '../../../../apps/cloud/src/session.ts';
 import { store } from '../../../../apps/cloud/src/store.ts';
 import type { AuthorizeRequest } from '../../../../apps/cloud/src/identity.ts';
-import { database, FakeIdentity, FakeMailer, MemoryImages } from '../../../../apps/cloud/test/support.ts';
+import { database, FakeIdentity, FakeMailer, MemoryBodies } from '../../../../apps/cloud/test/support.ts';
 
 const [portArg = '0'] = process.argv.slice(2);
 
@@ -30,7 +30,7 @@ const ASSETS = {
 };
 
 const { db } = await database();
-const images = new MemoryImages();
+const bodies = new MemoryBodies();
 
 const app = createApp(() => ({
   identity: new SignsInAtOnce({ tester: TESTER }),
@@ -38,7 +38,7 @@ const app = createApp(() => ({
   sessions: sessions('stand-in-session-secret-0123456789abcdef'),
   mailer: new FakeMailer(),
   issues: null,
-  shares: images,
+  shares: bodies,
   site: { url: 'https://site.test', downloads: downloads('', []) },
   assets: ASSETS,
   now: () => new Date(),

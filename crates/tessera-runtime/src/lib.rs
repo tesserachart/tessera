@@ -103,6 +103,7 @@ pub struct RuntimeConfig {
     pub launch_tickets: Option<auth::LaunchSink>,
     pub agent_providers: Option<Vec<tessera_agent::BuildProvider>>,
     pub issue_filer: Option<Arc<dyn session_runner::issues::IssueFiler>>,
+    pub share_cloud: Option<Arc<dyn crate::modules::share::ShareCloud>>,
     pub telemetry: telemetry::Project,
 }
 
@@ -143,6 +144,7 @@ impl Default for RuntimeConfig {
             launch_tickets: None,
             agent_providers: None,
             issue_filer: None,
+            share_cloud: None,
             telemetry: telemetry::Project::default(),
         }
     }
@@ -631,14 +633,13 @@ impl Runtime {
                 }
             });
         }
+        let templates =
+            crate::templates::TemplateService::new(Arc::clone(&settings), Arc::clone(&layouts));
         let mut modules: Vec<Arc<dyn RuntimeModule>> = vec![
             Arc::new(CoreModule::new(Arc::clone(&state_cell))),
             Arc::new(
                 WorkspaceModule::new(Arc::clone(&layouts))
-                    .with_templates(crate::templates::TemplateService::new(
-                        Arc::clone(&settings),
-                        Arc::clone(&layouts),
-                    ))
+                    .with_templates(Arc::clone(&templates))
                     .with_drawing_templates(crate::drawing_templates::DrawingTemplateService::new(
                         Arc::clone(&settings),
                         Arc::clone(&layouts),
@@ -736,11 +737,25 @@ impl Runtime {
                 Arc::clone(&clock),
             ),
         )));
-        modules.push(Arc::new(crate::modules::share::ShareModule(
-            crate::modules::share::ShareService::new(Arc::new(crate::modules::share::CloudShares(
-                Arc::clone(&account),
-            ))),
-        )));
+        let shares =
+            crate::modules::share::ShareService::new(config.share_cloud.clone().unwrap_or_else(
+                || Arc::new(crate::modules::share::CloudShares(Arc::clone(&account))),
+            ));
+        let share_desk = crate::modules::share::ShareDesk::new(
+            Arc::clone(&shares),
+            crate::modules::share::DeskParts {
+                store: store.clone(),
+                layouts: Arc::clone(&layouts),
+                templates,
+                indicators: Arc::clone(&indicators),
+                broker: Arc::clone(&broker),
+                clock: Arc::clone(&clock),
+            },
+        );
+        modules.push(Arc::new(crate::modules::share::ShareModule {
+            shares,
+            desk: Arc::clone(&share_desk),
+        }));
 
         for factory in extra {
             modules.push(factory(&ctx).map_err(|e| anyhow::anyhow!("building a module: {e}"))?);
@@ -752,6 +767,12 @@ impl Runtime {
                 .with_context(|| format!("registering the tools of module {}", m.name()))?;
         }
 
+        share_desk.set_tool_titles(
+            registry
+                .descriptors(tessera_tools::Audience::User, None, true)
+                .into_iter()
+                .map(|d| (d.name, d.title)),
+        );
         let observer = RuntimeObserver::spawn(Arc::clone(&bus), store.clone(), Arc::clone(&clock));
         observer.set_telemetry(telemetry.clone());
         broker

@@ -11,6 +11,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./format": "./src/format.ts",
+    "./glyphs": "./src/icons/glyphs.gen.ts",
     "./downloads": "./src/downloads.ts",
     "./first-open": "./src/firstOpen.ts",
     "./legal": "./src/legal.ts",

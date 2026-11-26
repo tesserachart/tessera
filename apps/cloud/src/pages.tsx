@@ -2,10 +2,9 @@ import type { Child, PropsWithChildren } from 'hono/jsx';
 
 import { chosenFirst, type Download, type Platform, PLATFORM_NAMES } from '@tessera/ui/downloads';
 
-import type { Share } from './shares.ts';
 import type { Applicant, Application, Invite, User } from './store.ts';
 
-const CSS = `
+export const CSS = `
 @font-face{font-family:'Instrument Sans';src:url(/assets/instrument-sans.woff2) format('woff2');font-weight:400 700;font-display:swap}
 @font-face{font-family:'Instrument Serif';src:url(/assets/instrument-serif.woff2) format('woff2');font-weight:400;font-display:swap}
 :root{color-scheme:dark;--petrol:#003648;--mist:#dcebef;--mist-press:#c5d8dd;--t1:#dcebef;--t2:#96b1ba;--ink:#05070c;--teal:#18849a;
@@ -90,10 +89,6 @@ td.trading{max-width:22rem}
 .waiting input{grid-column:1/-1;height:36px;font-size:14px;color:var(--t2)}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .empty{padding:48px 0;color:var(--t2)}
-main.shared{max-width:1600px;margin:0;padding:0 clamp(20px,4vw,48px) 64px;display:grid;gap:20px;justify-items:start}
-.shared h1{font-size:clamp(2rem,1.6rem + 1.6vw,3rem);margin:0;overflow-wrap:anywhere}
-.shared img.chart{display:block;max-width:100%;max-height:calc(100svh - 220px);width:auto;height:auto;border:1px solid var(--line);background:var(--ink)}
-.shared .when{color:var(--t2);font-size:14px}
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
 `;
 
@@ -629,45 +624,4 @@ function moment(iso: string): string {
 function list(words: readonly string[]): string {
   if (words.length <= 1) return words.join('');
   return `${words.slice(0, -1).join(', ')} and ${words.at(-1) ?? ''}`;
-}
-
-const SHARED_ON = new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeZone: 'UTC' });
-
-export function SharedChart(props: { share: Share; imageUrl: string; pageUrl: string; siteUrl: string }) {
-  const { share, imageUrl, pageUrl, siteUrl } = props;
-  const title = `${share.title} · Tessera`;
-  return (
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="robots" content="noindex, nofollow, noarchive" />
-        <meta name="referrer" content="no-referrer" />
-        <meta name="theme-color" content="#003648" />
-        <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="Tessera" />
-        <meta property="og:title" content={title} />
-        <meta property="og:url" content={pageUrl} />
-        <meta property="og:image" content={imageUrl} />
-        <meta property="og:image:width" content={String(share.width)} />
-        <meta property="og:image:height" content={String(share.height)} />
-        <meta name="twitter:card" content="summary_large_image" />
-        <title>{title}</title>
-        <link rel="icon" href={`${siteUrl}/favicon.svg`} type="image/svg+xml" />
-        <style dangerouslySetInnerHTML={{ __html: CSS }} />
-      </head>
-      <body>
-        <header class="top">
-          <a class="brand" href={siteUrl} aria-label="Tessera">
-            <img src="/assets/wordmark.svg" alt="" width="84" height="26" />
-          </a>
-        </header>
-        <main class="shared">
-          <h1>{share.title}</h1>
-          <img class="chart" src={imageUrl} alt={share.title} width={share.width} height={share.height} />
-          <p class="when">Shared from Tessera on {SHARED_ON.format(new Date(share.createdAt))}</p>
-        </main>
-      </body>
-    </html>
-  );
 }

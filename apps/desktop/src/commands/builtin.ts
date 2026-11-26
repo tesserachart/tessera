@@ -69,6 +69,7 @@ import type { Command, CommandRegistry } from './registry.ts';
 import { read } from '../app/store.ts';
 import { FEEDBACK_KEY } from '../feedback/model.ts';
 import { openFeedback } from '../feedback/store.ts';
+import { openSharedLinkCommand, shareChartCommand } from '../share/commands.ts';
 import { isUnsaved, revertWorkspace, saveWorkspace } from '../workspace/document.ts';
 
 export function areaCommand(a: AreaDef): Command {
@@ -261,6 +262,8 @@ export function registerBuiltinCommands(registry: CommandRegistry, deps: Builtin
         if (target) openAdd(target);
       },
     },
+    shareChartCommand(),
+    ...(deps.runtime ? [openSharedLinkCommand()] : []),
     ...drawingCommands(),
     ...orderFlowCommands(),
     ...domCommands(),

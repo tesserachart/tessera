@@ -100,11 +100,58 @@ pub struct ShareImage {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NewShare {
+    pub title: String,
+    #[serde(flatten)]
+    pub body: ShareBody,
+}
+
+impl NewShare {
+    pub fn kind(&self) -> &'static str {
+        self.body.kind()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ShareBody {
+    Chart {
+        image: ShareImage,
+        width: u32,
+        height: u32,
+    },
+    Conversation {
+        conversation: serde_json::Value,
+    },
+    Indicator(SetupBody),
+    Template(SetupBody),
+    Layout(SetupBody),
+}
+
+impl ShareBody {
+    pub fn kind(&self) -> &'static str {
+        match self {
+            ShareBody::Chart { .. } => "chart",
+            ShareBody::Conversation { .. } => "conversation",
+            ShareBody::Indicator(_) => "indicator",
+            ShareBody::Template(_) => "template",
+            ShareBody::Layout(_) => "layout",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SetupBody {
+    pub display: serde_json::Value,
+    pub setup: serde_json::Value,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SharedSetup {
+    pub id: String,
     pub kind: String,
     pub title: String,
-    pub image: ShareImage,
-    pub width: u32,
-    pub height: u32,
+    pub display: serde_json::Value,
+    pub setup: serde_json::Value,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -461,6 +508,14 @@ impl CloudClient {
         if a.ok() { Ok(()) } else { Err(a.error()) }
     }
 
+    pub async fn shared_setup(&self, id: &str) -> Result<SharedSetup, CloudError> {
+        let path = format!("/s/{}/setup", encode(id));
+        let a = self
+            .send(Method::GET, &path, None, None, REQUEST_TIMEOUT)
+            .await?;
+        if a.ok() { a.json() } else { Err(a.error()) }
+    }
+
     pub async fn sign_out(&self) -> Result<(), CloudError> {
         let held = self.tokens.lock().await.access.clone();
         let r = match held {
@@ -509,6 +564,7 @@ mod tests {
         signed_out: AtomicUsize,
         down: AtomicBool,
         shares: StdMutex<Vec<Value>>,
+        bodies: StdMutex<std::collections::HashMap<String, Value>>,
     }
 
     impl Fake {
@@ -523,6 +579,7 @@ mod tests {
                 signed_out: AtomicUsize::new(0),
                 down: AtomicBool::new(false),
                 shares: StdMutex::new(Vec::new()),
+                bodies: StdMutex::new(std::collections::HashMap::new()),
             })
         }
 
@@ -624,12 +681,26 @@ mod tests {
         .into_response()
     }
 
+    fn well_formed(v: &Value) -> bool {
+        let kind = v["kind"].as_str().unwrap_or_default();
+        match kind {
+            "chart" => v["image"]["type"] == "image/png" && v["width"].is_u64(),
+            "conversation" => v["conversation"].is_object() && v.get("image").is_none(),
+            "indicator" | "template" | "layout" => {
+                v["display"].is_object() && v["setup"]["kind"] == kind && v.get("image").is_none()
+            }
+            _ => false,
+        }
+    }
+
     async fn create_share(State(f): State<Arc<Fake>>, h: HeaderMap, body: String) -> Response {
         if !f.authorized(&h) {
             return refused();
         }
         let v: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(v["image"]["type"], "image/png");
+        if !well_formed(&v) {
+            return (StatusCode::BAD_REQUEST, r#"{"error":"bad_request"}"#).into_response();
+        }
         let mut shares = f.shares.lock().unwrap();
         let id = format!("Ab3dE6gH9jK{}", shares.len());
         let link = json!({
@@ -637,7 +708,31 @@ mod tests {
             "kind": v["kind"], "title": v["title"], "created_at": "2026-11-23T10:00:00.000Z",
         });
         shares.insert(0, link.clone());
+        f.bodies.lock().unwrap().insert(id, v);
         (StatusCode::CREATED, axum::Json(link)).into_response()
+    }
+
+    async fn shared_setup(
+        State(f): State<Arc<Fake>>,
+        h: HeaderMap,
+        axum::extract::Path(id): axum::extract::Path<String>,
+    ) -> Response {
+        assert!(h.get("authorization").is_none(), "a share opens signed out");
+        let listed = f
+            .shares
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|s| s["id"] == id.as_str());
+        let bodies = f.bodies.lock().unwrap();
+        match bodies.get(&id) {
+            Some(v) if listed && v.get("setup").is_some() => axum::Json(json!({
+                "id": id, "kind": v["kind"], "title": v["title"],
+                "display": v["display"], "setup": v["setup"],
+            }))
+            .into_response(),
+            _ => (StatusCode::NOT_FOUND, r#"{"error":"not_found"}"#).into_response(),
+        }
     }
 
     async fn list_shares(State(f): State<Arc<Fake>>, h: HeaderMap) -> Response {
@@ -680,6 +775,7 @@ mod tests {
             .route("/v1/checkins", post(checkins))
             .route("/v1/shares", post(create_share).get(list_shares))
             .route("/v1/shares/{id}", axum::routing::delete(delete_share))
+            .route("/s/{id}/setup", get(shared_setup))
             .route("/v1/auth/sign-out", post(sign_out))
             .route("/v1/feedback", post(feedback))
             .with_state(fake);
@@ -869,15 +965,118 @@ mod tests {
 
     fn chart_share(title: &str) -> NewShare {
         NewShare {
-            kind: "chart".into(),
             title: title.into(),
-            image: ShareImage {
-                mime_type: "image/png".into(),
-                data: "iVBORw0KGgo=".into(),
+            body: ShareBody::Chart {
+                image: ShareImage {
+                    mime_type: "image/png".into(),
+                    data: "iVBORw0KGgo=".into(),
+                },
+                width: 1600,
+                height: 900,
             },
-            width: 1600,
-            height: 900,
         }
+    }
+
+    fn setup_share(title: &str) -> NewShare {
+        NewShare {
+            title: title.into(),
+            body: ShareBody::Indicator(SetupBody {
+                display: json!({"name": "RSI", "about": "Indicator", "lines": [], "parts": [], "code": []}),
+                setup: json!({"kind": "indicator", "v": 1}),
+            }),
+        }
+    }
+
+    #[test]
+    fn each_kind_goes_in_the_shape_the_cloud_takes() {
+        assert_eq!(
+            serde_json::to_value(chart_share("NQZ6 · 5m")).unwrap(),
+            json!({"kind": "chart", "title": "NQZ6 · 5m", "image": {"type": "image/png", "data": "iVBORw0KGgo="}, "width": 1600, "height": 900})
+        );
+        let conversation = NewShare {
+            title: "Morning read".into(),
+            body: ShareBody::Conversation {
+                conversation: json!({"v": 1, "turns": []}),
+            },
+        };
+        assert_eq!(
+            serde_json::to_value(&conversation).unwrap(),
+            json!({"kind": "conversation", "title": "Morning read", "conversation": {"v": 1, "turns": []}})
+        );
+        let setup = serde_json::to_value(setup_share("RSI")).unwrap();
+        assert_eq!(
+            setup,
+            json!({"kind": "indicator", "title": "RSI", "display": {"name": "RSI", "about": "Indicator", "lines": [], "parts": [], "code": []}, "setup": {"kind": "indicator", "v": 1}})
+        );
+        for (share, kind) in [
+            (chart_share("x"), "chart"),
+            (conversation, "conversation"),
+            (setup_share("x"), "indicator"),
+        ] {
+            assert_eq!(share.kind(), kind);
+            let back: NewShare =
+                serde_json::from_value(serde_json::to_value(&share).unwrap()).unwrap();
+            assert_eq!(back, share);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_shared_setup_opens_signed_out_and_a_gone_one_says_so() {
+        let fake = Fake::new();
+        let (c, _kept) = client(&fake).await;
+        c.exchange("good", VERIFIER).await.unwrap();
+        let link = c.create_share(&setup_share("RSI")).await.unwrap();
+        let chart = c.create_share(&chart_share("NQZ6 · 5m")).await.unwrap();
+        let reader = CloudClient::new(c.base(), "Tessera/test", Arc::new(Kept::default())).unwrap();
+        let got = reader.shared_setup(&link.id).await.unwrap();
+        assert_eq!(
+            (got.id.as_str(), got.kind.as_str(), got.title.as_str()),
+            (link.id.as_str(), "indicator", "RSI")
+        );
+        assert_eq!(got.setup, json!({"kind": "indicator", "v": 1}));
+        assert_eq!(got.display["name"], "RSI");
+        let not_a_setup = reader.shared_setup(&chart.id).await.unwrap_err();
+        assert_eq!(
+            not_a_setup,
+            CloudError::Server {
+                status: 404,
+                code: Some("not_found".into())
+            }
+        );
+        c.delete_share(&link.id).await.unwrap();
+        let gone = reader.shared_setup(&link.id).await.unwrap_err();
+        assert!(
+            matches!(gone, CloudError::Server { status: 404, .. }),
+            "{gone}"
+        );
+        let down = CloudClient::new(
+            "http://127.0.0.1:9",
+            "Tessera/test",
+            Arc::new(Kept::default()),
+        )
+        .unwrap();
+        assert!(
+            down.shared_setup(&link.id)
+                .await
+                .unwrap_err()
+                .is_unreachable()
+        );
+    }
+
+    #[tokio::test]
+    async fn a_malformed_share_is_refused_as_final() {
+        let fake = Fake::new();
+        let (c, _kept) = client(&fake).await;
+        c.exchange("good", VERIFIER).await.unwrap();
+        let mismatched = NewShare {
+            title: "x".into(),
+            body: ShareBody::Template(SetupBody {
+                display: json!({}),
+                setup: json!({"kind": "layout"}),
+            }),
+        };
+        let e = c.create_share(&mismatched).await.unwrap_err();
+        assert!(e.is_final(), "{e}");
     }
 
     #[tokio::test]

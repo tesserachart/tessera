@@ -85,10 +85,17 @@ describe('Trade, the right sidebar’s trading panel', () => {
     expect(tradeChartOf({ ...base, active: null, docked: [] })).toBeNull();
   });
 
-  it('is in a chart’s own menu: change symbol, replay a saved day, chart type, and Trade on this chart', () => {
+  it('is in a chart’s own menu: change symbol, replay a saved day, chart type, Trade on this chart and Share', () => {
     const { panel, api } = fakePanel('chart-3', { layoutId: 'default', tileId: 'chart-3' });
     const labels = () => chartMenu({ ...panel, api } as never).map((e) => (e.type === 'sep' ? '—' : e.label));
-    expect(labels()).toEqual(['Change symbol…', 'Replay a saved day…', 'Chart type', 'Trade this chart']);
+    expect(labels()).toEqual([
+      'Change symbol…',
+      'Replay a saved day…',
+      'Chart type',
+      'Trade this chart',
+      '—',
+      'Share chart…',
+    ]);
     expect(chartMenu({ ...panel, api: fakePanel('x', {}).api } as never)).toEqual([]);
   });
 });

@@ -16,7 +16,7 @@ import {
 import { type FiledIssue, type FiledReport, type IssueTracker, IssueTrackerFailed } from '../src/feedback.ts';
 import { type Email, MailFailed, type Mailer } from '../src/mail.ts';
 import { sessions } from '../src/session.ts';
-import type { ImageType, ShareImages, StoredImage } from '../src/shares.ts';
+import type { BodyType, ShareBodies, StoredBody } from '../src/shares.ts';
 import { store } from '../src/store.ts';
 
 const MIGRATIONS = join(import.meta.dirname, '..', 'migrations');
@@ -130,7 +130,7 @@ export interface TestOptions {
   clock?: { at: Date };
   secret?: string;
   issues?: IssueTracker | null;
-  shares?: ShareImages | null;
+  shares?: ShareBodies | null;
 }
 
 export function testApp(db: D1Database, identity: Identity, options: TestOptions = {}) {
@@ -147,18 +147,18 @@ export function testApp(db: D1Database, identity: Identity, options: TestOptions
   }));
 }
 
-export class MemoryImages implements ShareImages {
-  readonly kept = new Map<string, { bytes: Uint8Array; type: ImageType }>();
+export class MemoryBodies implements ShareBodies {
+  readonly kept = new Map<string, { bytes: Uint8Array; type: BodyType }>();
 
-  put(id: string, bytes: Uint8Array, type: ImageType): Promise<void> {
+  put(id: string, bytes: Uint8Array, type: BodyType): Promise<void> {
     this.kept.set(id, { bytes, type });
     return Promise.resolve();
   }
 
-  get(id: string): Promise<StoredImage | null> {
-    const image = this.kept.get(id);
-    if (image === undefined) return Promise.resolve(null);
-    return Promise.resolve({ body: image.bytes.slice().buffer, type: image.type });
+  get(id: string): Promise<StoredBody | null> {
+    const body = this.kept.get(id);
+    if (body === undefined) return Promise.resolve(null);
+    return Promise.resolve({ body: body.bytes.slice().buffer, type: body.type });
   }
 
   delete(id: string): Promise<void> {

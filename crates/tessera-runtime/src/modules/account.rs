@@ -349,6 +349,10 @@ impl AccountService {
         }
     }
 
+    pub fn public_cloud(&self) -> Option<&CloudClient> {
+        self.client.as_ref()
+    }
+
     pub fn user_id(&self) -> Option<String> {
         self.shared.kept.lock().as_ref().map(|k| k.user.id.clone())
     }

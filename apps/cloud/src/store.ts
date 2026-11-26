@@ -2,7 +2,7 @@ import type { Platform } from '@tessera/ui/downloads';
 
 import type { Profile } from './identity.ts';
 import { randomToken } from './session.ts';
-import type { Share } from './shares.ts';
+import type { DocumentShare, ImageType, Share } from './shares.ts';
 
 export interface User {
   id: string;
@@ -340,21 +340,13 @@ export function store(db: D1Database) {
     },
 
     async addShare(share: Share): Promise<void> {
+      const size = share.kind === 'chart' ? share : { width: null, height: null };
       await db
         .prepare(
-          `INSERT INTO shares (id, user_id, kind, title, image_type, width, height, created_at)
+          `INSERT INTO shares (id, user_id, kind, title, body_type, width, height, created_at)
            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
         )
-        .bind(
-          share.id,
-          share.userId,
-          share.kind,
-          share.title,
-          share.imageType,
-          share.width,
-          share.height,
-          share.createdAt,
-        )
+        .bind(share.id, share.userId, share.kind, share.title, share.bodyType, size.width, size.height, share.createdAt)
         .run();
     },
 
@@ -378,30 +370,24 @@ export function store(db: D1Database) {
   };
 }
 
-interface ShareRow {
+type ShareRow = {
   id: string;
   user_id: string;
-  kind: Share['kind'];
   title: string;
-  image_type: Share['imageType'];
-  width: number;
-  height: number;
   created_at: string;
-}
+} & (
+  | { kind: 'chart'; body_type: ImageType; width: number; height: number }
+  | { kind: DocumentShare['kind']; body_type: DocumentShare['bodyType']; width: null; height: null }
+);
 
-const SHARE_COLUMNS = 'id, user_id, kind, title, image_type, width, height, created_at';
+const SHARE_COLUMNS = 'id, user_id, kind, title, body_type, width, height, created_at';
 
 function shareOf(row: ShareRow): Share {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    kind: row.kind,
-    title: row.title,
-    imageType: row.image_type,
-    width: row.width,
-    height: row.height,
-    createdAt: row.created_at,
-  };
+  const shared = { id: row.id, userId: row.user_id, title: row.title, createdAt: row.created_at };
+  if (row.kind === 'chart') {
+    return { ...shared, kind: 'chart', bodyType: row.body_type, width: row.width, height: row.height };
+  }
+  return { ...shared, kind: row.kind, bodyType: row.body_type };
 }
 
 export type Store = ReturnType<typeof store>;

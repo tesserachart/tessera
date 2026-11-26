@@ -42,6 +42,9 @@ import {
   type ChartRef,
 } from './store.ts';
 import { read } from '../../app/store.ts';
+import { useAccount } from '../../account/account.ts';
+import { canShare } from '../../share/model.ts';
+import { shareIndicator } from '../../share/setup.ts';
 
 const LEGEND_ROW_H = 22;
 const MAIN_TOP = 26;
@@ -71,6 +74,7 @@ export function IndicatorLegend({
 }) {
   const ref = useMemo(() => ({ layoutId, tileId }), [layoutId, tileId]);
   const custom = useCustomCatalog();
+  const sharing = canShare(useAccount());
   const entries = useMemo<Entry[]>(
     () =>
       layers.flatMap((layer) => {
@@ -292,6 +296,7 @@ export function IndicatorLegend({
                   key={id}
                   chart={ref}
                   entry={e}
+                  sharing={sharing}
                   reading={reading.has(id)}
                   mark={marks.get(id) ?? null}
                   notes={notes.get(id)}
@@ -366,11 +371,13 @@ function LegendRow({
   suffixRef,
   noticeRef,
   valuesRef,
+  sharing,
   onShow,
   onRemove,
 }: {
   chart: ChartRef;
   entry: Entry;
+  sharing: boolean;
   reading: boolean;
   mark: string | null;
   notes: Readonly<Record<string, string>> | undefined;
@@ -438,6 +445,16 @@ function LegendRow({
               Settings…
             </MenuItem>
             <MenuItem onSelect={() => onShow(!layer.visible)}>{layer.visible ? 'Hide' : 'Show'}</MenuItem>
+            {sharing ? (
+              <MenuItem
+                onSelect={() => {
+                  handoff.current = true;
+                  void shareIndicator(chart, layer, name);
+                }}
+              >
+                Share…
+              </MenuItem>
+            ) : null}
             <MenuSeparator />
             <MenuItem destructive onSelect={onRemove}>
               Remove

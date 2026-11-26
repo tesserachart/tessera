@@ -1,6 +1,9 @@
 .sh-dialog {
   width: 520px;
 }
+.sh-dialog[data-share-subject='conversation'] {
+  width: 600px;
+}
 .sh-body {
   display: grid;
   gap: var(--sp-3);
@@ -13,12 +16,23 @@
   border: var(--rule) solid var(--line);
   background: var(--ink-2);
 }
-.sh-preview.is-taking {
+.sh-preview.is-taking,
+.sh-convo.is-taking {
   animation: sh-wait 1.2s ease-in-out infinite alternate;
+}
+.sh-lines {
+  display: grid;
+  gap: var(--sp-1);
 }
 .sh-line {
   margin: 0;
   color: var(--t2);
+}
+.sh-name {
+  margin: 0;
+  font: 400 var(--fs-strong) / var(--lh-strong) var(--sans);
+  color: var(--t1);
+  overflow-wrap: anywhere;
 }
 .sh-link {
   display: flex;
@@ -34,13 +48,126 @@
   justify-content: flex-end;
   gap: var(--sp-2);
 }
+
+.sh-convo {
+  --ag-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --ag-prose: var(--fs-body);
+  --ag-prose-lh: var(--lh-body);
+  height: min(360px, 50vh);
+  border: var(--rule) solid var(--line);
+  background: var(--ink-2);
+}
+.sh-convo-page {
+  padding: var(--sp-3) var(--sp-4);
+}
+.sh-convo-title {
+  margin: 0 0 var(--sp-3);
+  font: 400 var(--fs-strong) / var(--lh-strong) var(--sans);
+  color: var(--t1);
+}
+.sh-files {
+  margin: 0;
+  font-size: var(--fs-meta);
+  color: var(--t3);
+}
+.sh-work {
+  margin-bottom: var(--sp-2);
+}
+.sh-work > summary {
+  list-style: none;
+}
+.sh-work > summary::-webkit-details-marker {
+  display: none;
+}
+.sh-work .ag-line {
+  cursor: default;
+}
+.sh-work > summary.ag-line {
+  cursor: pointer;
+}
+.sh-pnl {
+  justify-self: start;
+}
+
+.sh-item {
+  display: grid;
+  gap: var(--sp-2);
+  max-height: min(420px, 55vh);
+  overflow: auto;
+}
+.sh-about {
+  margin: 0;
+  color: var(--t3);
+}
+.sh-lines-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--sp-1) var(--sp-3);
+  margin: 0;
+}
+.sh-lines-list dt {
+  color: var(--t3);
+}
+.sh-lines-list dd {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1-5);
+  margin: 0;
+  color: var(--t1);
+  overflow-wrap: anywhere;
+}
+.sh-swatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border: var(--rule) solid var(--line-3);
+  border-radius: 2px;
+}
+.sh-part {
+  display: grid;
+  gap: var(--sp-1);
+}
+.sh-part > h3 {
+  margin: 0;
+  font: 400 var(--fs-body) / var(--lh-body) var(--sans);
+  color: var(--t2);
+}
+.sh-code > summary {
+  cursor: pointer;
+  color: var(--t2);
+}
+.sh-code pre {
+  max-height: 200px;
+  margin: var(--sp-2) 0 0;
+  padding: var(--sp-2);
+  overflow: auto;
+  border: var(--rule) solid var(--line);
+  background: var(--ink-2);
+  font:
+    400 var(--fs-meta) / 1.5 ui-monospace,
+    'SF Mono',
+    Menlo,
+    Consolas,
+    monospace;
+  color: var(--t2);
+}
+.sh-ask {
+  display: grid;
+  gap: var(--sp-3);
+}
+.sh-why {
+  margin: 0;
+  color: var(--t1);
+}
+
 @keyframes sh-wait {
   to {
     opacity: 0.55;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sh-preview.is-taking {
+  .sh-preview.is-taking,
+  .sh-convo.is-taking {
     animation: none;
   }
 }

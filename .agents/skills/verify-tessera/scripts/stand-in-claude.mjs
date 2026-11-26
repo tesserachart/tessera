@@ -88,6 +88,22 @@ async function research(name) {
   return `Stand-in answer for the demo, not a model. I registered "${name}" and ran it: ${run.verdict}, ${run.reason}`;
 }
 
+const SHARE_PROOF = /^Share proof\b/m;
+
+async function shareProof() {
+  const { positions } = await tool('portfolio.get_positions', {});
+  const held = positions.find((p) => p.qty !== 0) ?? null;
+  if (!held) return 'Stand-in answer for the demo, not a model. You hold nothing right now.';
+  const pnl = held.unrealizedPnl?.amount ?? held.realizedPnl.amount;
+  const sign = pnl < 0 ? '-' : '+';
+  return (
+    `Stand-in answer for the demo, not a model. On ${held.accountId} you are long ${String(Math.abs(held.qty))} contracts ` +
+    `at ${held.avgPrice.toFixed(2)}, and your open P&L is ${sign}$${Math.abs(pnl).toFixed(2)}. ` +
+    'The session high sits at 21,480.50 and RSI 14 reads 61%, so the trend still has room; ' +
+    'I would trail the stop under the last swing rather than add.'
+  );
+}
+
 let turn = null;
 let messages = 0;
 const waiting = [];
@@ -154,6 +170,16 @@ createInterface({ input: process.stdin }).on('line', (line) => {
   const text = Array.isArray(content)
     ? content.filter((b) => b.type === 'text').map((b) => b.text).join('\n')
     : String(content ?? '');
+  if (SHARE_PROOF.test(text) && !turn) {
+    turn = { said: '', timer: null };
+    void shareProof()
+      .catch((e) => `Stand-in answer for the demo, not a model. The portfolio tools refused: ${e.message}`)
+      .then((said) => {
+        turn = null;
+        answer(text, false, said);
+      });
+    return;
+  }
   const asked = RESEARCH.exec(text)?.[1];
   if (asked && !turn) {
     turn = { said: '', timer: null };

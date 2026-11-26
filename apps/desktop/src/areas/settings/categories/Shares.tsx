@@ -6,7 +6,7 @@ import { openExternal } from '../../../app/host.ts';
 import { useNow } from '../../../app/runtimeContext.ts';
 import { attempt, useToolValue } from '../../../app/tools.ts';
 import { screenWords } from '../../../shell/deskWords.ts';
-import { canShare, sharedOnWords } from '../../../share/model.ts';
+import { canShare, NOTHING_SHARED, shareRowWords } from '../../../share/model.ts';
 import { SHARE_LIST } from '../../../share/store.ts';
 import { useDisplayZone } from '../../../state/timeZone.ts';
 import { Section } from '../parts.tsx';
@@ -28,7 +28,7 @@ function ShareRow({ share, zone, now }: { share: ShareLink; zone: string; now: n
       data-setting={`app.share.${share.id}`}
       data-share-id={share.id}
       label={share.title}
-      help={why ?? `Shared ${sharedOnWords(share.createdAt, zone, now)}`}
+      help={why ?? shareRowWords(share, zone, now)}
     >
       <Button
         size="s"
@@ -69,7 +69,7 @@ export function SharesSection() {
   return (
     <Section id="app.shares">
       {list.shares.length === 0 ? (
-        <SettingsRow data-setting="app.sharesNone" label="Nothing shared yet" help="Share a chart from its menu." />
+        <SettingsRow data-setting="app.sharesNone" label="Nothing shared yet" help={NOTHING_SHARED} />
       ) : (
         list.shares.map((share) => <ShareRow key={share.id} share={share} zone={zone} now={now} />)
       )}

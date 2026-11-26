@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use base64::Engine as _;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tessera_cloud::{CloudError, NewShare, ShareImage, SharedLink};
+use tessera_cloud::{CloudError, NewShare, ShareBody, ShareImage, SharedLink, SharedSetup};
 use tessera_host::{RuntimeModule, TsExports};
 use tessera_protocol::tools::RiskTier;
 use tessera_tools::{RateLimit, RegistryError, Tool, ToolCtx, ToolError, ToolMeta, ToolRegistry};
@@ -13,11 +13,21 @@ use ts_rs::TS;
 use crate::modules::account::AccountService;
 use crate::modules::feedback::Scrubber;
 
+mod contract;
+mod conversation;
+mod desk;
+mod import;
+mod setup;
+mod words;
+
+pub use contract::*;
+pub use desk::{DeskParts, ShareDesk};
+
 const SHARE_ENTITLEMENT: &str = "share";
 
 const MAX_IMAGE_BYTES: usize = 8 * 1024 * 1024;
 
-const MAX_TITLE: usize = 120;
+pub(crate) const MAX_TITLE: usize = 120;
 
 const MAX_SIDE: u32 = 16_384;
 
@@ -26,6 +36,8 @@ const PNG_SIGNATURE: &[u8] = &[0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
 const JPEG_SIGNATURE: &[u8] = &[0xff, 0xd8, 0xff];
 
 const CREATE_RATE: RateLimit = RateLimit::new(0.2, 5);
+
+const UNREACHABLE: &str = "Tessera Cloud can’t be reached. Try again in a moment.";
 
 /// A picture of a chart, already redacted by the window that took it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS, JsonSchema)]
@@ -123,6 +135,10 @@ pub trait ShareCloud: Send + Sync + 'static {
     async fn list(&self) -> Result<Vec<SharedLink>, CloudError>;
 
     async fn delete(&self, id: &str) -> Result<(), CloudError>;
+
+    fn base(&self) -> Option<String>;
+
+    async fn setup(&self, id: &str) -> Result<SharedSetup, CloudError>;
 }
 
 pub struct CloudShares(pub Arc<AccountService>);
@@ -150,14 +166,38 @@ impl ShareCloud for CloudShares {
     async fn delete(&self, id: &str) -> Result<(), CloudError> {
         self.0.cloud()?.delete_share(id).await
     }
+
+    fn base(&self) -> Option<String> {
+        self.0.public_cloud().map(|c| c.base().to_owned())
+    }
+
+    async fn setup(&self, id: &str) -> Result<SharedSetup, CloudError> {
+        match self.0.public_cloud() {
+            Some(c) => c.shared_setup(id).await,
+            None => Err(CloudError::SignedOut),
+        }
+    }
 }
 
-fn clip(s: &str, max: usize) -> String {
+pub(crate) fn units(s: &str) -> usize {
+    s.encode_utf16().count()
+}
+
+pub(crate) fn clip(s: &str, max: usize) -> String {
     let s = s.trim();
-    if s.chars().count() <= max {
+    if units(s) <= max {
         return s.to_owned();
     }
-    let mut out: String = s.chars().take(max.saturating_sub(1)).collect();
+    let room = max.saturating_sub(1);
+    let mut used = 0;
+    let mut out = String::new();
+    for c in s.chars() {
+        used += c.len_utf16();
+        if used > room {
+            break;
+        }
+        out.push(c);
+    }
     out.push('…');
     out
 }
@@ -209,7 +249,7 @@ fn cloud_error(e: CloudError) -> ToolError {
     if e.needs_sign_in() {
         ToolError::permission_denied("Sign in to Tessera to share.")
     } else if e.is_unreachable() {
-        ToolError::unavailable("Tessera Cloud can’t be reached. Try again in a moment.")
+        ToolError::unavailable(UNREACHABLE)
     } else if let CloudError::Server { status: 404, .. } = e {
         ToolError::not_found("That link is already gone.")
     } else if let CloudError::Server {
@@ -220,6 +260,19 @@ fn cloud_error(e: CloudError) -> ToolError {
     } else {
         tracing::warn!(error = %e, "Tessera Cloud refused a share");
         ToolError::unavailable("Tessera Cloud couldn’t take the share. Try again in a moment.")
+    }
+}
+
+fn link_error(e: CloudError) -> ToolError {
+    match e {
+        CloudError::Unreachable(_) | CloudError::Server { status: 500.., .. } => {
+            ToolError::unavailable(UNREACHABLE)
+        }
+        CloudError::Invalid(why) => desk::not_a_share(why),
+        other => {
+            tracing::info!(error = %other, "a shared link did not open");
+            ToolError::not_found(desk::LINK_GONE)
+        }
     }
 }
 
@@ -238,7 +291,7 @@ impl ShareService {
         Arc::new(Self { cloud })
     }
 
-    fn ready(&self) -> Result<(), ToolError> {
+    pub(crate) fn ready(&self) -> Result<(), ToolError> {
         if self.cloud.available() {
             Ok(())
         } else {
@@ -246,19 +299,33 @@ impl ShareService {
         }
     }
 
+    pub(crate) fn base(&self) -> Option<String> {
+        self.cloud.base()
+    }
+
+    pub(crate) async fn create(&self, share: &NewShare) -> Result<ShareLink, ToolError> {
+        self.ready()?;
+        Ok(self.cloud.create(share).await.map_err(cloud_error)?.into())
+    }
+
+    pub(crate) async fn fetch(&self, id: &str) -> Result<SharedSetup, ToolError> {
+        self.cloud.setup(id).await.map_err(link_error)
+    }
+
     pub async fn chart(&self, input: &ShareChartInput) -> Result<ShareLink, ToolError> {
         self.ready()?;
         let image = checked_image(&input.image)?;
         let share = NewShare {
-            kind: "chart".to_owned(),
             title: chart_title(input.instrument.as_deref(), input.timeframe.as_deref()),
-            image,
-            width: input.image.width,
-            height: input.image.height,
+            body: ShareBody::Chart {
+                image,
+                width: input.image.width,
+                height: input.image.height,
+            },
         };
-        let link = self.cloud.create(&share).await.map_err(cloud_error)?;
+        let link = self.create(&share).await?;
         tracing::info!(share = %link.id, "chart shared");
-        Ok(link.into())
+        Ok(link)
     }
 
     pub async fn list(&self) -> Result<ShareListOutput, ToolError> {
@@ -287,7 +354,10 @@ impl ShareService {
     }
 }
 
-pub struct ShareModule(pub Arc<ShareService>);
+pub struct ShareModule {
+    pub shares: Arc<ShareService>,
+    pub desk: Arc<ShareDesk>,
+}
 
 impl std::fmt::Debug for ShareModule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -301,9 +371,14 @@ impl RuntimeModule for ShareModule {
     }
 
     fn register_tools(&self, r: &mut ToolRegistry) -> Result<(), RegistryError> {
-        r.register(ChartTool(Arc::clone(&self.0)))?;
-        r.register(ListTool(Arc::clone(&self.0)))?;
-        r.register(DeleteTool(Arc::clone(&self.0)))?;
+        r.register(ChartTool(Arc::clone(&self.shares)))?;
+        r.register(ListTool(Arc::clone(&self.shares)))?;
+        r.register(DeleteTool(Arc::clone(&self.shares)))?;
+        r.register(PreviewConversationTool(Arc::clone(&self.desk)))?;
+        r.register(ConversationTool(Arc::clone(&self.desk)))?;
+        r.register(SetupTool(Arc::clone(&self.desk)))?;
+        r.register(OpenTool(Arc::clone(&self.desk)))?;
+        r.register(AddTool(Arc::clone(&self.desk)))?;
         Ok(())
     }
 }
@@ -313,6 +388,11 @@ pub fn ts_exports() -> TsExports {
         .tool::<ShareChartInput, ShareLink>("share.chart")
         .tool::<ShareListInput, ShareListOutput>("share.list")
         .tool::<ShareDeleteInput, ShareDeleteOutput>("share.delete")
+        .tool::<ShareConversationInput, SharedConversation>("share.preview_conversation")
+        .tool::<ShareConversationInput, ShareLink>("share.conversation")
+        .tool::<ShareSetupInput, ShareLink>("share.setup")
+        .tool::<ShareOpenInput, SharedItem>("share.open")
+        .tool::<ShareAddInput, ShareAddOutput>("share.add")
 }
 
 struct ChartTool(Arc<ShareService>);
@@ -378,6 +458,118 @@ impl Tool for DeleteTool {
         input: ShareDeleteInput,
     ) -> Result<ShareDeleteOutput, ToolError> {
         self.0.delete(&input).await
+    }
+}
+
+struct PreviewConversationTool(Arc<ShareDesk>);
+
+#[async_trait]
+impl Tool for PreviewConversationTool {
+    type Input = ShareConversationInput;
+    type Output = SharedConversation;
+
+    fn meta(&self) -> ToolMeta {
+        ToolMeta::new(
+            "share.preview_conversation",
+            "Preview a shared conversation",
+            RiskTier::Read,
+        )
+        .description("The public page an analyst conversation would make, exactly as share.conversation would upload it: what was said and the steps the analyst took (never what a tool was given or returned), with every account's id and name, links, hosts and secrets taken out, position sizes hidden, and money amounts hidden unless showPnl. Nothing leaves this machine.")
+        .user_only()
+        .quiet()
+    }
+
+    async fn call(
+        &self,
+        _ctx: &ToolCtx,
+        input: ShareConversationInput,
+    ) -> Result<SharedConversation, ToolError> {
+        self.0.preview(&input).await
+    }
+}
+
+struct ConversationTool(Arc<ShareDesk>);
+
+#[async_trait]
+impl Tool for ConversationTool {
+    type Input = ShareConversationInput;
+    type Output = ShareLink;
+
+    fn meta(&self) -> ToolMeta {
+        ToolMeta::new("share.conversation", "Share a conversation", RiskTier::Modify)
+            .description("Uploads an analyst conversation to Tessera Cloud as share.preview_conversation shows it and answers an unlisted link that opens signed out. Only the signed-in owner can list or delete it (share.list, share.delete).")
+            .user_only()
+            .rate_limit(CREATE_RATE)
+            .timeout_ms(100_000)
+    }
+
+    async fn call(
+        &self,
+        _ctx: &ToolCtx,
+        input: ShareConversationInput,
+    ) -> Result<ShareLink, ToolError> {
+        self.0.conversation(&input).await
+    }
+}
+
+struct SetupTool(Arc<ShareDesk>);
+
+#[async_trait]
+impl Tool for SetupTool {
+    type Input = ShareSetupInput;
+    type Output = ShareLink;
+
+    fn meta(&self) -> ToolMeta {
+        ToolMeta::new("share.setup", "Share an indicator, template or workspace", RiskTier::Modify)
+            .description("Uploads an indicator (with its chart's settings for it, and its code when it is a custom one), a chart template or a workspace to Tessera Cloud by its settings only: no prices, bars, drawings, notes, orders, trade tickets or account. Answers an unlisted link that opens signed out and that another Tessera adds with share.add.")
+            .user_only()
+            .rate_limit(CREATE_RATE)
+            .timeout_ms(100_000)
+    }
+
+    async fn call(&self, _ctx: &ToolCtx, input: ShareSetupInput) -> Result<ShareLink, ToolError> {
+        self.0.setup(&input).await
+    }
+}
+
+struct OpenTool(Arc<ShareDesk>);
+
+#[async_trait]
+impl Tool for OpenTool {
+    type Input = ShareOpenInput;
+    type Output = SharedItem;
+
+    fn meta(&self) -> ToolMeta {
+        ToolMeta::new("share.open", "Open a shared link", RiskTier::Read)
+            .description("Reads what a shared indicator, template or workspace link holds before anything is added: its name, what it is, its settings and the code it brings. Takes only this Tessera's own share links; works signed out.")
+            .user_only()
+    }
+
+    async fn call(&self, _ctx: &ToolCtx, input: ShareOpenInput) -> Result<SharedItem, ToolError> {
+        self.0.open(&input).await
+    }
+}
+
+struct AddTool(Arc<ShareDesk>);
+
+#[async_trait]
+impl Tool for AddTool {
+    type Input = ShareAddInput;
+    type Output = ShareAddOutput;
+
+    fn meta(&self) -> ToolMeta {
+        ToolMeta::new("share.add", "Add from a shared link", RiskTier::Modify)
+            .description("Adds what a shared link holds to this Tessera: an indicator onto a chart (the active one when none is named) as the user's own, a template saved under a name of its own and applied when a chart is named, or a workspace saved as a new one. A custom indicator it brings joins the Indicators area, or the one already there with the same name and code is used. Works signed out.")
+            .user_only()
+            .timeout_ms(60_000)
+    }
+
+    async fn call(
+        &self,
+        _ctx: &ToolCtx,
+        input: ShareAddInput,
+    ) -> Result<ShareAddOutput, ToolError> {
+        self.0.add(&input).await
     }
 }
 

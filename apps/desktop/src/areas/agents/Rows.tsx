@@ -9,6 +9,7 @@ import { MessageFiles } from './Attachments.tsx';
 import { Markdown } from './Markdown.tsx';
 import { LiveCtx, RowCtx, TailCtx, type RowContext } from './rowContext.ts';
 import { foldWords, groupWords, hasArgs, prettyJson, thoughtLine, type Row } from './timeline.ts';
+import { toolIcon } from './toolIcon.ts';
 import { LiveCard } from '../../analyst/cards/LiveCard.tsx';
 
 function TailRow() {
@@ -19,22 +20,6 @@ function useRowCtx(): RowContext {
   const ctx = useContext(RowCtx);
   if (!ctx) throw new Error('a conversation row outside its conversation');
   return ctx;
-}
-
-function toolIcon(tool: string): IconName {
-  const ns = tool.split('.')[0] ?? '';
-  if (ns === 'chart') return 'chart';
-  if (ns === 'indicators') return 'indicators';
-  if (ns === 'market' || ns === 'orders' || ns === 'portfolio' || ns === 'broker') return 'ticket';
-  if (ns === 'levels' || ns === 'intel' || ns === 'concepts') return 'levels';
-  if (ns === 'drawings') return 'trend-line';
-  if (ns === 'settings') return 'settings';
-  if (ns === 'appearance') return 'appearance';
-  if (ns === 'workspace' || ns === 'layout' || ns === 'areas') return 'desk';
-  if (ns === 'research' || ns === 'strategy') return 'research';
-  if (ns === 'journal') return 'journal';
-  if (ns === 'connections') return 'accounts';
-  return 'command';
 }
 
 const APPROVAL_WORD: Record<ApprovalStatus | 'pending', string> = {

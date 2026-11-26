@@ -934,7 +934,21 @@ export const SECTIONS: Readonly<Record<SettingsCategory, readonly SectionDef[]>>
       title: 'Shares',
       description:
         'Links to what you shared. Each opens for anyone who has it and is listed nowhere. Delete one and it stops opening.',
-      keywords: ['share', 'shared', 'link', 'links', 'unlisted', 'screenshot', 'picture', 'delete', 'public'],
+      keywords: [
+        'share',
+        'shared',
+        'link',
+        'links',
+        'unlisted',
+        'screenshot',
+        'picture',
+        'conversation',
+        'indicator',
+        'template',
+        'workspace',
+        'delete',
+        'public',
+      ],
     },
     {
       id: 'app.keyboard',

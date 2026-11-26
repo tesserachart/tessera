@@ -1,11 +1,15 @@
-import { Button, Dialog, DialogContent, TextInput } from '@tessera/ui';
+import type { ShareImageInput } from '@tessera/protocol';
+import { Button, Dialog, DialogContent, Switch, TextInput, Tooltip } from '@tessera/ui';
 import { useState, type ReactNode } from 'react';
+import { useAccount } from '../account/account.ts';
 import { openExternal } from '../app/host.ts';
-import { closeShare, createLink, useShareFlow, type ShareFlow } from './store.ts';
+import { ConversationPreview } from './ConversationPreview.tsx';
+import { canShare } from './model.ts';
+import { copyPicture } from './picture.ts';
+import { closeShare, createLink, showPnl, useShareFlow, type Share, type ShareFlow } from './store.ts';
+import { flowLines, shareTitle, waitWords } from './words.ts';
 
-const TITLE = 'Share chart';
-
-export const LEFT_OUT_WORDS = 'Orders, positions and P/L are left out. Nothing is shared until you create a link.';
+type OpenFlow = Exclude<ShareFlow, { step: 'closed' }>;
 
 function Preview({ src }: { src: string | null }) {
   return src ? (
@@ -15,7 +19,7 @@ function Preview({ src }: { src: string | null }) {
   );
 }
 
-function Shared({ url }: { url: string }) {
+function LinkRow({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="sh-link" data-share-link={url}>
@@ -38,74 +42,125 @@ function Shared({ url }: { url: string }) {
   );
 }
 
-interface Body {
-  preview: string | null;
-  line: string;
-  actions: ReactNode;
+function CopyPicture({ image, primary, why }: { image: ShareImageInput | null; primary: boolean; why: string | null }) {
+  const [said, setSaid] = useState<'Copy picture' | 'Copied' | 'Couldn’t copy'>('Copy picture');
+  return (
+    <Waits why={image ? null : why}>
+      <Button
+        variant={primary ? 'primary' : 'secondary'}
+        disabled={!image}
+        onClick={() => {
+          if (!image) return;
+          copyPicture(image).then(
+            () => setSaid('Copied'),
+            () => setSaid('Couldn’t copy'),
+          );
+        }}
+      >
+        {said}
+      </Button>
+    </Waits>
+  );
 }
 
-const cancel = (
-  <Button variant="quiet" onClick={closeShare}>
-    Cancel
-  </Button>
-);
+function Waits({ why, children }: { why: string | null; children: ReactNode }) {
+  return why ? (
+    <Tooltip content={why}>
+      <span>{children}</span>
+    </Tooltip>
+  ) : (
+    children
+  );
+}
 
-function body(flow: Exclude<ShareFlow, { kind: 'closed' }>): Body {
-  switch (flow.kind) {
-    case 'taking':
-      return { preview: null, line: 'Picturing the chart…', actions: cancel };
-    case 'ready':
-      return {
-        preview: flow.preview,
-        line: LEFT_OUT_WORDS,
-        actions: (
-          <>
-            {cancel}
-            <Button variant="primary" autoFocus onClick={() => void createLink()}>
-              Create link
-            </Button>
-          </>
-        ),
-      };
-    case 'sending':
-      return { preview: flow.preview, line: 'Making a link…', actions: null };
-    case 'shared':
-      return {
-        preview: flow.preview,
-        line: 'Anyone with the link can see this picture. It isn’t listed anywhere. Delete it in Settings › App.',
-        actions: (
-          <Button variant="primary" onClick={closeShare}>
-            Done
-          </Button>
-        ),
-      };
-    case 'failed':
-      return {
-        preview: null,
-        line: flow.why,
-        actions: (
-          <Button variant="primary" onClick={closeShare}>
-            Close
-          </Button>
-        ),
-      };
+function Subject({ share, step }: { share: Share; step: OpenFlow['step'] }) {
+  switch (share.subject) {
+    case 'chart':
+      return <Preview src={share.picture?.preview ?? null} />;
+    case 'conversation':
+      return (
+        <>
+          <ConversationPreview page={share.page} />
+          {step === 'ready' || step === 'preparing' ? (
+            <Switch className="sh-pnl" checked={share.showPnl} onCheckedChange={(on) => void showPnl(on)}>
+              Show P/L
+            </Switch>
+          ) : null}
+        </>
+      );
+    case 'setup':
+      return <p className="sh-name">{share.name}</p>;
   }
+}
+
+function Actions({ flow, canLink }: { flow: OpenFlow; canLink: boolean }) {
+  const why = waitWords(flow);
+  const picture = flow.share.subject === 'chart' ? (flow.share.picture?.input.image ?? null) : null;
+  const copy = flow.share.subject === 'chart';
+  if (flow.step === 'failed')
+    return (
+      <Button variant="primary" onClick={closeShare}>
+        Close
+      </Button>
+    );
+  if (flow.step === 'shared')
+    return (
+      <>
+        {copy ? <CopyPicture image={picture} primary={false} why={null} /> : null}
+        <Button variant="primary" onClick={closeShare}>
+          Done
+        </Button>
+      </>
+    );
+  return (
+    <>
+      {flow.step === 'sending' ? null : (
+        <Button variant="quiet" onClick={closeShare}>
+          {canLink || !copy ? 'Cancel' : 'Close'}
+        </Button>
+      )}
+      {copy ? <CopyPicture image={picture} primary={!canLink} why={why} /> : null}
+      {canLink ? (
+        <Waits why={why}>
+          <Button
+            variant="primary"
+            autoFocus={flow.step === 'ready'}
+            disabled={flow.step !== 'ready'}
+            onClick={() => void createLink()}
+          >
+            Create link
+          </Button>
+        </Waits>
+      ) : null}
+    </>
+  );
 }
 
 export function ShareDialog() {
   const flow = useShareFlow();
-  if (flow.kind === 'closed') return null;
-  const { preview, line, actions } = body(flow);
+  const canLink = canShare(useAccount());
+  if (flow.step === 'closed') return null;
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : closeShare())}>
-      <DialogContent className="sh-dialog" title={TITLE} data-share-flow={flow.kind}>
+      <DialogContent
+        className="sh-dialog"
+        title={shareTitle(flow.share)}
+        data-share-flow={flow.step}
+        data-share-subject={flow.share.subject}
+      >
         <div className="ui-dialog-body sh-body">
-          {flow.kind === 'failed' ? null : <Preview src={preview} />}
-          <p className="sh-line" role="status">
-            {line}
-          </p>
-          {flow.kind === 'shared' ? <Shared url={flow.link.url} /> : null}
-          {actions ? <div className="sh-acts">{actions}</div> : null}
+          {flow.step === 'failed' ? null : <Subject share={flow.share} step={flow.step} />}
+          <div className="sh-lines" role="status">
+            {flowLines(flow, canLink).map((line) => (
+              <p key={line} className="sh-line">
+                {line}
+              </p>
+            ))}
+          </div>
+          {flow.step === 'shared' ? <LinkRow url={flow.link.url} /> : null}
+          <div className="sh-acts">
+            <Actions flow={flow} canLink={canLink} />
+          </div>
         </div>
       </DialogContent>
     </Dialog>

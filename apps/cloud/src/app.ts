@@ -18,15 +18,14 @@ import type { Mailer } from './mail.ts';
 import type { Session, Sessions } from './session.ts';
 import { sharePages } from './sharePages.tsx';
 import {
-  decoded,
-  isImageOf,
+  bodyOf,
   isShareId,
   MAX_SHARE_BYTES,
-  MAX_SHARE_IMAGE_BYTES,
+  newShare,
   type Share,
+  type ShareBodies,
   SHARE_ENTITLEMENT,
   shareId,
-  type ShareImages,
   ShareRequest,
   shareUrl,
 } from './shares.ts';
@@ -44,7 +43,7 @@ export interface Services {
   sessions: Sessions;
   mailer: Mailer;
   issues: IssueTracker | null;
-  shares: ShareImages | null;
+  shares: ShareBodies | null;
   site: { url: string; downloads: readonly Download[] };
   assets?: Readonly<Record<string, Asset>>;
   now: () => Date;
@@ -205,23 +204,18 @@ export function createApp<Bindings extends object>(services: (env: Bindings) => 
     if (standing.access !== 'full') return c.json({ error: 'no_access' }, 403);
     const raw = await c.req.arrayBuffer();
     if (raw.byteLength > MAX_SHARE_BYTES) return c.json({ error: 'too_large' }, 413);
-    const body = ShareRequest.safeParse(parseJson(raw));
-    if (!body.success) return c.json({ error: 'bad_request' }, 400);
-    const { kind, title, image, width, height } = body.data;
-    if (decodedBytes(image.data) > MAX_SHARE_IMAGE_BYTES) return c.json({ error: 'too_large' }, 413);
-    const bytes = decoded(image.data);
-    if (!isImageOf(bytes, image.type)) return c.json({ error: 'bad_request' }, 400);
-    const share: Share = {
+    const request = ShareRequest.safeParse(parseJson(raw));
+    if (!request.success) return c.json({ error: 'bad_request' }, 400);
+    const body = bodyOf(request.data);
+    if (body === 'too_large') return c.json({ error: 'too_large' }, 413);
+    if (body === 'bad_request') return c.json({ error: 'bad_request' }, 400);
+    const share = newShare(request.data, {
       id: shareId(),
       userId: c.var.user.id,
-      kind,
-      title,
-      imageType: image.type,
-      width,
-      height,
+      title: request.data.title,
       createdAt: now().toISOString(),
-    };
-    await shares.put(share.id, bytes, image.type);
+    });
+    await shares.put(share.id, body.bytes, body.type);
     try {
       await store.addShare(share);
     } catch (error) {

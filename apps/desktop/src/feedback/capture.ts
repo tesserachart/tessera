@@ -76,7 +76,7 @@ function loadedSandbox(): Promise<HTMLIFrameElement> {
   });
 }
 
-function blobOf(canvas: HTMLCanvasElement, type: Screenshot['type'], quality?: number): Promise<Blob> {
+export function blobOf(canvas: HTMLCanvasElement, type: Screenshot['type'], quality?: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error('the picture could not be encoded'))),
@@ -108,10 +108,13 @@ function dataUrlOf(blob: Blob): Promise<string> {
   });
 }
 
+export type Stamp = (canvas: HTMLCanvasElement, scale: number) => Promise<void> | void;
+
 export async function captureWindow(
   words: readonly string[],
   root: HTMLElement = document.body,
   alsoLeftOut: readonly string[] = [],
+  stamp?: Stamp,
 ): Promise<Screenshot> {
   const width = root.clientWidth || window.innerWidth;
   const height = root.clientHeight || window.innerHeight;
@@ -154,6 +157,7 @@ export async function captureWindow(
     frozen = null;
     const classes = await classify(svg, slice);
     const canvas = await drawTiles(svg, boxes, classes, { width, height, scale, background, slice });
+    if (stamp) await stamp(canvas, scale);
     await nextFrame();
     let blob = await blobOf(canvas, 'image/png');
     if (blob.size > MAX_PNG_BYTES) blob = await blobOf(canvas, 'image/jpeg', JPEG_QUALITY);

@@ -37,7 +37,9 @@ import { WindowControls } from './WindowControls.tsx';
 import { Arrival } from './Arrival.tsx';
 import { UpdateDialog } from './UpdateDialog.tsx';
 import { FeedbackDialog } from '../feedback/FeedbackDialog.tsx';
+import { listenForSharedLinks } from '../share/open.ts';
 import { ShareDialog } from '../share/ShareDialog.tsx';
+import { SharedLinkDialog } from '../share/SharedLinkDialog.tsx';
 import { WorkspaceDialogs } from '../frame/WorkspaceDialogs.tsx';
 import { UpdatePrompt } from './UpdatePrompt.tsx';
 import { arrivalStore } from './arrival.ts';
@@ -104,6 +106,7 @@ function Frame() {
       <UpdateDialog />
       <FeedbackDialog />
       <ShareDialog />
+      <SharedLinkDialog />
       <WorkspaceDialogs />
       <Arrival />
     </div>
@@ -150,6 +153,7 @@ export function Shell() {
   useShowKeysOnHold(platform);
   useEffect(() => registerBuiltinCommands(commands, { runtime: true, focusComposer }), []);
   useEffect(() => watchForUpdates(), []);
+  useEffect(() => listenForSharedLinks('desk'), []);
   return (
     <ShellDataProvider>
       <AnalystData />

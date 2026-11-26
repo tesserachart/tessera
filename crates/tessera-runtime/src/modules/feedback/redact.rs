@@ -136,13 +136,18 @@ impl Scrubber {
         Self { words }
     }
 
-    pub fn scrub(&self, text: &str) -> String {
+    pub fn scrub_words(&self, text: &str) -> String {
         let mut out = Redactor::global().redact_shared(text).into_owned();
         for w in &self.words {
             if out.contains(w.as_str()) {
                 out = out.replace(w.as_str(), ACCOUNT);
             }
         }
+        out
+    }
+
+    pub fn scrub(&self, text: &str) -> String {
+        let mut out = self.scrub_words(text);
         if let Some(home) = home_dir() {
             out = out.replace(&home, "~");
         }
@@ -270,6 +275,16 @@ mod tests {
         for text in KEPT {
             assert_eq!(s.scrub(text), *text);
         }
+    }
+
+    #[test]
+    fn code_loses_only_the_words_given_and_known_secrets() {
+        Redactor::global().register("hunter4-Zq81!");
+        let code = "const computeExponentialMovingAverage20 = 1; // Funded-Trader-Bob hunter4-Zq81! see https://example.test";
+        assert_eq!(
+            scrubber().scrub_words(code),
+            "const computeExponentialMovingAverage20 = 1; // [account] [redacted] see https://example.test"
+        );
     }
 
     #[test]

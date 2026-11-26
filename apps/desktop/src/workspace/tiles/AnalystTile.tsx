@@ -2,7 +2,11 @@ import { Button, Loaded, ShownContext } from '@tessera/ui';
 import type { IDockviewPanelProps } from 'dockview-react';
 import { AnalystBody } from '../../analyst/AnalystPanel.tsx';
 import { AnalystBadge, AnalystTab } from '../../analyst/AnalystTab.tsx';
-import { newConversation, setSheet } from '../../analyst/analystStore.ts';
+import { accountStore } from '../../account/account.ts';
+import { analystStore, newConversation, selectCurrent, setSheet } from '../../analyst/analystStore.ts';
+import { read } from '../../app/store.ts';
+import { canShare } from '../../share/model.ts';
+import { shareConversation } from '../../share/store.ts';
 import { SessionMenu } from '../../analyst/SessionMenu.tsx';
 import { SessionList } from '../../areas/agents/SessionList.tsx';
 import { focusComposer } from '../../shell/composer.ts';
@@ -73,15 +77,28 @@ registerTile({
   tab: AnalystTab,
   badge: AnalystBadge,
   room: 320,
-  menu: () => [
-    {
-      type: 'item',
-      id: 'analyst-settings',
-      label: 'Model & permissions…',
-      run: () => {
-        revealTile('analyst', { via: 'pointer' });
-        setSheet(true);
+  menu: () => {
+    const session = selectCurrent(read(analystStore));
+    return [
+      {
+        type: 'item',
+        id: 'analyst-settings',
+        label: 'Model & permissions…',
+        run: () => {
+          revealTile('analyst', { via: 'pointer' });
+          setSheet(true);
+        },
       },
-    },
-  ],
+      ...(session && canShare(read(accountStore))
+        ? [
+            {
+              type: 'item' as const,
+              id: 'analyst-share',
+              label: 'Share conversation…',
+              run: () => void shareConversation(session.id),
+            },
+          ]
+        : []),
+    ];
+  },
 });

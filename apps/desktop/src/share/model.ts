@@ -1,8 +1,18 @@
-import type { AccountState } from '@tessera/protocol';
+import type { AccountState, ShareLink } from '@tessera/protocol';
 
 const SHARE_ENTITLEMENT = 'share';
 
 export const CHART_CANVAS_ATTR = 'data-chart-canvas';
+
+const KIND_WORDS: Readonly<Record<string, string>> = {
+  chart: 'Chart',
+  conversation: 'Conversation',
+  indicator: 'Indicator',
+  template: 'Template',
+  layout: 'Workspace',
+};
+
+export const NOTHING_SHARED = 'Share a chart, a conversation or an indicator from its menu.';
 
 export function canShare(account: AccountState | null): boolean {
   return (
@@ -25,4 +35,13 @@ export function sharedOnWords(createdAt: string, zone: string, now: number): str
     hourCycle: 'h23',
     timeZone: zone,
   }).format(at);
+}
+
+function shareKindWord(kind: string): string | null {
+  return KIND_WORDS[kind] ?? null;
+}
+
+export function shareRowWords(share: ShareLink, zone: string, now: number): string {
+  const when = sharedOnWords(share.createdAt, zone, now);
+  return [shareKindWord(share.kind), when ? `Shared ${when}` : null].filter((w) => w !== null).join(' · ');
 }

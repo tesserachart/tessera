@@ -89,6 +89,8 @@ export const COMMAND_TOOLS: Readonly<Record<string, CommandReach>> = {
 
   'area.*': { tools: ['ui.show_area'] },
   'feedback.open': { tools: ['feedback.context', 'feedback.send', 'feedback.write_up'] },
+  'chart.share': { tools: ['share.chart'] },
+  'share.openLink': { tools: ['share.open', 'share.add'] },
   'settings.open': { tools: ['ui.show_area'] },
   'settings.open.*': { tools: ['ui.show_area'] },
   'appearance.toggleUpDown': { tools: ['settings.set'] },
