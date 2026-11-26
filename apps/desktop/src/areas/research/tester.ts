@@ -16,7 +16,7 @@ export const SPLIT_WORD: Record<Split, string> = { development: 'Development', l
 
 const SESSIONS_PER_YEAR = 252;
 
-function nsToMs(ns: number): number {
+export function nsToMs(ns: number): number {
   return Math.round(ns / 1e6);
 }
 
@@ -113,6 +113,7 @@ export function monthWords(month: string): string {
 export interface CurvePoint {
   time: number;
   pnl: number;
+  peak: number;
   drawdown: number;
 }
 
@@ -127,7 +128,7 @@ export function curveOf(points: readonly BacktestEquityPoint[], width: number): 
     peak = Math.max(peak, p.equity);
     deepest = Math.min(deepest, p.equity - peak);
     if (i % step === 0 || i === points.length - 1) {
-      out.push({ time: p.time, pnl: p.equity - start, drawdown: deepest });
+      out.push({ time: p.time, pnl: p.equity - start, peak: peak - start, drawdown: deepest });
       deepest = 0;
     }
   }
@@ -155,35 +156,6 @@ export function curveFrame(points: readonly BacktestEquityPoint[], width: number
     deepest = Math.min(deepest, p.drawdown);
   }
   return { points: pts, t0: pts[0]!.time, t1: pts[pts.length - 1]!.time, low, high, deepest };
-}
-
-export function xOfTime(f: Pick<CurveFrame, 't0' | 't1'>, time: number, w: number): number {
-  return ((time - f.t0) / (f.t1 - f.t0 || 1)) * w;
-}
-
-export function linePath(
-  f: CurveFrame,
-  w: number,
-  h: number,
-  value: (p: CurvePoint) => number,
-  lo: number,
-  hi: number,
-) {
-  const span = hi - lo || 1;
-  return f.points
-    .map((p, i) => {
-      const x = xOfTime(f, p.time, w).toFixed(1);
-      const y = (h - ((value(p) - lo) / span) * h).toFixed(1);
-      return `${i === 0 ? 'M' : 'L'}${x},${y}`;
-    })
-    .join('');
-}
-
-export function nearestPoint(f: CurveFrame, fraction: number): CurvePoint {
-  const time = f.t0 + Math.min(1, Math.max(0, fraction)) * (f.t1 - f.t0);
-  let best = f.points[0]!;
-  for (const p of f.points) if (Math.abs(p.time - time) < Math.abs(best.time - time)) best = p;
-  return best;
 }
 
 export type TradeKey = 'entryTime' | 'side' | 'exit' | 'bars' | 'mae' | 'mfe' | 'pnl';

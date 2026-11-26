@@ -4,7 +4,7 @@ import { useHasTool, valueOf } from '../../app/tools.ts';
 import { showArea } from '../../areas/store.ts';
 import { useJournalLive, useToday, useTrades } from '../../areas/journal/data.ts';
 import { clock, pct, plural, rLabel, sideWord, tradeOpen } from '../../areas/journal/model/format.ts';
-import { Spark } from '../../areas/journal/parts/Charts.tsx';
+import { Spark } from '../../graphs/index.ts';
 import { openDay, openTrade } from '../../areas/journal/store.ts';
 import { registerTile } from './registry.ts';
 import '../../areas/journal/journal.css';

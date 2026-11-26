@@ -391,68 +391,11 @@
 .rs-equity {
   margin: 0;
 }
-.rs-equity-plot,
-.rs-equity-dd {
-  position: relative;
-  background: var(--panel);
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-.rs-equity-dd {
-  margin-top: -1px;
-}
-.rs-equity svg {
-  display: block;
-  width: 100%;
-}
-.rs-equity-plot svg {
-  height: 220px;
-}
-.rs-equity-dd svg {
-  height: 56px;
-}
-.rs-equity-tag {
-  position: absolute;
-  top: var(--sp-2);
-  left: var(--sp-3);
-  color: var(--t3);
-  font-size: var(--fs-meta);
-  pointer-events: none;
-}
-.rs-equity-tag.is-later {
-  margin-left: var(--sp-2);
-}
-.rs-equity-read {
-  position: absolute;
-  top: var(--sp-2);
-  right: var(--sp-3);
-  color: var(--t2);
-  font-size: var(--fs-meta);
-  pointer-events: none;
-}
-.rs-curve-later {
-  fill: var(--raise);
-}
-.rs-curve-zero {
-  stroke: var(--line-3);
-  stroke-dasharray: 3 3;
-}
-.rs-curve-line {
-  fill: none;
-  stroke: var(--mist);
-  stroke-width: 1.5;
-}
-.rs-curve-under {
-  fill: var(--down);
-  fill-opacity: 0.28;
-}
-.rs-curve-cross {
-  stroke: var(--line-3);
-}
 .rs-curve-cap {
   display: flex;
   justify-content: space-between;
   gap: var(--sp-3);
-  margin-top: var(--sp-1);
+  margin-top: var(--sp-3);
   color: var(--t3);
   font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;

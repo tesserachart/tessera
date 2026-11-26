@@ -1,18 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useHasTool, useToolValue } from '../../../app/tools.ts';
-
-export function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
-  const ref = useRef<T>(null);
-  const [w, setW] = useState(0);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setW(el.clientWidth));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  return [ref, w];
-}
 
 export function useAttachmentUrl(id: string | null): string | null {
   const has = useHasTool('journal.get_attachment');

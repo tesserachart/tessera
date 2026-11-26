@@ -1,17 +1,8 @@
 import { formatMoney } from '@tessera/ui';
-import type { Bucket, CalendarDay, EquityPoint, JournalStats, JournalTrade } from '@tessera/protocol';
+import type { Bucket, CalendarDay, JournalStats, JournalTrade } from '@tessera/protocol';
 import { describe, expect, it } from 'vitest';
 import { addMonths, intensity, monthBounds, monthGrid, yearColumns } from '../src/areas/journal/model/calendar.ts';
-import {
-  autoTimeframe,
-  cumulative,
-  donutArcs,
-  equityGeometry,
-  gaugeArc,
-  nearestIndex,
-  niceTicks,
-  seriesGeometry,
-} from '../src/areas/journal/model/chart.ts';
+import { autoTimeframe, cumulative } from '../src/areas/journal/model/chart.ts';
 import { clockSec } from '../src/areas/journal/model/activity.ts';
 import { clock, dayLabel, holdLabel, longDate, rLabel, todayIn } from '../src/areas/journal/model/format.ts';
 import { putRuntimeSettings } from '../src/state/runtimeSettings.ts';
@@ -144,51 +135,12 @@ describe('calendar grid', () => {
   });
 });
 
-describe('charts', () => {
-  it('ticks, scales and the equity geometry', () => {
-    expect(niceTicks(0, 1000, 4)).toEqual([0, 250, 500, 750, 1000]);
-    expect(niceTicks(-130, 420, 4)).toEqual([0, 200, 400]);
-    const pts: EquityPoint[] = [
-      { i: 1, tradeId: 'a', t: 1, pnl: 100, equity: 100, peak: 100, drawdown: 0 },
-      { i: 2, tradeId: 'b', t: 2, pnl: -50, equity: 50, peak: 100, drawdown: 50 },
-      { i: 3, tradeId: 'c', t: 3, pnl: 150, equity: 200, peak: 200, drawdown: 0 },
-    ];
-    const g = equityGeometry(pts, 300, 200);
-    expect(g.line.startsWith('M0.0,')).toBe(true);
-    expect(g.line.split('L')).toHaveLength(4);
-    expect(g.dd(50)).toBeGreaterThan(g.split);
-    expect(g.y(200)).toBeLessThan(g.y(0));
-    expect(nearestIndex(210, g.x, 3)).toBe(2);
-    expect(nearestIndex(-20, g.x, 3)).toBe(1);
+describe('chart helpers', () => {
+  it('picks a timeframe for the hold and sums a running total', () => {
     expect(autoTimeframe(30 * 60)).toBe('1m');
     expect(autoTimeframe(2 * 3600)).toBe('5m');
     expect(autoTimeframe(10 * 3600)).toBe('1h');
-  });
-});
-
-describe('kit charts', () => {
-  it('lays donut segments end to end around the circle', () => {
-    const r = 10;
-    const c = 2 * Math.PI * r;
-    const arcs = donutArcs([1, 3, 0, -2], r);
-    expect(arcs[0]?.offset).toBe(-0);
-    expect(Number(arcs[0]?.dash.split(' ')[0])).toBeCloseTo(c / 4, 1);
-    expect(arcs[1]?.offset).toBeCloseTo(-c / 4, 1);
-    expect(Number(arcs[2]?.dash.split(' ')[0])).toBe(0);
-    expect(Number(arcs[3]?.dash.split(' ')[0])).toBe(0);
-  });
-  it('clamps a gauge to its ring', () => {
-    const c = 2 * Math.PI * 5;
-    expect(Number(gaugeArc(2, 5).dash.split(' ')[0])).toBeCloseTo(c, 1);
-    expect(Number(gaugeArc(-1, 5).dash.split(' ')[0])).toBe(0);
-    expect(Number(gaugeArc(Number.NaN, 5).dash.split(' ')[0])).toBe(0);
-  });
-  it('sums a running total and keeps zero inside a series', () => {
     expect(cumulative([5, -2, 4])).toEqual([5, 3, 7]);
-    const g = seriesGeometry([10, 20, 30], 100, 50);
-    expect(g.y.domain[0]).toBeLessThanOrEqual(0);
-    expect(g.line.startsWith('M0.0,')).toBe(true);
-    expect(g.area.endsWith('Z')).toBe(true);
   });
 });
 

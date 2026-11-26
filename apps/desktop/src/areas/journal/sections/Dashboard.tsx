@@ -42,7 +42,7 @@ import {
 } from '../model/dashboard.ts';
 import { clock, dayLabel, longDate, monthLabel, pct, plural, tone, tradeOpen } from '../model/format.ts';
 import { rangeDates } from '../model/scope.ts';
-import { Gauge, Spark } from '../parts/Charts.tsx';
+import { Gauge, Spark } from '../../../graphs/index.ts';
 import { openDay, openTrade, setJournal, useJournalUi } from '../store.ts';
 import {
   SAMPLE_BUCKET,

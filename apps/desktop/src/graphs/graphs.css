@@ -1,0 +1,363 @@
+.gr-plot,
+.gr-bars,
+.gr-equity {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+.gr-plot svg,
+.gr-bars svg,
+.gr-equity svg {
+  display: block;
+  overflow: visible;
+}
+.gr-equity[data-pick] {
+  cursor: pointer;
+}
+.gr-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 80px;
+  padding: var(--sp-6);
+  text-align: center;
+  color: var(--t3);
+  font-size: var(--fs-body);
+}
+
+.gr-grid,
+.gr-grid line {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.gr-zero {
+  stroke: var(--line-3);
+  stroke-width: 1;
+}
+.gr-cross {
+  stroke: var(--line-3);
+  stroke-width: 1;
+  pointer-events: none;
+}
+.gr-axis,
+.gr-note {
+  fill: var(--t3);
+  font: 400 var(--fs-meta) var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+.gr-axis.mid,
+.gr-note.mid {
+  text-anchor: middle;
+}
+.gr-axis.end {
+  text-anchor: end;
+}
+.gr-tag {
+  fill: var(--t3);
+  font: 400 var(--fs-meta) var(--sans);
+  pointer-events: none;
+}
+
+.gr-line,
+.gr-series {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.gr-line.up {
+  stroke: var(--up);
+}
+.gr-line.down {
+  stroke: var(--down);
+}
+.gr-stop.up {
+  stop-color: var(--up);
+}
+.gr-stop.down {
+  stop-color: var(--down);
+}
+.gr-peak {
+  fill: none;
+  stroke: var(--mist-25);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.gr-under {
+  fill: var(--down);
+  fill-opacity: 0.16;
+  stroke: var(--down-60);
+  stroke-width: 1;
+}
+.gr-shade {
+  fill: var(--raise);
+}
+.gr-dot.up {
+  fill: var(--up);
+}
+.gr-dot.down {
+  fill: var(--down);
+}
+.gr-area.up {
+  fill: var(--up);
+  fill-opacity: 0.14;
+}
+.gr-area.down {
+  fill: var(--down);
+  fill-opacity: 0.14;
+}
+.gr-marker {
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.gr-marker.up {
+  stroke: var(--up-60);
+}
+.gr-marker.down {
+  stroke: var(--down-60);
+}
+.gr-marker.mist {
+  stroke: var(--mist-45);
+}
+.gr-series {
+  stroke: var(--gr-c);
+}
+.gr-series.is-dim {
+  stroke-opacity: 0.15;
+}
+
+.gr-tip {
+  position: absolute;
+  top: var(--sp-2);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 168px;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  font-size: var(--fs-meta);
+  line-height: var(--lh-meta);
+  color: var(--t2);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.gr-tip b {
+  color: var(--t1);
+  font-weight: 600;
+}
+
+.gr-bar .gr-hit {
+  fill: transparent;
+}
+.gr-bar.is-pick {
+  cursor: pointer;
+}
+.gr-bar.is-hover .gr-hit {
+  fill: var(--raise);
+}
+.gr-bar rect.up {
+  fill: var(--up);
+  opacity: 0.85;
+}
+.gr-bar rect.down {
+  fill: var(--down);
+  opacity: 0.85;
+}
+.gr-bar rect.mist {
+  fill: var(--mist-55);
+}
+.gr-bar.is-faint rect.up,
+.gr-bar.is-faint rect.down,
+.gr-bar.is-faint rect.mist {
+  opacity: 0.45;
+}
+
+.gr-spark {
+  display: block;
+}
+
+.gr-gauge {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.gr-gauge svg {
+  position: absolute;
+  inset: 0;
+}
+.gr-gauge-track {
+  fill: var(--line-2);
+}
+.gr-gauge-fill {
+  fill: var(--gr-c);
+}
+.gr-gauge-v {
+  position: relative;
+  font: 600 var(--fs-meta) / 1 var(--fig);
+  font-variant-numeric: tabular-nums;
+  color: var(--t2);
+}
+.gr-gauge-v.is-big {
+  font-size: 12px;
+}
+.gr-gauge-v.up {
+  color: var(--up);
+}
+.gr-gauge-v.down {
+  color: var(--down);
+}
+.gr-gauge-v.brass {
+  color: var(--brass);
+}
+
+.gr-donut {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  min-width: 0;
+}
+.gr-donut-ring {
+  position: relative;
+  flex: none;
+}
+.gr-donut-ring svg {
+  display: block;
+}
+.gr-seg {
+  fill: var(--gr-c);
+  cursor: default;
+}
+.gr-donut-c {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: var(--fs-meta);
+  color: var(--t3);
+  text-align: center;
+}
+.gr-donut-c b {
+  font: 600 16px/20px var(--fig);
+  font-variant-numeric: tabular-nums;
+  color: var(--t1);
+}
+
+.gr-legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.gr-legend li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto 40px;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 24px;
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+}
+.gr-legend li.is-hover {
+  background: var(--raise);
+}
+.gr-legend .nm {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--t2);
+}
+.gr-legend .v {
+  color: var(--t1);
+  text-align: right;
+}
+.gr-legend.is-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  margin-top: var(--sp-2);
+}
+.gr-legend.is-row li {
+  display: block;
+  min-height: 0;
+}
+.gr-legend.is-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-size: var(--fs-meta);
+  color: var(--t3);
+}
+.gr-legend.is-row button.is-on,
+.gr-legend.is-row button:hover {
+  color: var(--t1);
+}
+.gr-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--gr-c);
+}
+
+.gr-seg,
+.gr-swatch,
+.gr-gauge-fill,
+.gr-series {
+  --gr-c: var(--mist-45);
+}
+.up.gr-seg,
+.up.gr-swatch,
+.up.gr-gauge-fill {
+  --gr-c: var(--up);
+}
+.down.gr-seg,
+.down.gr-swatch,
+.down.gr-gauge-fill {
+  --gr-c: var(--down);
+}
+.brass.gr-seg,
+.brass.gr-swatch,
+.brass.gr-gauge-fill {
+  --gr-c: var(--brass);
+}
+.mist.gr-gauge-fill {
+  --gr-c: var(--mist-55);
+}
+.gr-p0 {
+  --gr-c: var(--color-tag-1);
+}
+.gr-p1 {
+  --gr-c: var(--color-tag-2);
+}
+.gr-p2 {
+  --gr-c: var(--color-tag-3);
+}
+.gr-p3 {
+  --gr-c: var(--color-tag-4);
+}
+.gr-p4 {
+  --gr-c: var(--color-tag-5);
+}
+.gr-p5 {
+  --gr-c: var(--color-tag-6);
+}
+.gr-p6 {
+  --gr-c: var(--color-tag-7);
+}
+.gr-p7 {
+  --gr-c: var(--color-tag-8);
+}

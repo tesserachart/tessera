@@ -183,13 +183,13 @@ describe('the strategy tester measures', () => {
     expect(sessionSharpe([], 10)).toBeNull();
   });
 
-  it('keeps the deepest drawdown of every point it thins out', () => {
+  it('keeps the deepest drawdown and the high of every point it thins out', () => {
     const equity = [100, 120, 80, 130, 90, 140].map((e, i) => ({ time: i, equity: e }));
     expect(curveOf(equity, 3)).toEqual([
-      { time: 0, pnl: 0, drawdown: 0 },
-      { time: 2, pnl: -20, drawdown: -40 },
-      { time: 4, pnl: -10, drawdown: -40 },
-      { time: 5, pnl: 40, drawdown: 0 },
+      { time: 0, pnl: 0, peak: 0, drawdown: 0 },
+      { time: 2, pnl: -20, peak: 20, drawdown: -40 },
+      { time: 4, pnl: -10, peak: 30, drawdown: -40 },
+      { time: 5, pnl: 40, peak: 40, drawdown: 0 },
     ]);
   });
 });

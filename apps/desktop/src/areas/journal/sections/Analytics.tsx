@@ -9,16 +9,8 @@ import { clock, dayLabel, holdLabel, nsToMs, pct, plural, rLabel, todayIn, tone 
 import { METRICS, SMALL_N, metricValue, type BucketMetric } from '../model/metrics.ts';
 import { symbolSeries } from '../model/symbols.ts';
 import { YearHeat } from '../parts/Calendar.tsx';
-import {
-  AreaChart,
-  BarRows,
-  BucketBars,
-  Donut,
-  EquityChart,
-  HourGrid,
-  MultiLine,
-  SignedBars,
-} from '../parts/Charts.tsx';
+import { AreaChart, BarRows, BucketBars, EquityChart, HourGrid, SignedBars } from '../parts/Charts.tsx';
+import { Donut, LinesGraph } from '../../../graphs/index.ts';
 import { QueryBar, QueryBarSample } from '../parts/QueryBar.tsx';
 import { SAMPLE_STATS } from './samples.ts';
 import { openDay, openTrade, setJournal, useJournalUi, type ReportTab } from '../store.ts';
@@ -283,6 +275,7 @@ function OverviewTab({ s }: { s: JournalStats }) {
       <Row>
         <Panel chrome="win-loss-distribution" title="Win/Loss distribution">
           <Donut
+            empty="Nothing to measure yet."
             segments={[
               { key: 'w', label: 'Winners', value: a.wins, tone: 'up' },
               { key: 'l', label: 'Losers', value: a.losses, tone: 'down' },
@@ -710,6 +703,7 @@ function SymbolsTab({ s }: { s: JournalStats }) {
           }
         >
           <Donut
+            empty="Nothing to measure yet."
             segments={top.map((b, i) => ({
               key: b.key,
               label: b.label,
@@ -736,7 +730,13 @@ function SymbolsTab({ s }: { s: JournalStats }) {
             />
           }
         >
-          <MultiLine series={series.lines} labels={series.months} height={220} />
+          <LinesGraph
+            series={series.lines}
+            labels={series.months}
+            height={220}
+            label="Lines by series"
+            empty="Nothing to measure yet."
+          />
         </Panel>
       </Row>
     </div>
