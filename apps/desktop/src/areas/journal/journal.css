@@ -123,11 +123,13 @@
 }
 
 .jr-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--line);
 }
 .jr-cell {
+  flex: 1 0 118px;
+  min-width: max-content;
   display: flex;
   flex-direction: column;
   justify-content: center;
