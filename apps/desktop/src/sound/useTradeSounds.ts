@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useTopicEffect } from '../app/useTopic.ts';
-import { useRuntimeSetting } from '../state/runtimeSettings.ts';
+import { useSetting } from '../state/runtimeSettings.ts';
 import { ConnectionSoundTracker } from './connectionSounds.ts';
-import { soundSettings } from './settings.ts';
+import { SOUNDS } from './settings.ts';
 import { LimitSoundTracker, PositionSoundTracker, RefusalSoundTracker, TradeSoundTracker } from './tradeSounds.ts';
 import type { VoiceLineId } from './voice/lines.ts';
 import { announce, primeVoice, voicePack } from './voice/speaker.ts';
 
 export function useTradeSounds(): void {
-  const settings = soundSettings(useRuntimeSetting('sounds'));
+  const settings = useSetting(SOUNDS);
   const packId = voicePack(settings)?.manifest.id ?? null;
   const voiced = packId === null ? null : {};
   const [orders] = useState(() => new TradeSoundTracker());

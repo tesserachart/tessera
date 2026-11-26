@@ -1,8 +1,6 @@
 import type { ComboboxOption } from '@tessera/ui';
-import { read, useStore } from '../app/store.ts';
-import { runtimeSettingsStore } from './runtimeSettings.ts';
-
-export const TIME_ZONE_SETTING = 'display.timeZone';
+import { readSetting, useSetting, watchSetting } from './runtimeSettings.ts';
+import { defineSetting } from './setting.ts';
 
 function systemTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -18,33 +16,18 @@ export function isTimeZone(zone: unknown): zone is string {
   }
 }
 
-let lastValue: unknown = undefined;
-let lastZone = '';
-
-function zoneOf(value: unknown): string {
-  if (lastZone === '' || value !== lastValue) {
-    lastValue = value;
-    lastZone = isTimeZone(value) ? value : systemTimeZone();
-  }
-  return lastZone;
-}
+export const TIME_ZONE = defineSetting('display.timeZone', (v) => (isTimeZone(v) ? v : systemTimeZone()));
 
 export function displayZone(): string {
-  return zoneOf(read(runtimeSettingsStore).values[TIME_ZONE_SETTING]);
+  return readSetting(TIME_ZONE);
 }
 
 export function useDisplayZone(): string {
-  return useStore(runtimeSettingsStore, (s) => zoneOf(s.values[TIME_ZONE_SETTING]));
+  return useSetting(TIME_ZONE);
 }
 
 export function onDisplayZone(listener: (zone: string) => void): () => void {
-  let last = displayZone();
-  return runtimeSettingsStore.subscribe((s) => {
-    const zone = zoneOf(s.values[TIME_ZONE_SETTING]);
-    if (zone === last) return;
-    last = zone;
-    listener(zone);
-  });
+  return watchSetting(TIME_ZONE, listener);
 }
 
 const TIME_ZONES: readonly string[] = [

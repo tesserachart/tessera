@@ -14,7 +14,7 @@ import {
 } from '@tessera/ui';
 import { useRef, useState } from 'react';
 import { useClock } from '../../../app/clock.ts';
-import { runTool, toolReason, useToolValue } from '../../../app/tools.ts';
+import { attempt, useToolValue, type Attempt } from '../../../app/tools.ts';
 import { CLIENT_KINDS, CLIENT_POLICIES, addedWords, clientHelp } from '../agentClients.ts';
 import { Section, SettingSelect } from '../parts.tsx';
 import { asSentence } from '../sentence.ts';
@@ -24,9 +24,11 @@ const REFRESH = { refresh: [LIST] };
 
 function ClientRow({ client, all, nowMs }: { client: McpClientInfo; all: readonly McpClientInfo[]; nowMs: number }) {
   const [err, setErr] = useState<string | null>(null);
-  const run = (call: Promise<unknown>) => {
+  const run = (call: Promise<Attempt<unknown>>) => {
     setErr(null);
-    call.catch((e: unknown) => setErr(asSentence(toolReason(e))));
+    void call.then((r) => {
+      if (!r.ok) setErr(asSentence(r.why));
+    });
   };
   return (
     <SettingsRow
@@ -38,13 +40,13 @@ function ClientRow({ client, all, nowMs }: { client: McpClientInfo; all: readonl
       <SettingSelect<McpClientPolicy>
         label={`What ${client.name} may do`}
         value={client.policy}
-        onValueChange={(policy) => run(runTool('mcp.set_client_policy', { id: client.id, policy }, REFRESH))}
+        onValueChange={(policy) => run(attempt('mcp.set_client_policy', { id: client.id, policy }, REFRESH))}
         options={CLIENT_POLICIES.map((p) => ({ value: p.value, label: p.label, hint: p.hint }))}
       />
       <ConfirmButton
         what={client.name}
         question="Its token stops working at once."
-        onConfirm={() => run(runTool('mcp.revoke_client', { id: client.id }, REFRESH))}
+        onConfirm={() => run(attempt('mcp.revoke_client', { id: client.id }, REFRESH))}
       >
         Revoke
       </ConfirmButton>
@@ -116,9 +118,13 @@ function SetupDialog({ setup, onClose }: { setup: Setup; onClose: () => void }) 
   const add = () => {
     if (!out) return;
     setAdding({ busy: true, said: null, failed: null });
-    void runTool('mcp.add_to_claude_desktop', { id: out.client.id, token: out.token })
-      .then((r) => setAdding({ busy: false, said: addedWords(r.path, r.backup), failed: null }))
-      .catch((e: unknown) => setAdding({ busy: false, said: null, failed: asSentence(toolReason(e)) }));
+    void attempt('mcp.add_to_claude_desktop', { id: out.client.id, token: out.token }).then((r) =>
+      setAdding(
+        r.ok
+          ? { busy: false, said: addedWords(r.out.path, r.out.backup), failed: null }
+          : { busy: false, said: null, failed: asSentence(r.why) },
+      ),
+    );
   };
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
@@ -175,13 +181,11 @@ export function AgentClients() {
   const [setup, setSetup] = useState<Setup | null>(null);
   const attempts = useRef(0);
   const connect = (kind: McpClientKind, label: string) => {
-    const attempt = ++attempts.current;
-    setSetup({ attempt, kind, label, out: null, failed: null });
-    void runTool('mcp.add_client', { kind }, REFRESH)
-      .then((out) => setSetup((s) => (s?.attempt === attempt ? { ...s, out } : s)))
-      .catch((e: unknown) =>
-        setSetup((s) => (s?.attempt === attempt ? { ...s, failed: asSentence(toolReason(e)) } : s)),
-      );
+    const tried = ++attempts.current;
+    setSetup({ attempt: tried, kind, label, out: null, failed: null });
+    void attempt('mcp.add_client', { kind }, REFRESH).then((r) =>
+      setSetup((s) => (s?.attempt !== tried ? s : r.ok ? { ...s, out: r.out } : { ...s, failed: asSentence(r.why) })),
+    );
   };
   const nowMs = clock.now();
   return (

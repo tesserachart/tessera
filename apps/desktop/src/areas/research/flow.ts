@@ -14,9 +14,9 @@ import { requestViewport } from '../../chart/viewportRequests.ts';
 import { read } from '../../app/store.ts';
 import { layoutsStore } from '../../state/layouts.ts';
 import { activeChartTarget, setChartTimeframe, showOnChart } from '../../workspace/controller.ts';
-import { SESSION_RUNNER_KEY, runnerValue, sessionRunning, standingWords } from '../../analyst/tradingSessions.ts';
+import { SESSION_RUNNER, runnerValue, sessionRunning, standingWords } from '../../analyst/tradingSessions.ts';
 import { refreshTools, runTool } from '../../app/tools.ts';
-import { setRuntimeSetting } from '../../state/runtimeSettings.ts';
+import { saveSetting } from '../../state/runtimeSettings.ts';
 import { pct, plural, tradeClosed } from '../journal/model/format.ts';
 import { setJournal } from '../journal/store.ts';
 import { showArea } from '../store.ts';
@@ -116,7 +116,7 @@ export function tradedWords(setup: Pick<Setup, 'stats'>): string | null {
 }
 
 export async function tradeInSessions(setting: SessionRunnerSetting, studyId: string): Promise<string | null> {
-  const why = await setRuntimeSetting(SESSION_RUNNER_KEY, runnerValue(setting, { studyId }));
+  const why = await saveSetting(SESSION_RUNNER, runnerValue(setting, { studyId }));
   void refreshTools('agent.trading_session');
   return why;
 }

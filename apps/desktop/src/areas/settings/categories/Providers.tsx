@@ -2,6 +2,7 @@ import type { LevelSourceInfo } from '@tessera/protocol';
 import { Button, Choice, SettingsRow, SettingsSection, Switch, ToggleGroup } from '@tessera/ui';
 import {
   LABEL_WORD,
+  LEVELS,
   LEVEL_LABELS,
   levelStyle,
   setLevelStyle,
@@ -13,11 +14,10 @@ import {
   type SourceDef,
 } from '../../../chart/levelSettings.ts';
 import { openConnection, openConnections } from '../../../accounts/navigate.ts';
-import { useTradeSettings, tradeSettingsStore, setLevels } from '../../../state/tradeSettings.ts';
+import { setLevels } from '../../../state/tradeSettings.ts';
+import { readSetting, useSetting } from '../../../state/runtimeSettings.ts';
 import { Section } from '../parts.tsx';
-import { read } from '../../../app/store.ts';
 
-const store = () => read(tradeSettingsStore);
 const save = (next: LevelSettings) => setLevels(next);
 
 const packageHelp = (pkg: string, endpoint: string | null) =>
@@ -59,7 +59,7 @@ function ProviderSection({
   defs: LevelDefs;
   bands: ReadonlyMap<string, SourceDef>;
 }) {
-  const settings = useTradeSettings((s) => s.levels);
+  const settings = useSetting(LEVELS);
   const packages = info.packages.flatMap((p) => {
     const band = bands.get(p.key);
     return band && band.levels.length > 0 ? [{ p, band }] : [];
@@ -71,7 +71,7 @@ function ProviderSection({
     save(
       packages.reduce(
         (s, { band }) => band.levels.reduce((acc, l) => setLevelStyle(acc, l.key, patch, defs), s),
-        store().levels,
+        readSetting(LEVELS),
       ),
     );
   const name = info.displayName;
@@ -100,7 +100,7 @@ function ProviderSection({
             <Switch
               label={`${band.name} levels`}
               checked={on}
-              onCheckedChange={(v) => save(setSourceOn(store().levels, p.key, v))}
+              onCheckedChange={(v) => save(setSourceOn(readSetting(LEVELS), p.key, v))}
             />
           </SettingsRow>,
           band.levels.length > 1 ? (
@@ -110,7 +110,7 @@ function ProviderSection({
                 disabled={!on}
                 options={band.levels.map((l) => ({ value: l.key, label: l.name }))}
                 value={shown}
-                onToggle={(key, show) => save(setLevelStyle(store().levels, key, { on: show }, defs))}
+                onToggle={(key, show) => save(setLevelStyle(readSetting(LEVELS), key, { on: show }, defs))}
               />
             </SettingsRow>
           ) : null,

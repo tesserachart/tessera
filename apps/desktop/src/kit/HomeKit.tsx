@@ -1,10 +1,9 @@
 import type { AccountUpdate } from '@tessera/protocol';
 import '../styles/app.css';
 import { LevelsBands } from '../areas/settings/categories/Levels.tsx';
-import { DEFAULT_LEVEL_SETTINGS, defsOf, setLevelStyle, sourceDefs } from '../chart/levelSettings.ts';
+import { DEFAULT_LEVEL_SETTINGS, LEVELS, defsOf, setLevelStyle, sourceDefs } from '../chart/levelSettings.ts';
 import { EMPTY_SHELL_DATA, ShellDataContext } from '../shell/shellData.ts';
-import { tradeSettingsStore } from '../state/tradeSettings.ts';
-import { patch } from '../app/store.ts';
+import { putRuntimeSettings } from '../state/runtimeSettings.ts';
 
 const money = (amount: number) => ({ amount, currency: 'USD' as const });
 const account = (id: string, displayName: string, environment: 'paper' | 'eval', nl: number): AccountUpdate =>
@@ -67,15 +66,17 @@ const SOURCES = sourceDefs([
 ]);
 const DEFS = defsOf(SOURCES);
 
-patch(tradeSettingsStore, {
-  status: 'local',
-  levels: setLevelStyle(
-    setLevelStyle(DEFAULT_LEVEL_SETTINGS, 'tessera.concepts.pdc', { on: false }),
-    'acme.classic.zero_gamma',
-    { color: 'brass' },
-    DEFS,
-  ),
-});
+putRuntimeSettings(
+  {
+    [LEVELS.key]: setLevelStyle(
+      setLevelStyle(DEFAULT_LEVEL_SETTINGS, 'tessera.concepts.pdc', { on: false }),
+      'acme.classic.zero_gamma',
+      { color: 'brass' },
+      DEFS,
+    ),
+  },
+  false,
+);
 
 export function HomeKit(_props: { section: string }) {
   return (

@@ -1,7 +1,7 @@
 import type { DataFile } from '@tessera/protocol';
 import { Button, SettingsRow } from '@tessera/ui';
 import { useState } from 'react';
-import { refreshTools, useHasTool, useToolValue, runToolResult } from '../../../app/tools.ts';
+import { attempt, refreshTools, useHasTool, useToolValue } from '../../../app/tools.ts';
 import { Fact, Row, Section } from '../parts.tsx';
 import { sizeWords } from '../words.ts';
 import { SavedTradesSections } from './SavedTrades.tsx';
@@ -30,16 +30,14 @@ export function Data() {
   });
   const backUp = () => {
     setBackup({ busy: true, said: null, failed: null });
-    void runToolResult('runtime.backup', {}, { timeoutMs: 120_000 })
-      .then((r) =>
-        setBackup(
-          r.ok && r.output
-            ? { busy: false, said: `${r.output.path} · ${sizeWords(r.output.bytes)}`, failed: null }
-            : { busy: false, said: null, failed: r.error?.message ?? 'It did not go through.' },
-        ),
-      )
-      .catch((e: unknown) => setBackup({ busy: false, said: null, failed: e instanceof Error ? e.message : String(e) }))
-      .finally(() => void refreshTools('runtime.data_info'));
+    void attempt('runtime.backup', {}, { timeoutMs: 120_000 }).then((r) => {
+      setBackup(
+        r.ok
+          ? { busy: false, said: `${r.out.path} · ${sizeWords(r.out.bytes)}`, failed: null }
+          : { busy: false, said: null, failed: r.why },
+      );
+      void refreshTools('runtime.data_info');
+    });
   };
   return (
     <>

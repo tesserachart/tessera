@@ -6,7 +6,7 @@ import {
   limitKind,
   limitsValue,
   parseLimit,
-  readLimits,
+  RISK_LIMITS,
   setIsOff,
   standingWords,
   withLimit,
@@ -14,7 +14,7 @@ import {
   type LimitKey,
 } from '../../../accounts/limits.ts';
 import { useAccountUpdates } from '../../../app/portfolio.ts';
-import { useRuntimeSetting, useSetSetting } from '../../../state/runtimeSettings.ts';
+import { saveSetting, useSetting } from '../../../state/runtimeSettings.ts';
 import { rowWords } from '../model.ts';
 import { Row, Section } from '../parts.tsx';
 
@@ -155,11 +155,9 @@ function AccountLimits({
 }
 
 export function RiskSections() {
-  const stored = useRuntimeSetting('risk.limits');
-  const set = useSetSetting();
+  const setting = useSetting(RISK_LIMITS);
   const accountUpdates = useAccountUpdates() ?? [];
-  const setting = readLimits(stored);
-  const save = (next: LimitsSetting) => set('risk.limits', limitsValue(next) as JsonValue);
+  const save = (next: LimitsSetting) => saveSetting(RISK_LIMITS, limitsValue(next) as JsonValue);
   const [firmFailed, setFirmFailed] = useState<string | null>(null);
   const [unlockFailed, setUnlockFailed] = useState<string | null>(null);
   return (

@@ -1,11 +1,10 @@
 import type { Alert, AlertDelivery } from '@tessera/protocol';
 import { patch, read, makeStore, useStore } from '../app/store.ts';
 import { displaySymbol } from '../market/instruments.ts';
-import { runtimeSettingsStore } from '../state/runtimeSettings.ts';
+import { readSetting } from '../state/runtimeSettings.ts';
+import { defineSetting } from '../state/setting.ts';
 import { formFromAlert, formFromSeed, type AlertForm, type AlertSeed, type OperandChoice } from './form.ts';
 import { markPrice } from './store.ts';
-
-const DEFAULT_DELIVERY_KEY = 'alerts.defaultDelivery';
 
 export interface FormOpen {
   form: AlertForm;
@@ -22,19 +21,22 @@ export function useAlertForm(): FormOpen | null {
   return useStore(alertFormStore, (s) => s.open);
 }
 
-function defaultDelivery(): AlertDelivery {
-  const v = read(runtimeSettingsStore).values[DEFAULT_DELIVERY_KEY];
-  const o = v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
-  const flag = (k: string, d: boolean) => {
+const DELIVERY_DEFAULT: AlertDelivery = { sound: true, desktop: true, discord: false };
+
+function deliveryOf(v: unknown): AlertDelivery {
+  const o = typeof v === 'object' && v !== null ? (v as Partial<Record<keyof AlertDelivery, unknown>>) : {};
+  const pick = (k: keyof AlertDelivery) => {
     const on = o[k];
-    return typeof on === 'boolean' ? on : d;
+    return typeof on === 'boolean' ? on : DELIVERY_DEFAULT[k];
   };
-  return { sound: flag('sound', true), desktop: flag('desktop', true), discord: flag('discord', false) };
+  return { sound: pick('sound'), desktop: pick('desktop'), discord: pick('discord') };
 }
+
+export const DEFAULT_DELIVERY = defineSetting('alerts.defaultDelivery', deliveryOf);
 
 /** A closing Radix menu hands the focus back to its trigger. */
 export function openAlertForm(seed: AlertSeed, at: { x: number; y: number } | null = null): void {
-  const open = { form: formFromSeed(seed, defaultDelivery()), at, price: seed.price, seq: ++opened };
+  const open = { form: formFromSeed(seed, readSetting(DEFAULT_DELIVERY)), at, price: seed.price, seq: ++opened };
   setTimeout(() => patch(alertFormStore, { open }), 0);
 }
 

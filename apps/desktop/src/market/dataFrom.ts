@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { feedErrorWords } from '../shell/deskWords.ts';
 import { writeSetting } from '../state/runtimeSettings.ts';
 import { CONTRACT_ANSWERS } from './contracts.ts';
+import { defineSetting, textOrNull } from '../state/setting.ts';
+
+export const DATA_SOURCE = defineSetting('market.dataSource', textOrNull);
 
 export function dataConnections(infos: readonly ConnectionInfo[]): ConnectionInfo[] {
   return infos.filter((c) => c.market !== null && c.kind === 'market_data');
@@ -25,7 +28,7 @@ export function useDataFrom() {
     setBusy(true);
     setFailed(null);
     const refresh = ['connections.list', 'settings.get', CONTRACT_ANSWERS];
-    writeSetting('market.dataSource', connectionId, { refresh })
+    writeSetting(DATA_SOURCE.key, connectionId, { refresh })
       .then(() => undefined)
       .catch((e: unknown) => setFailed(feedErrorWords(e)))
       .finally(() => setBusy(false));

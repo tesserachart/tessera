@@ -9,10 +9,11 @@ import type { CaptureResult, PostHog, PostHogConfig } from 'posthog-js/no-extern
 import { useEffect } from 'react';
 import { useAccount } from '../account/account.ts';
 import { areaStore } from '../areas/store.ts';
-import { setRuntimeSetting, useRuntimeSetting } from '../state/runtimeSettings.ts';
+import { saveSetting, useSetting } from '../state/runtimeSettings.ts';
+import { defineSetting } from '../state/setting.ts';
 import { maskAttribute, maskInput, maskText } from './replayMask.ts';
 import { watch } from './store.ts';
-import { peekTool, refreshTools, runToolResult, useTool, useTools } from './tools.ts';
+import { attempt, peekTool, refreshTools, useTool, useTools } from './tools.ts';
 
 const CONSENT_SETTING = 'telemetry.consent';
 
@@ -33,18 +34,20 @@ function consentOf(value: unknown): Consent {
   };
 }
 
-function sharingOf(status: TelemetryStatusOutput | null | undefined, consent: unknown): Sharing {
+const CONSENT = defineSetting(CONSENT_SETTING, (v): Consent | null => (v === undefined ? null : consentOf(v)));
+
+function sharingOf(status: TelemetryStatusOutput | null | undefined, consent: Consent | null): Sharing {
   if (status === undefined) return { kind: 'unknown' };
   if (!status?.available) return { kind: 'unavailable' };
-  if (consent === undefined) return { kind: 'unknown' };
-  return { kind: 'known', consent: consentOf(consent) };
+  if (consent === null) return { kind: 'unknown' };
+  return { kind: 'known', consent };
 }
 
 export function useSharing(): Sharing {
   const tools = useTools();
   const has = tools?.has('telemetry.status') === true;
   const status = useTool('telemetry.status', has ? {} : null, { keepFor: Infinity });
-  const consent = useRuntimeSetting(CONSENT_SETTING);
+  const consent = useSetting(CONSENT);
   return sharingOf(tools === null ? undefined : !has || status.isError ? null : status.data, consent);
 }
 
@@ -53,7 +56,7 @@ export function usageAsked(sharing: Sharing): boolean {
 }
 
 export function setConsent(now: Consent, change: Partial<Consent>): Promise<string | null> {
-  return setRuntimeSetting(CONSENT_SETTING, { ...now, ...change });
+  return saveSetting(CONSENT, { ...now, ...change });
 }
 
 const CONFIG_EVERY = 30 * 60_000;
@@ -296,7 +299,7 @@ function flush(): void {
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = null;
   const events = outbox.splice(0, MOST_A_CALL);
-  if (events.length > 0) void runToolResult('telemetry.capture', { events }).catch(() => undefined);
+  if (events.length > 0) void attempt('telemetry.capture', { events });
   if (outbox.length > 0) flushTimer = setTimeout(flush, FLUSH_MS);
 }
 

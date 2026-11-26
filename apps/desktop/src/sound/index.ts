@@ -1,9 +1,8 @@
-import { runtimeSettingsStore } from '../state/runtimeSettings.ts';
+import { readSetting } from '../state/runtimeSettings.ts';
 import { audioContext, bestEffort, whenRunning } from './context.ts';
 import type { SoundEvent } from './events.ts';
-import { audible, previewGain, soundSettings, type SoundSettings } from './settings.ts';
+import { audible, previewGain, SOUNDS, type SoundSettings } from './settings.ts';
 import { TONES, type Note, type SoundName } from './tones.ts';
-import { read } from '../app/store.ts';
 
 export type { SoundName } from './tones.ts';
 
@@ -54,7 +53,7 @@ function play(name: SoundName, gain: number): void {
   });
 }
 
-export const soundsNow = (): SoundSettings => soundSettings(read(runtimeSettingsStore).values.sounds);
+export const soundsNow = (): SoundSettings => readSetting(SOUNDS);
 
 const EVENT_OF: Readonly<Record<SoundName, SoundEvent>> = {
   fill: 'fill',

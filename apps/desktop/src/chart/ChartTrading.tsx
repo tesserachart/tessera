@@ -92,12 +92,13 @@ import {
 import { menuTrade } from './menuTrade.ts';
 import { runPlaceStep, usePlacementKeys } from './placementRun.ts';
 import { noteOnChart } from './chartNotice.ts';
-import { levelShown, setLevelStyle } from './levelSettings.ts';
+import { LEVELS, levelShown, setLevelStyle } from './levelSettings.ts';
 import { useLevelSources } from './useLevelSources.ts';
 import { CHART_TYPE_WORD, chartTypeOf, useStageView, layoutsStore } from '../state/layouts.ts';
 import { useUi } from '../state/ui.ts';
 import { endPlacement, usePlacement } from '../state/placement.ts';
-import { useTradeSettings, useTradeSettingsSync, tradeSettingsStore, setLevels } from '../state/tradeSettings.ts';
+import { useTradeSettings, tradeSettingsStore, setLevels } from '../state/tradeSettings.ts';
+import { readSetting, useSetting } from '../state/runtimeSettings.ts';
 import { splitWithSymbol } from '../workspace/addChart.ts';
 import { ChartTypeItems } from './ChartTools.tsx';
 import { setChartTimeframe } from '../workspace/controller.ts';
@@ -286,7 +287,6 @@ export interface ChartTradingProps {
 
 export function ChartTrading(props: ChartTradingProps) {
   const { chart, layer, layoutId, tileId, instrument, ids, spec, levels, layers, children } = props;
-  useTradeSettingsSync();
   const { update: accountUpdate, orders, positions, env, entry, setup } = useTicketTrade(tileId);
   const runtime = useRuntimeEntry();
   const accountId = accountUpdate?.account.id ?? null;
@@ -838,7 +838,7 @@ export function ChartTrading(props: ChartTradingProps) {
     if (r.tone === 'err') setShelf(r);
   };
 
-  const levelSettings = useTradeSettings((st) => st.levels);
+  const levelSettings = useSetting(LEVELS);
   const levelDefs = useLevelSources().defs;
   const shownLevels = levels.filter(
     (l) => l.price !== null && isLevelShown(layers, l) && levelShown(levelSettings, l.key, levelDefs),
@@ -1615,7 +1615,7 @@ function ChartMenuItems({
         <>
           <MenuItem
             onSelect={() => {
-              setLevels(setLevelStyle(read(tradeSettingsStore).levels, target.level!.key, { on: false }, levelDefs));
+              setLevels(setLevelStyle(readSetting(LEVELS), target.level!.key, { on: false }, levelDefs));
             }}
           >
             Hide {target.level.label}

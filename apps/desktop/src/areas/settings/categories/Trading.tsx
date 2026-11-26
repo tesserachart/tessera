@@ -1,19 +1,20 @@
 import type { ConnectionInfo, TradingAccount } from '@tessera/protocol';
 import { ConfirmButton, SettingsRow, Switch } from '@tessera/ui';
 import { Fragment, useState } from 'react';
-import { bracketModeOf } from '../../../chart/brackets.ts';
+import { POSITION_BRACKET } from '../../../chart/brackets.ts';
 import { orThrow, switchEdits, useConnectionCall } from '../../../accounts/connectionCall.ts';
 import { useDraft } from '../../../app/overlay.ts';
 import { connectionOf, type ConnectionRow } from '../../../accounts/connections.ts';
 import { useConnections } from '../../../accounts/useConnections.ts';
 import { orderEntryOf, orderEntrySwitchOf } from '../../../shell/orderEntry.ts';
 import { useShellData } from '../../../shell/shellData.ts';
-import { useRuntimeSetting, useSetSetting } from '../../../state/runtimeSettings.ts';
+import { useSetting, useSettingInfos, useSettingSave } from '../../../state/runtimeSettings.ts';
+import { defineSetting } from '../../../state/setting.ts';
 import { useTradeSettings, tradeSettingsStore } from '../../../state/tradeSettings.ts';
 import { NumberSetting } from '../NumberSetting.tsx';
 import { OrderHotkeys } from './OrderHotkeys.tsx';
 import { RiskSections } from './Risk.tsx';
-import { useSettingInfos, useShellKnown } from '../hooks.ts';
+import { useShellKnown } from '../hooks.ts';
 import { Row, Section, SettingSelect } from '../parts.tsx';
 import { BRACKET_MODES, bracketWords } from '../words.ts';
 import { read, patch } from '../../../app/store.ts';
@@ -66,8 +67,6 @@ function OrderEntry({
 
 type AccountType = 'eval' | 'funded' | 'live' | 'sim';
 
-const ACCOUNT_TYPES = 'accounts.types';
-
 const TYPE_WORDS: Record<AccountType, string> = {
   eval: 'Evaluation',
   funded: 'Funded',
@@ -84,18 +83,18 @@ function readTypes(stored: unknown): Record<string, AccountType> {
   );
 }
 
+const ACCOUNT_TYPES = defineSetting('accounts.types', readTypes);
+
 function AccountTypeRow({ account }: { account: TradingAccount }) {
-  const types = readTypes(useRuntimeSetting(ACCOUNT_TYPES));
-  const set = useSetSetting();
-  const [failed, setFailed] = useState<string | null>(null);
+  const types = useSetting(ACCOUNT_TYPES);
+  const { save: keep, error: failed } = useSettingSave(ACCOUNT_TYPES);
   const own = types[account.id];
   const shown = account.environment === 'paper' ? null : account.environment;
   if (shown === null) return null;
   const save = (v: string) => {
     if (v === (own ?? shown)) return;
     const { [account.id]: _was, ...rest } = types;
-    setFailed(null);
-    void set(ACCOUNT_TYPES, v === DETECTED ? rest : { ...rest, [account.id]: v }).then(setFailed);
+    void keep(v === DETECTED ? rest : { ...rest, [account.id]: v });
   };
   return (
     <SettingsRow
@@ -121,10 +120,8 @@ function AccountTypeRow({ account }: { account: TradingAccount }) {
 const DRAFT_KEYS = { seconds: 'approvals.staleAfterSeconds', ticks: 'approvals.staleAfterTicks' } as const;
 
 function BracketMode() {
-  const stored = useRuntimeSetting('trade.positionBracket');
-  const set = useSetSetting();
-  const [failed, setFailed] = useState<string | null>(null);
-  const value = bracketModeOf(stored);
+  const value = useSetting(POSITION_BRACKET);
+  const { save, error: failed } = useSettingSave(POSITION_BRACKET);
   const shown = BRACKET_MODES.find((m) => m.value === value)!;
   return (
     <Row id="trading.bracketMode" help={shown.help} error={failed}>
@@ -133,8 +130,7 @@ function BracketMode() {
         value={value}
         onValueChange={(v) => {
           if (v === value) return;
-          setFailed(null);
-          void set('trade.positionBracket', v).then(setFailed);
+          void save(v);
         }}
         options={BRACKET_MODES.map((m) => ({ value: m.value, label: m.label }))}
       />

@@ -1,9 +1,9 @@
 import type { AgentProviderInfo, Delivery, SessionMode } from '@tessera/protocol';
 import { Button, Choice, SettingsRow, Switch, TextArea, TextInput, formatShortcut, usePlatform } from '@tessera/ui';
 import { useState, type ReactNode } from 'react';
-import { FOLLOW_UP_SETTING, followUpHelp, followUpOf } from '../../../analyst/dispatch.ts';
+import { FOLLOW_UP, followUpHelp } from '../../../analyst/dispatch.ts';
 import { useModeChange } from '../../../analyst/modeChange.tsx';
-import { MODES, isMode, modeInfo } from '../../../analyst/modes.ts';
+import { DEFAULT_MODE, MODES, modeInfo } from '../../../analyst/modes.ts';
 import { useClock } from '../../../app/clock.ts';
 import { useFlag } from '../../../app/flags.ts';
 import { GetProvider } from '../../agents/GetProvider.tsx';
@@ -21,19 +21,19 @@ import {
 } from '../../agents/connect.ts';
 import { anyEnabled, effortOf, findModel, resolvePick, type ProviderView } from '../../agents/models.ts';
 import {
-  PROVIDERS_KEY,
+  PROVIDERS,
   recheckProviders,
   setProviderEnabled,
   setProviderLaunch,
   useProviders,
 } from '../../agents/providers.ts';
 import { setPick, useAgentsUi } from '../../agents/store.ts';
-import { useRuntimeSetting, useSetSetting } from '../../../state/runtimeSettings.ts';
-import { readModelSetting } from '../../../state/settingsSync.ts';
+import { useSetting, useSettingInfos, useSettingSave } from '../../../state/runtimeSettings.ts';
+import { DEFAULT_MODEL } from '../../../state/settingsSync.ts';
+import { defineSetting, textOrNull } from '../../../state/setting.ts';
 import { NumberSetting } from '../NumberSetting.tsx';
 import { AgentClients } from './AgentClients.tsx';
 import { TradingSessions } from './TradingSessions.tsx';
-import { useSettingInfos } from '../hooks.ts';
 import { Fact, Row, Section, SettingSelect } from '../parts.tsx';
 
 export const INSTRUCTIONS_MAX = 4000;
@@ -194,12 +194,12 @@ function CheckAgain({ list }: { list: readonly AgentProviderInfo[] | undefined }
   );
 }
 
+const CUSTOM_INSTRUCTIONS = defineSetting('agent.customInstructions', (v) => textOrNull(v) ?? '');
+
 function Instructions() {
-  const set = useSetSetting();
-  const stored = useRuntimeSetting('agent.customInstructions');
-  const value = typeof stored === 'string' ? stored : '';
+  const value = useSetting(CUSTOM_INSTRUCTIONS);
+  const { save: keep, error: err } = useSettingSave(CUSTOM_INSTRUCTIONS);
   const [text, setText] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
   const [seen, setSeen] = useState(value);
   if (seen !== value) {
     setSeen(value);
@@ -208,8 +208,7 @@ function Instructions() {
   const shown = text ?? value;
   const save = async () => {
     if (text === null || text === value) return;
-    const why = await set('agent.customInstructions', text.slice(0, INSTRUCTIONS_MAX));
-    setErr(why);
+    await keep(text.slice(0, INSTRUCTIONS_MAX));
   };
   const near = shown.length > INSTRUCTIONS_MAX * 0.8;
   return (
@@ -254,20 +253,18 @@ const GUARDS: { row: string; key: string; unit?: string }[] = [
 
 export function Analyst() {
   const tradingSessions = useFlag('analyst-trading-sessions');
-  const set = useSetSetting();
   const { list, views } = useProviders();
-  const choices = useRuntimeSetting(PROVIDERS_KEY);
-  const stored = readModelSetting(useRuntimeSetting('agent.defaultModel'));
+  const choices = useSetting(PROVIDERS);
+  const stored = useSetting(DEFAULT_MODEL);
   const lastPick = useAgentsUi((s) => s.pick);
   const pick = resolvePick(views, null, stored ?? lastPick);
   const model = findModel(views, pick);
   const effort = effortOf(model, pick?.effort ?? null);
-  const modeValue = useRuntimeSetting('agent.defaultMode');
-  const mode: SessionMode = isMode(modeValue) ? modeValue : 'auto_modify';
-  const [modeErr, setModeErr] = useState<string | null>(null);
-  const modeChange = useModeChange(mode, (v) => void set('agent.defaultMode', v).then(setModeErr));
-  const followUp = followUpOf(useRuntimeSetting(FOLLOW_UP_SETTING));
-  const [followUpErr, setFollowUpErr] = useState<string | null>(null);
+  const mode = useSetting(DEFAULT_MODE);
+  const { save: saveMode, error: modeErr } = useSettingSave(DEFAULT_MODE);
+  const modeChange = useModeChange(mode, (v) => void saveMode(v));
+  const followUp = useSetting(FOLLOW_UP);
+  const { save: saveFollowUp, error: followUpErr } = useSettingSave(FOLLOW_UP);
   const platform = usePlatform();
   const infos = useSettingInfos();
   const options = views
@@ -334,7 +331,7 @@ export function Analyst() {
           <Choice<Delivery>
             label="While the analyst works"
             value={followUp}
-            onChange={(v) => void set(FOLLOW_UP_SETTING, v).then(setFollowUpErr)}
+            onChange={(v) => void saveFollowUp(v)}
             options={[
               { value: 'steer', label: 'Steer' },
               { value: 'queue', label: 'Queue' },

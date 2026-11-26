@@ -3,7 +3,7 @@ import { useState, useSyncExternalStore, type KeyboardEvent } from 'react';
 import { takenKeys, useOrderHotkeys } from '../../../chart/ticket/commands.ts';
 import { commands } from '../../../commands/registry.ts';
 import {
-  ORDER_HOTKEYS_KEY,
+  ORDER_HOTKEYS,
   ORDER_KEYS,
   canonical,
   keyConflicts,
@@ -11,17 +11,16 @@ import {
   shortcutOfEvent,
   type OrderKeyAction,
 } from '../../../shell/orderHotkeys.ts';
-import { useSetSetting } from '../../../state/runtimeSettings.ts';
+import { useSettingSave } from '../../../state/runtimeSettings.ts';
 import { Row, Section } from '../parts.tsx';
 
 export function OrderHotkeys() {
   const h = useOrderHotkeys();
-  const set = useSetSetting();
   const platform = usePlatform();
   useSyncExternalStore(commands.subscribe, commands.getVersion);
   const taken = takenKeys(commands.all());
   const stored = keyConflicts(h.keys, taken, platform);
-  const [failed, setFailed] = useState<string | null>(null);
+  const { save, error: failed, clear } = useSettingSave(ORDER_HOTKEYS);
   const [refused, setRefused] = useState<{ action: OrderKeyAction; why: string } | null>(null);
   const record = (action: OrderKeyAction, key: string) => {
     const keys = { ...h.keys, [action]: key };
@@ -31,21 +30,13 @@ export function OrderHotkeys() {
       return;
     }
     setRefused(null);
-    setFailed(null);
-    if (canonical(key, platform) !== canonical(h.keys[action], platform))
-      void set(ORDER_HOTKEYS_KEY, orderHotkeysValue({ ...h, keys })).then(setFailed);
+    clear();
+    if (canonical(key, platform) !== canonical(h.keys[action], platform)) void save(orderHotkeysValue({ ...h, keys }));
   };
   return (
     <Section id="trading.orderHotkeys">
       <Row id="trading.orderHotkeysOn" error={failed}>
-        <Switch
-          label="Order hotkeys"
-          checked={h.enabled}
-          onCheckedChange={(on) => {
-            setFailed(null);
-            void set(ORDER_HOTKEYS_KEY, { enabled: on }).then(setFailed);
-          }}
-        />
+        <Switch label="Order hotkeys" checked={h.enabled} onCheckedChange={(on) => void save({ enabled: on })} />
       </Row>
       {ORDER_KEYS.map((d) => {
         const key = h.keys[d.action];

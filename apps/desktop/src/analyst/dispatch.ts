@@ -1,12 +1,13 @@
 import type { Delivery } from '@tessera/protocol';
+import { defineSetting } from '../state/setting.ts';
 
 export type Dispatch = 'start' | Delivery;
-
-export const FOLLOW_UP_SETTING = 'agent.followUp';
 
 export function followUpOf(setting: unknown): Delivery {
   return setting === 'queue' ? 'queue' : 'steer';
 }
+
+export const FOLLOW_UP = defineSetting('agent.followUp', followUpOf);
 
 export function alternateOf(followUp: Delivery): Delivery {
   return followUp === 'queue' ? 'steer' : 'queue';

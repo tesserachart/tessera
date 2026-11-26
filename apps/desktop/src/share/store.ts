@@ -1,7 +1,7 @@
 import type { ShareChartInput, ShareLink } from '@tessera/protocol';
 import { accountListStore } from '../app/portfolio.ts';
 import { makeStore, patch, read, useStore } from '../app/store.ts';
-import { failureText, runTool } from '../app/tools.ts';
+import { attempt, failureText } from '../app/tools.ts';
 import { captureWindow, privateWordsOf } from '../feedback/capture.ts';
 import { screenWords } from '../shell/deskWords.ts';
 import { layoutsStore } from '../state/layouts.ts';
@@ -87,10 +87,10 @@ export async function createLink(): Promise<void> {
   if (flow.kind !== 'ready') return;
   patch(shareStore, { flow: { kind: 'sending', preview: flow.preview, input: flow.input } });
   const settle = runner();
-  try {
-    const link = await runTool('share.chart', flow.input, { refresh: [SHARE_LIST] });
-    settle({ kind: 'shared', preview: flow.preview, link });
-  } catch (error) {
-    settle({ kind: 'failed', why: screenWords(failureText(error), SHARE_FAILED) });
-  }
+  const r = await attempt('share.chart', flow.input, { refresh: [SHARE_LIST] });
+  settle(
+    r.ok
+      ? { kind: 'shared', preview: flow.preview, link: r.out }
+      : { kind: 'failed', why: screenWords(r.why, SHARE_FAILED) },
+  );
 }

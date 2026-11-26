@@ -1,11 +1,12 @@
 import type { SettingInfo } from '@tessera/protocol';
 import { TextInput } from '@tessera/ui';
-import { useState, type KeyboardEvent } from 'react';
-import { useRuntimeSetting, useSetSetting } from '../../state/runtimeSettings.ts';
+import { useMemo, useState, type KeyboardEvent } from 'react';
+import { saveSetting, useSetting } from '../../state/runtimeSettings.ts';
+import { defineSetting, stored } from '../../state/setting.ts';
 
 export function NumberSetting({ info, unit, label }: { info: SettingInfo; unit?: string; label?: string }) {
-  const set = useSetSetting();
-  const live = useRuntimeSetting(info.key);
+  const setting = useMemo(() => defineSetting(info.key, stored), [info.key]);
+  const live = useSetting(setting);
   const [text, setText] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const raw = live ?? info.value;
@@ -18,7 +19,7 @@ export function NumberSetting({ info, unit, label }: { info: SettingInfo; unit?:
       setErr(null);
       return;
     }
-    setErr(await set(info.key, n));
+    setErr(await saveSetting(setting, n));
     setText(null);
   };
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {

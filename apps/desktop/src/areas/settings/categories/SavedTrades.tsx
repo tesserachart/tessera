@@ -1,10 +1,10 @@
 import type { ExportTradesInput, PullSummary } from '@tessera/protocol';
 import { Button, Segmented, SettingsRow, Switch, TextInput } from '@tessera/ui';
 import { useEffect, useState } from 'react';
-import { peekTool, refreshTools, runToolResult, useHasTool, useToolValue } from '../../../app/tools.ts';
-import { useRuntimeSetting, useSetSetting } from '../../../state/runtimeSettings.ts';
+import { attempt, peekTool, refreshTools, useHasTool, useToolValue } from '../../../app/tools.ts';
+import { useSetting, useSettingInfos, useSettingSave } from '../../../state/runtimeSettings.ts';
+import { defineSetting, onUnlessOff } from '../../../state/setting.ts';
 import { useArea } from '../../store.ts';
-import { useSettingInfos } from '../hooks.ts';
 import { NumberSetting } from '../NumberSetting.tsx';
 import { Fact, Row, Section } from '../parts.tsx';
 import {
@@ -32,47 +32,31 @@ import { act, EVERY_PULL, PULL_READS } from '../pullTools.ts';
 import { sizeWords } from '../words.ts';
 
 const KEEP_SETTING = 'market.savedTradeSessions';
-const RECORD_SETTING = 'market.recordWatchlists';
-const AUTO_SETTING = 'market.autoDownload';
+const RECORD_WATCHLISTS = defineSetting('market.recordWatchlists', onUnlessOff);
+const AUTO_DOWNLOAD = defineSetting('market.autoDownload', onUnlessOff);
 type Said = { said: string | null; failed: string | null };
 
 async function exportTo(input: ExportTradesInput): Promise<Said> {
-  try {
-    const r = await runToolResult('market.export_trades', input, { timeoutMs: 600_000 });
-    return r.ok && r.output
-      ? { said: exportWords(r.output), failed: null }
-      : { said: null, failed: r.error?.message ?? 'It did not go through.' };
-  } catch (e) {
-    return { said: null, failed: e instanceof Error ? e.message : String(e) };
-  }
+  const r = await attempt('market.export_trades', input, { timeoutMs: 600_000 });
+  return r.ok ? { said: exportWords(r.out), failed: null } : { said: null, failed: r.why };
 }
 
 function RecordWatchlists() {
-  const on = useRuntimeSetting(RECORD_SETTING) !== false;
-  const set = useSetSetting();
-  const [failed, setFailed] = useState<string | null>(null);
+  const on = useSetting(RECORD_WATCHLISTS);
+  const { save, error: failed } = useSettingSave(RECORD_WATCHLISTS);
   return (
     <Row id="data.savedRecord" error={failed}>
-      <Switch
-        label="Record your watchlists"
-        checked={on}
-        onCheckedChange={(next) => void set(RECORD_SETTING, next).then(setFailed)}
-      />
+      <Switch label="Record your watchlists" checked={on} onCheckedChange={(next) => void save(next)} />
     </Row>
   );
 }
 
 function AutoDownload() {
-  const on = useRuntimeSetting(AUTO_SETTING) !== false;
-  const set = useSetSetting();
-  const [failed, setFailed] = useState<string | null>(null);
+  const on = useSetting(AUTO_DOWNLOAD);
+  const { save, error: failed } = useSettingSave(AUTO_DOWNLOAD);
   return (
     <Row id="data.savedAuto" error={failed}>
-      <Switch
-        label="Download missing data automatically"
-        checked={on}
-        onCheckedChange={(next) => void set(AUTO_SETTING, next).then(setFailed)}
-      />
+      <Switch label="Download missing data automatically" checked={on} onCheckedChange={(next) => void save(next)} />
     </Row>
   );
 }

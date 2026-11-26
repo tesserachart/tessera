@@ -20,9 +20,9 @@ import {
   formatClock,
 } from '@tessera/ui';
 import { useState } from 'react';
+import { attempt } from '../../app/tools.ts';
 import {
   candidates,
-  copyCall,
   useCopySync,
   withAdded,
   withCopying,
@@ -102,7 +102,7 @@ export function GroupView({
     });
   };
   const remove = () => {
-    void copyCall('copy.delete', { groupId: group.id }).then((r) => {
+    void attempt('copy.delete', { groupId: group.id }).then((r) => {
       if (!r.ok) say(group.id, 'err', r.why);
       else if (r.out.said.length > 0)
         deskToasts.push({ tone: 'info', title: `Deleted ${r.out.name}`, detail: r.out.said.join(' ') });

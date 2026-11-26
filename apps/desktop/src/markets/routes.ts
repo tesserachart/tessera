@@ -1,5 +1,6 @@
 import type { ConnectionInfo, TradingAccount } from '@tessera/protocol';
 import type { ConnectionListing } from '../areas/markets/model.ts';
+import { defineSetting } from '../state/setting.ts';
 
 export const DATA_BY_EXCHANGE = 'market.dataByExchange';
 export const ACCOUNT_BY_EXCHANGE = 'trade.accountByExchange';
@@ -17,6 +18,10 @@ export function readRoutes(v: unknown): ExchangeRoutes {
   }
   return out;
 }
+
+export const DATA_ROUTES = defineSetting(DATA_BY_EXCHANGE, readRoutes);
+
+export const ACCOUNT_ROUTES = defineSetting(ACCOUNT_BY_EXCHANGE, readRoutes);
 
 export function withRoute(routes: ExchangeRoutes, exchange: string, id: string | null): Record<string, string> {
   const { [exchange]: _was, ...rest } = routes;

@@ -1,5 +1,6 @@
 import type { JsonValue } from '@tessera/protocol';
 import { SOUND_EVENTS, type SoundEvent } from './events.ts';
+import { defineSetting } from '../state/setting.ts';
 
 export const VOICE_OFF = 'off';
 
@@ -34,6 +35,8 @@ export function soundSettings(v: unknown): SoundSettings {
   const voice = typeof o.voice === 'string' && o.voice.length > 0 ? o.voice : null;
   return { muted: typeof o.muted === 'boolean' ? o.muted : DEFAULT_SOUNDS.muted, volume, voice, events };
 }
+
+export const SOUNDS = defineSetting('sounds', soundSettings);
 
 export function audible(s: SoundSettings, event: SoundEvent): number {
   return s.muted || !s.events[event] ? 0 : s.volume;

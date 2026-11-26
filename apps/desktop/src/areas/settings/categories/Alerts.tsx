@@ -3,19 +3,19 @@ import { Button, Stepper, Switch, TextInput } from '@tessera/ui';
 import { useEffect, useState } from 'react';
 import { useAlerts, alertsStore } from '../../../alerts/store.ts';
 import { SOUND_EVENTS, VOICE_ONLY_EVENTS, type SoundEvent } from '../../../sound/events.ts';
-import { VOICE_OFF, soundSettings, soundsValue, type SoundSettings } from '../../../sound/settings.ts';
+import { SOUNDS, VOICE_OFF, soundsValue, type SoundSettings } from '../../../sound/settings.ts';
 import { EVENT_SAMPLE } from '../../../sound/voice/lines.ts';
 import { creditsOf, packFor } from '../../../sound/voice/packs.ts';
 import { previewLine, voicePacks } from '../../../sound/voice/speaker.ts';
-import { useRuntimeSetting, useSetSetting } from '../../../state/runtimeSettings.ts';
+import { saveSetting, useSetting } from '../../../state/runtimeSettings.ts';
+import type { Setting } from '../../../state/setting.ts';
+import { DEFAULT_DELIVERY } from '../../../alerts/formStore.ts';
 import { rowWords } from '../model.ts';
 import { Row, Section, SettingSelect } from '../parts.tsx';
 import { asSentence } from '../sentence.ts';
 import { patch } from '../../../app/store.ts';
-import { type ToolInput, type ToolOutput, runToolResult } from '../../../app/tools.ts';
+import { useAttempt } from '../../../app/tools.ts';
 
-const DELIVERY_KEY = 'alerts.defaultDelivery';
-const DELIVERY_DEFAULT: AlertDelivery = { sound: true, desktop: true, discord: false };
 const DELIVERY_ROWS: readonly { key: keyof AlertDelivery; row: string }[] = [
   { key: 'sound', row: 'alerts.delivery.sound' },
   { key: 'desktop', row: 'alerts.delivery.desktop' },
@@ -26,21 +26,11 @@ const SAID_MS = 4000;
 
 const soundRow = (name: SoundEvent) => `alerts.sound.${name}`;
 
-function deliveryOf(v: unknown): AlertDelivery {
-  const o = typeof v === 'object' && v !== null ? (v as Partial<Record<keyof AlertDelivery, unknown>>) : {};
-  const pick = (k: keyof AlertDelivery) => {
-    const on = o[k];
-    return typeof on === 'boolean' ? on : DELIVERY_DEFAULT[k];
-  };
-  return { sound: pick('sound'), desktop: pick('desktop'), discord: pick('discord') };
-}
-
 function useRowSave() {
-  const set = useSetSetting();
   const [failed, setFailed] = useState<{ row: string; why: string } | null>(null);
-  const save = (row: string, key: string, value: JsonValue) => {
+  const save = (row: string, setting: Setting<unknown>, value: JsonValue) => {
     setFailed(null);
-    void set(key, value).then((why) => setFailed(why ? { row, why } : null));
+    void saveSetting(setting, value).then((why) => setFailed(why ? { row, why } : null));
   };
   const errorOf = (row: string) => (failed?.row === row ? failed.why : null);
   return { save, errorOf };
@@ -92,9 +82,9 @@ interface SoundsRowProps {
 }
 
 function Sounds() {
-  const s = soundSettings(useRuntimeSetting('sounds'));
+  const s = useSetting(SOUNDS);
   const { save, errorOf } = useRowSave();
-  const put = (row: string, next: SoundSettings) => save(row, 'sounds', soundsValue(next));
+  const put = (row: string, next: SoundSettings) => save(row, SOUNDS, soundsValue(next));
   const silent = s.muted || s.volume === 0;
   const pack = packFor(s.voice, voicePacks());
   const events = SOUND_EVENTS.filter((e) => pack !== null || !VOICE_ONLY_EVENTS.has(e));
@@ -146,7 +136,7 @@ function Sounds() {
 }
 
 function Delivery({ discordSet }: { discordSet: boolean }) {
-  const d = deliveryOf(useRuntimeSetting(DELIVERY_KEY));
+  const d = useSetting(DEFAULT_DELIVERY);
   const { save, errorOf } = useRowSave();
   return (
     <Section id="alerts.delivery">
@@ -160,7 +150,7 @@ function Delivery({ discordSet }: { discordSet: boolean }) {
           <Switch
             label={rowWords(row).title}
             checked={d[key]}
-            onCheckedChange={(on) => save(row, DELIVERY_KEY, { ...d, [key]: on })}
+            onCheckedChange={(on) => save(row, DEFAULT_DELIVERY, { ...d, [key]: on })}
           />
         </Row>
       ))}
@@ -168,30 +158,12 @@ function Delivery({ discordSet }: { discordSet: boolean }) {
   );
 }
 
-type DiscordTool = 'alerts.set_discord' | 'alerts.test_discord';
-
-function useDiscordCall() {
-  const [busy, setBusy] = useState<DiscordTool | null>(null);
-  const run = async <N extends DiscordTool>(
-    name: N,
-    input: ToolInput<N>,
-  ): Promise<{ ok: true; out: ToolOutput<N> } | { ok: false; why: string }> => {
-    setBusy(name);
-    try {
-      const r = await runToolResult(name, input, { timeoutMs: 20_000 });
-      if (r.ok && r.output) return { ok: true, out: r.output };
-      return { ok: false, why: asSentence(r.error?.message ?? 'It did not go through') };
-    } catch (e) {
-      return { ok: false, why: asSentence(e instanceof Error ? e.message : String(e)) };
-    } finally {
-      setBusy(null);
-    }
-  };
-  return { busy, run };
-}
+const DISCORD_CALL = { timeoutMs: 20_000 } as const;
 
 function Discord({ set }: { set: boolean }) {
-  const { busy, run } = useDiscordCall();
+  const setHook = useAttempt('alerts.set_discord', DISCORD_CALL);
+  const tester = useAttempt('alerts.test_discord', DISCORD_CALL);
+  const busy = setHook.busy || tester.busy;
   const [url, setUrl] = useState('');
   const [failed, setFailed] = useState<string | null>(null);
   const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null);
@@ -204,9 +176,10 @@ function Discord({ set }: { set: boolean }) {
     const u = url.trim();
     if (!u || busy) return;
     setFailed(null);
-    void run('alerts.set_discord', { url: u }).then((r) => {
+    void setHook.run({ url: u }).then((r) => {
+      if (!r) return;
       if (!r.ok) {
-        setFailed(r.why);
+        setFailed(asSentence(r.why));
         return;
       }
       setUrl('');
@@ -215,16 +188,17 @@ function Discord({ set }: { set: boolean }) {
   };
   const test = () => {
     setSaid(null);
-    void run('alerts.test_discord', {}).then((r) =>
-      setSaid(r.ok ? { ok: true, text: 'Sent' } : { ok: false, text: r.why }),
-    );
+    void tester.run({}).then((r) => {
+      if (r) setSaid(r.ok ? { ok: true, text: 'Sent' } : { ok: false, text: asSentence(r.why) });
+    });
   };
   const remove = () => {
     setSaid(null);
     setFailed(null);
-    void run('alerts.set_discord', {}).then((r) => {
+    void setHook.run({}).then((r) => {
+      if (!r) return;
       if (r.ok) patch(alertsStore, { discord: r.out.configured });
-      else setSaid({ ok: false, text: r.why });
+      else setSaid({ ok: false, text: asSentence(r.why) });
     });
   };
   if (!set)
@@ -244,7 +218,7 @@ function Discord({ set }: { set: boolean }) {
               autoComplete="off"
               spellCheck={false}
               value={url}
-              disabled={busy !== null}
+              disabled={busy}
               onChange={(e) => {
                 setUrl(e.target.value);
                 setFailed(null);
@@ -255,8 +229,8 @@ function Discord({ set }: { set: boolean }) {
                 save();
               }}
             />
-            <Button size="s" disabled={busy !== null || url.trim() === ''} onClick={save}>
-              {busy === 'alerts.set_discord' ? 'Saving…' : 'Save'}
+            <Button size="s" disabled={busy || url.trim() === ''} onClick={save}>
+              {setHook.busy ? 'Saving…' : 'Save'}
             </Button>
           </span>
         </Row>
@@ -270,10 +244,10 @@ function Discord({ set }: { set: boolean }) {
         error={said && !said.ok ? said.text : null}
       >
         {said?.ok ? <span className="st-health">{said.text}</span> : null}
-        <Button size="s" disabled={busy !== null} onClick={test}>
-          {busy === 'alerts.test_discord' ? 'Sending…' : 'Send test'}
+        <Button size="s" disabled={busy} onClick={test}>
+          {tester.busy ? 'Sending…' : 'Send test'}
         </Button>
-        <Button size="s" variant="quiet" disabled={busy !== null} onClick={remove}>
+        <Button size="s" variant="quiet" disabled={busy} onClick={remove}>
           Remove
         </Button>
       </Row>

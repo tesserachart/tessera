@@ -2,10 +2,9 @@ import { Button, Switch, TextInput } from '@tessera/ui';
 import { useState } from 'react';
 import { selectSession } from '../../../analyst/analystStore.ts';
 import {
-  SESSION_RUNNER_KEY,
+  SESSION_RUNNER,
   accountLabel,
   canStartNow,
-  readRunnerSetting,
   repoProblem,
   runnerValue,
   sessionRunning,
@@ -13,8 +12,8 @@ import {
 } from '../../../analyst/tradingSessions.ts';
 import { useAccountUpdates } from '../../../app/portfolio.ts';
 import { useNow } from '../../../app/runtimeContext.ts';
-import { failureText, refreshTools, runTool, useHasTool, useToolValue } from '../../../app/tools.ts';
-import { useRuntimeSetting, useSetSetting } from '../../../state/runtimeSettings.ts';
+import { attempt, refreshTools, useHasTool, useToolValue } from '../../../app/tools.ts';
+import { saveSetting, useSetting } from '../../../state/runtimeSettings.ts';
 import type { ProviderView } from '../../agents/models.ts';
 import { tradable } from '../../research/flow.ts';
 import { useShellKnown } from '../hooks.ts';
@@ -97,10 +96,10 @@ function StartNow({ ready, onError }: { ready: boolean; onError: (why: string | 
       onClick={() => {
         setBusy(true);
         onError(null);
-        void runTool('agent.start_trading_session', {}, { refresh: [STATUS] })
-          .then(() => onError(null))
-          .catch((e: unknown) => onError(failureText(e)))
-          .finally(() => setBusy(false));
+        void attempt('agent.start_trading_session', {}, { refresh: [STATUS] }).then((r) => {
+          onError(r.ok ? null : r.why);
+          setBusy(false);
+        });
       }}
     >
       {busy ? 'Starting…' : 'Start now'}
@@ -110,8 +109,7 @@ function StartNow({ ready, onError }: { ready: boolean; onError: (why: string | 
 
 export function TradingSessions({ views }: { views: readonly ProviderView[] }) {
   useShellKnown();
-  const set = useSetSetting();
-  const setting = readRunnerSetting(useRuntimeSetting(SESSION_RUNNER_KEY));
+  const setting = useSetting(SESSION_RUNNER);
   const can = useHasTool(STATUS);
   const status = useToolValue(STATUS, can ? {} : null, { refreshEvery: 15_000, keepFor: 60_000 });
   const accounts = useAccountUpdates() ?? [];
@@ -122,7 +120,7 @@ export function TradingSessions({ views }: { views: readonly ProviderView[] }) {
   const [err, setErr] = useState<string | null>(null);
   if (!can) return null;
   const save = (change: Parameters<typeof runnerValue>[1]) =>
-    set(SESSION_RUNNER_KEY, runnerValue(setting, change)).then((why) => {
+    saveSetting(SESSION_RUNNER, runnerValue(setting, change)).then((why) => {
       void refreshTools(STATUS);
       return why;
     });

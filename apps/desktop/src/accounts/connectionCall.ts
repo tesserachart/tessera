@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createOverlay } from '../app/overlay.ts';
 import { useClock } from '../app/clock.ts';
-import { failureText, refreshTools, runTool, type ToolInput, type ToolOutput } from '../app/tools.ts';
+import { attempt, refreshTools, type Attempt, type ToolInput, type ToolOutput } from '../app/tools.ts';
 import { screenWords } from '../shell/deskWords.ts';
 
 type LoginTool =
@@ -25,6 +25,7 @@ export function orThrow<R extends { ok: boolean }>(r: R): R {
 }
 
 const LOGIN_TIMEOUT_MS = 65_000;
+const CONNECTION_FAILED = 'That did not go through. Try again.';
 
 export const CONNECTION_READS = [
   'connections.list',
@@ -36,19 +37,12 @@ export const CONNECTION_READS = [
 export function useConnectionCall() {
   const clock = useClock();
   const [since, setSince] = useState<number | null>(null);
-  const run = async <N extends LoginTool>(
-    name: N,
-    input: ToolInput<N>,
-  ): Promise<{ ok: true; out: ToolOutput<N> } | { ok: false; why: string }> => {
+  const run = async <N extends LoginTool>(name: N, input: ToolInput<N>): Promise<Attempt<ToolOutput<N>>> => {
     setSince(clock.now());
-    try {
-      return { ok: true, out: await runTool(name, input, { timeoutMs: LOGIN_TIMEOUT_MS }) };
-    } catch (e) {
-      return { ok: false, why: screenWords(failureText(e), 'That did not go through. Try again.') };
-    } finally {
-      setSince(null);
-      void refreshTools(...CONNECTION_READS);
-    }
+    const r = await attempt(name, input, { timeoutMs: LOGIN_TIMEOUT_MS });
+    setSince(null);
+    void refreshTools(...CONNECTION_READS);
+    return r.ok ? r : { ...r, why: screenWords(r.why, CONNECTION_FAILED) };
   };
   return { since, run };
 }

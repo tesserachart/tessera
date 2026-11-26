@@ -1,7 +1,7 @@
 import type { ImportLevelHistoryOutput } from '@tessera/protocol';
 import { Button, Select, SettingsRow } from '@tessera/ui';
 import { useRef, useState } from 'react';
-import { refreshTools, useHasTool, useToolValue, runToolResult } from '../../../app/tools.ts';
+import { attempt, refreshTools, useAttempt, useHasTool, useToolValue } from '../../../app/tools.ts';
 import { askAnalyst } from '../../../shell/tradeActions.ts';
 import { dateValue } from '../../research/model.ts';
 import { adapterOptions, coverageGroups, importLine, importSummary } from '../levelHistory.ts';
@@ -20,7 +20,8 @@ export function LevelHistorySection({ providerVendors = [] }: { providerVendors?
   const [preview, setPreview] = useState<ImportLevelHistoryOutput | null>(null);
   const [said, setSaid] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const importer = useAttempt('intel.import_level_history', { timeoutMs: 600_000 });
+  const busy = importer.busy;
   if (!has) return null;
   const data = q;
   const groups = coverageGroups((data?.series ?? []).filter((s) => !providerVendors.includes(s.vendor)));
@@ -32,29 +33,20 @@ export function LevelHistorySection({ providerVendors = [] }: { providerVendors?
     .join(', ');
 
   const run = async (f: Picked, a: string, dryRun: boolean) => {
-    setBusy(true);
     setFailed(null);
     setSaid(null);
-    try {
-      const r = await runToolResult(
-        'intel.import_level_history',
-        { text: f.text, fileName: f.name, adapter: { kind: 'saved', vendor: a }, dryRun },
-        { timeoutMs: 600_000 },
-      );
-      if (!r.ok || !r.output) throw new Error(r.error?.message ?? 'It did not go through.');
-      if (dryRun) {
-        setPreview(r.output);
-      } else {
-        setPreview(null);
-        setFile(null);
-        setSaid(importSummary(r.output)[0] ?? null);
-        void refreshTools('intel.list_level_history');
-      }
-    } catch (e) {
+    const r = await importer.run({ text: f.text, fileName: f.name, adapter: { kind: 'saved', vendor: a }, dryRun });
+    if (!r) return;
+    if (!r.ok) {
       setPreview(null);
-      setFailed(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
+      setFailed(r.why);
+    } else if (dryRun) {
+      setPreview(r.out);
+    } else {
+      setPreview(null);
+      setFile(null);
+      setSaid(importSummary(r.out)[0] ?? null);
+      void refreshTools('intel.list_level_history');
     }
   };
   const take = async (files: FileList | null) => {
@@ -72,8 +64,8 @@ export function LevelHistorySection({ providerVendors = [] }: { providerVendors?
     void run(picked, adapter, true);
   };
   const undo = async (id: string) => {
-    const r = await runToolResult('intel.undo_level_import', { importId: id });
-    if (!r.ok) setFailed(r.error?.message ?? 'It did not go through.');
+    const r = await attempt('intel.undo_level_import', { importId: id });
+    if (!r.ok) setFailed(r.why);
     void refreshTools('intel.list_level_history');
   };
 

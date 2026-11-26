@@ -2,11 +2,13 @@ import type { TradingAccount } from '@tessera/protocol';
 import { SettingsRow, type SelectOption } from '@tessera/ui';
 import { useState } from 'react';
 import { useConnections } from '../../../accounts/useConnections.ts';
-import { dataConnections, shownDataSource, useDataFrom } from '../../../market/dataFrom.ts';
+import { DATA_SOURCE, dataConnections, shownDataSource, useDataFrom } from '../../../market/dataFrom.ts';
 import { useListing } from '../../../markets/listing.ts';
 import {
   ACCOUNT_BY_EXCHANGE,
+  ACCOUNT_ROUTES,
   DATA_BY_EXCHANGE,
+  DATA_ROUTES,
   accountsFor,
   exchangeRows,
   feederOf,
@@ -16,7 +18,7 @@ import {
 } from '../../../markets/routes.ts';
 import { followRoute, useExchangeRoutes } from '../../../markets/useRoutes.ts';
 import { useShellData } from '../../../shell/shellData.ts';
-import { useRuntimeSetting, useSetSetting } from '../../../state/runtimeSettings.ts';
+import { saveSetting, useSetting } from '../../../state/runtimeSettings.ts';
 import { ticketAccountId } from '../../../state/tickets.ts';
 import { useUi, setTradeAccount } from '../../../state/ui.ts';
 import { Section, SettingSelect } from '../parts.tsx';
@@ -31,9 +33,8 @@ export function ExchangesSections() {
   const routes = useExchangeRoutes();
   const { accounts } = useShellData();
   const tradeAccount = useUi((s) => s.tradeAccount);
-  const storedDefault = useRuntimeSetting('market.dataSource');
+  const storedDefault = useSetting(DATA_SOURCE);
   const dataFrom = useDataFrom();
-  const set = useSetSetting();
   const [failed, setFailed] = useState<{ key: RouteKey; why: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -43,7 +44,7 @@ export function ExchangesSections() {
     const c = id ? infos.find((i) => i.id === id) : undefined;
     return c ? c.displayName : (id ?? '');
   };
-  const shownDefault = shownDataSource(typeof storedDefault === 'string' ? storedDefault : null, infos, dataSource);
+  const shownDefault = shownDataSource(storedDefault, infos, dataSource);
   const defaultAccount = ticketAccountId(accounts, null, null, tradeAccount);
   const defaultAccountName = accounts.find((a) => a.id === defaultAccount)?.displayName ?? null;
   const accountOptions = (list: readonly TradingAccount[]): SelectOption[] =>
@@ -54,7 +55,7 @@ export function ExchangesSections() {
     const next = withRoute(now, exchange, v === DEFAULT ? null : v);
     setFailed(null);
     setBusy(`${key}:${exchange}`);
-    void set(key, next).then((why) => {
+    void saveSetting(key === DATA_BY_EXCHANGE ? DATA_ROUTES : ACCOUNT_ROUTES, next).then((why) => {
       setBusy(null);
       setFailed(why ? { key, why } : null);
       if (!why && key === ACCOUNT_BY_EXCHANGE) followRoute(exchange, next);

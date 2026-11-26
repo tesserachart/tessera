@@ -29,7 +29,6 @@ import { instrumentRoot } from '../../shell/oco.ts';
 import { mathOf, useOco } from '../../shell/tradeContext.ts';
 import { nextPanelStep, settlePanelRequest, usePanelRequest } from '../../state/panelRequests.ts';
 import { patchTicket } from '../../state/tickets.ts';
-import { useTradeSettingsSync } from '../../state/tradeSettings.ts';
 import { groupBrackets } from '../brackets.ts';
 import { BracketSection } from './BracketSection.tsx';
 import { ContractPicker } from './ContractPicker.tsx';
@@ -52,7 +51,6 @@ export type { TicketChart } from './useTicketModel.ts';
 const QTY_PRESETS = ['1', '2', '5', '10'] as const;
 
 export function Ticket({ chart }: { chart: TicketChart }) {
-  useTradeSettingsSync();
   const trade = useTicketTrade(chart.tileId);
   const { accounts } = useShellData();
   const accountUpdates = useAccountUpdates() ?? [];

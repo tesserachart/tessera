@@ -10,14 +10,13 @@ import { putDrawingTemplates } from '../chart/drawings/templateStore.ts';
 import { isDrawingKind, readLabel, readLevels } from '../chart/drawings/templates.ts';
 import { SCHEME_KEY } from '../theme/scheme.ts';
 import { SAVED_THEMES_KEY, THEME_KEY, setThemeSettings } from '../theme/store.ts';
-import { readLevelSettings } from '../chart/levelSettings.ts';
 import { putPresets } from '../chart/presets/store.ts';
 import { putTemplates } from '../chart/templates/store.ts';
 import { useTopicEffect } from '../app/useTopic.ts';
 import { stableStringify } from '../workspace/layouts.ts';
 import { CHART_TYPES, type ChartType } from './layouts.ts';
 import { putRuntimeSettings, receiveSettings, settingAgreed, writeSetting } from './runtimeSettings.ts';
-import { tradeSettingsStore } from './tradeSettings.ts';
+import { defineSetting } from './setting.ts';
 import { applyView, currentView, onViewChange } from './areaView.ts';
 import { type Density, type UiState, uiStore } from './ui.ts';
 import { putWatchlists, watchlistsStore } from '../markets/watchlists.ts';
@@ -109,6 +108,8 @@ export function readModelSetting(v: unknown): ModelPick | null {
   };
 }
 
+export const DEFAULT_MODEL = defineSetting('agent.defaultModel', readModelSetting);
+
 function localValue(key: string): unknown {
   const s = read(uiStore);
   if (key === 'appearance.upDownColors') return s.updown === 'jade-coral' ? 'jade_coral' : 'tessera';
@@ -131,7 +132,6 @@ export function applySetting(key: string, value: unknown): void {
     const d = (Object.keys(DENSITY_PX) as Density[]).find((k) => DENSITY_PX[k] === value);
     if (d) patch(uiStore, { density: d });
   } else if (key === 'ui.preferences') patch(uiStore, readPreferences(value));
-  else if (key === 'chart.levels') patch(tradeSettingsStore, { levels: readLevelSettings(value) });
   else if (key === 'chart.templates') putTemplates(value);
   else if (key === 'chart.drawingTemplates') putDrawingTemplates(value);
   else if (key === 'chart.indicatorPresets') putPresets(value);
@@ -259,7 +259,6 @@ const CHART_WINDOW_KEYS: ReadonlySet<string> = new Set([
   THEME_KEY,
   SAVED_THEMES_KEY,
   SCHEME_KEY,
-  'chart.levels',
   'chart.templates',
   'chart.drawingTemplates',
   'chart.indicatorPresets',

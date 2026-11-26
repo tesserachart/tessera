@@ -45,10 +45,10 @@ import { refusedLine } from '../../shell/noticeWords.ts';
 import { mathOf, ocoMarket, useOco } from '../../shell/tradeContext.ts';
 import { usePlacement, placementStore, endPlacement, startPlacement } from '../../state/placement.ts';
 import { clearRefusal, useRefusal } from '../../state/refusals.ts';
-import { useRuntimeSetting } from '../../state/runtimeSettings.ts';
+import { useSetting } from '../../state/runtimeSettings.ts';
 import { patchTicket, useTicketSetup } from '../../state/tickets.ts';
 import {
-  bracketModeOf,
+  POSITION_BRACKET,
   groupBrackets,
   mergeOffer,
   protectionPairs,
@@ -151,7 +151,7 @@ export function chartMathOf(m: ContractMath | null, dp: number): ChartMath {
 }
 
 export function useBracketMode(): BracketMode {
-  return bracketModeOf(useRuntimeSetting('trade.positionBracket'));
+  return useSetting(POSITION_BRACKET);
 }
 
 export function useTicketModel(chart: TicketChart, trade: TicketTrade, inst: TicketInstrument, disabled = false) {

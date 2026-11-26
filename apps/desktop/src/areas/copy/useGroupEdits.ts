@@ -1,6 +1,6 @@
 import type { CopyFollower, CopyGroup } from '@tessera/protocol';
 import { createOverlay, useOverlay } from '../../app/overlay.ts';
-import { copyCall } from '../../accounts/copy.ts';
+import { attempt, type Attempt, type ToolOutput } from '../../app/tools.ts';
 import { say, unsay } from './store.ts';
 
 const copyEdits = createOverlay();
@@ -26,7 +26,11 @@ export function useGroupEdits(group: CopyGroup): GroupEdits {
   const followers = shown('followers', group.followers);
   const enabled = shown('enabled', group.enabled);
   const name = shown('name', group.name);
-  const send = (part: string, value: unknown, call: () => ReturnType<typeof copyCall>): void => {
+  const send = (
+    part: string,
+    value: unknown,
+    call: () => Promise<Attempt<ToolOutput<'copy.update' | 'copy.enable' | 'copy.disable'>>>,
+  ): void => {
     copyEdits
       .write(k(part), value, async () => {
         const r = await call();
@@ -51,9 +55,9 @@ export function useGroupEdits(group: CopyGroup): GroupEdits {
         copyEdits.edit(k('name'), group.name);
         return;
       }
-      send('name', n, () => copyCall('copy.update', { groupId: group.id, name: n }));
+      send('name', n, () => attempt('copy.update', { groupId: group.id, name: n }));
     },
-    turn: (on) => send('enabled', on, () => copyCall(on ? 'copy.enable' : 'copy.disable', { groupId: group.id })),
-    update: (next) => send('followers', next, () => copyCall('copy.update', { groupId: group.id, followers: next })),
+    turn: (on) => send('enabled', on, () => attempt(on ? 'copy.enable' : 'copy.disable', { groupId: group.id })),
+    update: (next) => send('followers', next, () => attempt('copy.update', { groupId: group.id, followers: next })),
   };
 }

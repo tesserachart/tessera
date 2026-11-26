@@ -4,7 +4,8 @@ import { useState, type KeyboardEvent } from 'react';
 import { runTool } from '../../../app/tools.ts';
 import { displaySymbol, intervalText, tabRowChoices, withPresets } from '../../../market/instruments.ts';
 import { CHART_TYPES, type ChartType } from '../../../state/layouts.ts';
-import { useRuntimeSetting, useSetSetting } from '../../../state/runtimeSettings.ts';
+import { saveSetting, useSetting } from '../../../state/runtimeSettings.ts';
+import { DEFAULT_INSTRUMENT, DEFAULT_TIMEFRAME } from '../../../frame/workspaces.ts';
 import { setDefaultChartType, toggleFavouriteInterval, useUi } from '../../../state/ui.ts';
 import { Row, Section, SettingSelect } from '../parts.tsx';
 
@@ -72,10 +73,8 @@ function SymbolField({
 }
 
 export function NewChartsSection() {
-  const set = useSetSetting();
-  const tf = useRuntimeSetting('chart.defaultTimeframe');
-  const sym = useRuntimeSetting('market.defaultInstrument');
-  const value = typeof sym === 'string' ? sym : null;
+  const tf = useSetting(DEFAULT_TIMEFRAME);
+  const value = useSetting(DEFAULT_INSTRUMENT);
   const favourites = useUi((s) => s.favouriteIntervals);
   const type = useUi((s) => s.defaultChartType);
   const saveSymbol = async (typed: string): Promise<string | null> => {
@@ -85,20 +84,20 @@ export function NewChartsSection() {
       (r) => r.symbol.toUpperCase() === q || r.root?.toUpperCase() === q || displaySymbol(r.id).replace(' ', '') === q,
     );
     if (!hit) return `No symbol ${typed}`;
-    return set('market.defaultInstrument', hit.root?.toUpperCase() === q ? hit.root : hit.symbol);
+    return saveSetting(DEFAULT_INSTRUMENT, hit.root?.toUpperCase() === q ? hit.root : hit.symbol);
   };
   return (
     <Section id="chart.newCharts">
       <Row id="chart.instrument">
-        <SymbolField value={value} onSave={saveSymbol} onClear={() => set('market.defaultInstrument', null)} />
+        <SymbolField value={value} onSave={saveSymbol} onClear={() => saveSetting(DEFAULT_INSTRUMENT, null)} />
       </Row>
       <Row id="chart.timeframe">
-        {typeof tf === 'string' ? (
+        {tf !== null ? (
           <SettingSelect<Timeframe>
             label="Interval of new charts"
-            value={tf as Timeframe}
-            onValueChange={(v) => void set('chart.defaultTimeframe', v)}
-            options={withPresets([tf as Timeframe]).map((t) => ({ value: t, label: timeframeWords(t) }))}
+            value={tf}
+            onValueChange={(v) => void saveSetting(DEFAULT_TIMEFRAME, v)}
+            options={withPresets([tf]).map((t) => ({ value: t, label: timeframeWords(t) }))}
           />
         ) : null}
       </Row>

@@ -22,11 +22,11 @@ const runtimeSays = vi.hoisted(() => ({ said: [] as string[] }));
 
 vi.mock('../src/app/tools.ts', async (original) => ({
   ...(await original<typeof Tools>()),
-  runToolResult: (name: string, input: unknown, options: unknown) => {
-    calls.push({ name, input, options });
+  attempt: (name: string, input: unknown, options?: Tools.AttemptOptions) => {
+    const { unanswered: _, ...sent } = options ?? {};
+    calls.push({ name, input, options: options === undefined ? undefined : sent });
     const report = { groupId: 'cg1', groupName: 'Evals', leaderId: 'lead', results: [] };
-    const output = { report, group: { id: 'cg1' }, said: runtimeSays.said };
-    return Promise.resolve({ status: 'ok', ok: true, output, error: null });
+    return Promise.resolve({ ok: true, out: { report, group: { id: 'cg1' }, said: runtimeSays.said } });
   },
 }));
 

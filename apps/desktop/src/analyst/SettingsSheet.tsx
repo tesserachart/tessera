@@ -1,13 +1,14 @@
 import type { ProviderHealth, SessionMode } from '@tessera/protocol';
 import { Button, FormHint, FormRow, FormSection, Segmented, Sheet, SheetContent } from '@tessera/ui';
 import { useState } from 'react';
-import { useHasTool, useToolValue } from '../app/tools.ts';
+import { useHasTool } from '../app/tools.ts';
 import { ConnectAi } from '../areas/agents/ConnectAi.tsx';
 import { InstallButton } from '../areas/agents/InstallButton.tsx';
 import { SignInControls } from '../areas/agents/SignIn.tsx';
 import { useSignIn } from '../areas/agents/signInState.ts';
 import { installPage } from '../areas/agents/models.ts';
 import { NumberSetting } from '../areas/settings/NumberSetting.tsx';
+import { useSettingInfos } from '../state/runtimeSettings.ts';
 import { setSessionMode, startSession } from './actions.ts';
 import { useAnalyst, useCurrentSession, setSheet } from './analystStore.ts';
 import { useModeChange } from './modeChange.tsx';
@@ -19,7 +20,6 @@ const GUARDS: { key: string; label: string; unit?: string }[] = [
   { key: 'approvals.staleAfterSeconds', label: 'A draft goes stale after', unit: 's' },
   { key: 'approvals.staleAfterTicks', label: 'or after this many trades', unit: 'trades' },
 ];
-const GUARD_KEYS = GUARDS.map((g) => g.key);
 
 function modelHint(p: ProviderHealth, inUse: boolean, model: string | null): string | undefined {
   if (p.status === 'ok') return inUse ? (model ?? undefined) : (p.message ?? undefined);
@@ -128,7 +128,7 @@ function Permissions({ onError }: { onError: (text: string) => void }) {
 }
 
 function GuardRails() {
-  const guards = useToolValue('settings.get', useHasTool('settings.get') ? { keys: GUARD_KEYS } : null)?.settings;
+  const guards = useSettingInfos();
   if (!guards) return null;
   return (
     <FormSection title="Guard rails" description="Only you can change them.">

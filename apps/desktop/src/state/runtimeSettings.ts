@@ -1,7 +1,9 @@
 import type { JsonValue } from '@tessera/protocol';
 import { createEchoGuard } from '../app/echoGuard.ts';
-import { patch, read, makeStore, useStore } from '../app/store.ts';
-import { failureText, runTool } from '../app/tools.ts';
+import { useCallback, useState } from 'react';
+import { patch, read, makeStore, useStore, watch } from '../app/store.ts';
+import { DID_NOT_GO_THROUGH, failureText, runTool, useHasTool, useToolValue } from '../app/tools.ts';
+import type { Setting } from './setting.ts';
 
 interface RuntimeSettingsState {
   values: Readonly<Record<string, unknown>>;
@@ -79,28 +81,81 @@ export async function writeSetting(key: string, value: JsonValue, options: Write
   }
 }
 
-export function useRuntimeSetting(key: string): unknown {
-  return useStore(runtimeSettingsStore, (s) => s.values[key]);
+export function useSettingInfos() {
+  const has = useHasTool('settings.get');
+  return useToolValue('settings.get', has ? {} : null, { keepFor: Infinity })?.settings ?? null;
+}
+
+export function readSetting<T>(setting: Setting<T>): T {
+  return setting.read(read(runtimeSettingsStore).values[setting.key]);
+}
+
+export function useSetting<T>(setting: Setting<T>): T {
+  return useStore(runtimeSettingsStore, (s) => setting.read(s.values[setting.key]));
+}
+
+export function watchSetting<T>(setting: Setting<T>, listener: (value: T) => void): () => void {
+  let last = readSetting(setting);
+  return runtimeSettingsStore.subscribe((s) => {
+    const value = setting.read(s.values[setting.key]);
+    if (Object.is(value, last)) return;
+    last = value;
+    listener(value);
+  });
 }
 
 export function useRuntimeSettingsLoaded(): boolean {
   return useStore(runtimeSettingsStore, (s) => s.loaded);
 }
 
-export async function setRuntimeSetting(key: string, value: JsonValue, shown?: JsonValue): Promise<string | null> {
+export function onceSettingsLoaded(then: () => void): () => void {
+  if (read(runtimeSettingsStore).loaded) {
+    then();
+    return () => undefined;
+  }
+  const off = watch(runtimeSettingsStore, (s) => {
+    if (!s.loaded) return;
+    off();
+    then();
+  });
+  return off;
+}
+
+export async function saveSetting(
+  setting: Setting<unknown>,
+  value: JsonValue,
+  shown?: JsonValue,
+): Promise<string | null> {
   try {
-    await writeSetting(key, value, { refresh: ['settings.get'], ...(shown === undefined ? {} : { shown }) });
+    await writeSetting(setting.key, value, { refresh: ['settings.get'], ...(shown === undefined ? {} : { shown }) });
     return null;
   } catch (e) {
-    return refusal(key, failureText(e));
+    return refusal(setting.key, failureText(e));
   }
 }
 
-function refusal(key: string, message: string | undefined): string {
-  const m = (message ?? 'It did not go through.').replace(new RegExp(`^${key.replace(/\./g, '\\.')}: `), '');
+function refusal(key: string, message: string): string {
+  const m = (message || DID_NOT_GO_THROUGH).replace(new RegExp(`^${key.replace(/\./g, '\\.')}: `), '');
   return m.charAt(0).toUpperCase() + m.slice(1);
 }
 
-export function useSetSetting(): (key: string, value: JsonValue) => Promise<string | null> {
-  return setRuntimeSetting;
+export interface SettingSave {
+  readonly save: (value: JsonValue, shown?: JsonValue) => Promise<string | null>;
+  readonly error: string | null;
+  readonly clear: () => void;
+}
+
+export function useSettingSave(setting: Setting<unknown>): SettingSave {
+  const [error, setError] = useState<string | null>(null);
+  const save = useCallback(
+    async (value: JsonValue, shown?: JsonValue) => {
+      setError(null);
+      const why = await saveSetting(setting, value, shown);
+      setError(why);
+      return why;
+    },
+    [setting],
+  );
+  const clear = useCallback(() => setError(null), []);
+  return { save, error, clear };
 }

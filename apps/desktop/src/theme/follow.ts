@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { read, watch } from '../app/store.ts';
-import { runtimeSettingsStore } from '../state/runtimeSettings.ts';
+import { onceSettingsLoaded } from '../state/runtimeSettings.ts';
 import { writeFlip } from './actions.ts';
 import { flipTo, type Flip } from './scheme.ts';
 import { themeStore, type ThemeState } from './store.ts';
@@ -45,15 +45,7 @@ export function useFollowScheme(): void {
     const begin = () => {
       if (!stopped) off = followScheme(writeFlip);
     };
-    const offLoaded = watch(runtimeSettingsStore, (s) => {
-      if (!s.loaded) return;
-      offLoaded();
-      queueMicrotask(begin);
-    });
-    if (read(runtimeSettingsStore).loaded) {
-      offLoaded();
-      queueMicrotask(begin);
-    }
+    const offLoaded = onceSettingsLoaded(() => queueMicrotask(begin));
     return () => {
       stopped = true;
       offLoaded();

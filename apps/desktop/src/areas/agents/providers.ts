@@ -3,24 +3,24 @@ import { useLoadPending } from '@tessera/ui';
 import { useEffect, useMemo, useRef } from 'react';
 import { useAnalyst } from '../../analyst/analystStore.ts';
 import { openExternal } from '../../app/host.ts';
-import { failureText, refreshTools, runTool, useHasTool, useToolValue } from '../../app/tools.ts';
-import { runtimeSettingsStore, setRuntimeSetting, useRuntimeSetting } from '../../state/runtimeSettings.ts';
-import { read, useStore } from '../../app/store.ts';
+import { attempt, refreshTools, runTool, useHasTool, useToolValue } from '../../app/tools.ts';
+import { readSetting, saveSetting, useRuntimeSettingsLoaded, useSetting } from '../../state/runtimeSettings.ts';
+import { defineSetting, stored } from '../../state/setting.ts';
 import { sayFailed } from '../../workspace/dock/deskToasts.ts';
 import { enabledIds, providerChange, withProviderChange } from './connect.ts';
 import { providerViews, type ProviderView } from './models.ts';
 
-export const PROVIDERS_KEY = 'agent.providers';
+export const PROVIDERS = defineSetting('agent.providers', stored);
 
 export function useProviders(): { list: readonly AgentProviderInfo[] | undefined; views: ProviderView[] } {
   const health = useAnalyst((s) => s.providers);
   const healthKnown = useAnalyst((s) => s.healthKnown);
-  const settingsKnown = useStore(runtimeSettingsStore, (s) => s.loaded);
+  const settingsKnown = useRuntimeSettingsLoaded();
   useLoadPending(!healthKnown);
   useLoadPending(!settingsKnown);
   const canList = useHasTool('agent.list_providers');
   const read = useToolValue('agent.list_providers', canList ? {} : null, { keepFor: 60_000 });
-  const setting = useRuntimeSetting(PROVIDERS_KEY);
+  const setting = useSetting(PROVIDERS);
   const on = useMemo(() => (setting === undefined ? undefined : enabledIds(setting)), [setting]);
   const changes = [
     ...health.filter((h) => h.kind === 'agent').map((h) => `${h.providerId}:${h.status}`),
@@ -40,8 +40,7 @@ export function useProviders(): { list: readonly AgentProviderInfo[] | undefined
 }
 
 function changeProvider(patch: ReturnType<typeof providerChange>): Promise<string | null> {
-  const stored = read(runtimeSettingsStore).values[PROVIDERS_KEY];
-  return setRuntimeSetting(PROVIDERS_KEY, patch, withProviderChange(stored, patch));
+  return saveSetting(PROVIDERS, patch, withProviderChange(readSetting(PROVIDERS), patch));
 }
 
 export function setProviderEnabled(id: string, enabled: boolean): Promise<string | null> {
@@ -63,12 +62,12 @@ export function recheckProviders(): Promise<void> {
 }
 
 export async function installProvider(id: string): Promise<string | null> {
-  try {
-    await runTool('agent.install', { provider: id }, { refresh: ['agent.list_providers'], timeoutMs: 11 * 60_000 });
-    return null;
-  } catch (err) {
-    return failureText(err);
-  }
+  const r = await attempt(
+    'agent.install',
+    { provider: id },
+    { refresh: ['agent.list_providers'], timeoutMs: 11 * 60_000 },
+  );
+  return r.ok ? null : r.why;
 }
 
 export async function startSignIn(id: string): Promise<AgentSignInPage | null> {

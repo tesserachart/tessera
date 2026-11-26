@@ -2,6 +2,7 @@ import type { AccountUpdate, LimitsSetting, LimitsStatus, RiskLimits, Timestamp 
 import { normalizeEpochMs } from '@tessera/protocol';
 import { formatMoney } from '@tessera/ui';
 import { displayZone } from '../state/timeZone.ts';
+import { defineSetting } from '../state/setting.ts';
 
 export const LIMIT_KEYS = [
   'dailyLossLimit',
@@ -45,6 +46,8 @@ export function readLimits(v: unknown): LimitsSetting {
     allowEarlyUnlock: o.allowEarlyUnlock === true,
   };
 }
+
+export const RISK_LIMITS = defineSetting('risk.limits', readLimits);
 
 export function limitsValue(s: LimitsSetting): Record<string, unknown> {
   const out: Record<string, unknown> = { every: readSet(s.every) };

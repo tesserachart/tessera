@@ -1,4 +1,4 @@
-import { ToolFailed, type Layout, type LayoutSummary, type Timeframe } from '@tessera/protocol';
+import { ToolFailed, type Layout, type LayoutSummary } from '@tessera/protocol';
 import {
   Button,
   Dialog,
@@ -21,7 +21,7 @@ import { useState, type SyntheticEvent } from 'react';
 import { refreshTools, useHasTool, useToolValue, runTool } from '../app/tools.ts';
 import { FEEDBACK_KEY } from '../feedback/model.ts';
 import { openFeedback } from '../feedback/store.ts';
-import { writeSetting } from '../state/runtimeSettings.ts';
+import { readSetting, writeSetting } from '../state/runtimeSettings.ts';
 import { useServer } from '../app/runtimeContext.ts';
 import { useClock } from '../app/clock.ts';
 import { appHost } from '../app/services.ts';
@@ -40,6 +40,9 @@ import { appMenuStore } from './appMenuStore.ts';
 import { ArrangeSub } from './ArrangeSub.tsx';
 import { PanelsSub } from './PanelsSub.tsx';
 import {
+  ACTIVE_LAYOUT,
+  DEFAULT_INSTRUMENT,
+  DEFAULT_TIMEFRAME,
   chartsBrief,
   copyName,
   newWorkspaceId,
@@ -173,26 +176,21 @@ export function AppMenu() {
 
   const create = () =>
     run(async () => {
-      const settings = await runTool('settings.get', {
-        keys: ['market.defaultInstrument', 'chart.defaultTimeframe'],
-      }).catch(() => null);
-      const chosen = settings?.settings['market.defaultInstrument']?.value;
-      const timeframe = settings?.settings['chart.defaultTimeframe']?.value;
+      const chosen = readSetting(DEFAULT_INSTRUMENT);
+      const timeframe = readSetting(DEFAULT_TIMEFRAME);
       const id = newWorkspaceId(clock.now());
       const tpl = read(templatesStore);
       const fresh = newWorkspaceLayout(id, clock.now() * 1e6, {
         name: nextWorkspaceName(names),
         instrument: preferredInstrument({ chosen, active: activeChartTarget() }),
-        timeframe: typeof timeframe === 'string' ? (timeframe as Timeframe) : undefined,
+        timeframe: timeframe ?? undefined,
         setup: newChartSetup(tpl, tpl.loaded),
       });
       await openNew(fresh);
     });
   const fromStory = (story: StoryPreset) =>
     run(async () => {
-      const settings = await runTool('settings.get', { keys: ['market.defaultInstrument'] }).catch(() => null);
-      const chosen = settings?.settings['market.defaultInstrument']?.value;
-      const instrument = preferredInstrument({ chosen, active: activeChartTarget() });
+      const instrument = preferredInstrument({ chosen: readSetting(DEFAULT_INSTRUMENT), active: activeChartTarget() });
       const id = newWorkspaceId(clock.now());
       const tpl = read(templatesStore);
       const fresh = storyLayout(story, {
@@ -229,7 +227,7 @@ export function AppMenu() {
     });
   const makeDefault = (w: LayoutSummary) =>
     run(async () => {
-      await writeSetting('workspace.activeLayoutId', w.id);
+      await writeSetting(ACTIVE_LAYOUT.key, w.id);
     });
   const remove = (w: LayoutSummary) =>
     run(async () => {

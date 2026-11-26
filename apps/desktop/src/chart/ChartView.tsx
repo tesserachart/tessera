@@ -27,7 +27,7 @@ import { MOTION } from '@tessera/ui';
 import { useEffect, useEffectEvent, useRef } from 'react';
 import { useClock } from '../app/clock.ts';
 import { useInSight } from '../app/inSight.ts';
-import { useTradeSettings, tradeSettingsStore } from '../state/tradeSettings.ts';
+import { readSetting, useSetting } from '../state/runtimeSettings.ts';
 import { updateChart } from '../workspace/controller.ts';
 import { ChartFeed, type FeedMeta } from './feed.ts';
 import { withPaneHeights } from './indicators.ts';
@@ -37,7 +37,7 @@ import { gapTipWords } from './gapTip.ts';
 import { LayerReconciler, type LevelsSink } from './layers/index.ts';
 import { legendItems, type LegendSource } from './legend.ts';
 import { useChartTheme, chartThemeStore } from './chartTheme.ts';
-import { applyLevelSettings, type Palette } from './levelSettings.ts';
+import { LEVELS, applyLevelSettings, type Palette } from './levelSettings.ts';
 import { useLevelSources } from './useLevelSources.ts';
 import { onMarkTime } from '../market/flow/events.ts';
 import {
@@ -104,7 +104,7 @@ export function ChartView(props: ChartViewProps) {
   const sinkRef = useRef<LevelsSink | null>(null);
   const annotationsRef = useRef<AnnotationLayer | null>(null);
   const ordersRef = useRef<BracketsLayer | null>(null);
-  const levelSettings = useTradeSettings((s) => s.levels);
+  const levelSettings = useSetting(LEVELS);
   const levelDefs = useLevelSources().defs;
   const levelDefsRef = useRef(levelDefs);
   const republishRef = useRef<(() => void) | null>(null);
@@ -210,7 +210,7 @@ export function ChartView(props: ChartViewProps) {
     const publish = () => {
       const seen = new Set<string>();
       const all: LevelSpec[] = [];
-      const settings = read(tradeSettingsStore).levels;
+      const settings = readSetting(LEVELS);
       const { swatches } = read(chartThemeStore);
       const palette = swatches as unknown as Palette;
       for (const specs of byLayer.values()) {

@@ -7,8 +7,7 @@ import type {
 } from '@tessera/protocol';
 import { normalizeEpochMs } from '@tessera/protocol';
 import { zonedFormat } from '../state/timeZone.ts';
-
-export const SESSION_RUNNER_KEY = 'agent.sessionRunner';
+import { defineSetting } from '../state/setting.ts';
 
 export function readRunnerSetting(v: unknown): SessionRunnerSetting {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return { enabled: false };
@@ -28,6 +27,8 @@ export function readRunnerSetting(v: unknown): SessionRunnerSetting {
     studyId: text('studyId'),
   };
 }
+
+export const SESSION_RUNNER = defineSetting('agent.sessionRunner', readRunnerSetting);
 
 export function runnerValue(s: SessionRunnerSetting, change: Partial<SessionRunnerSetting>): JsonValue {
   const next: Record<string, JsonValue> = {};

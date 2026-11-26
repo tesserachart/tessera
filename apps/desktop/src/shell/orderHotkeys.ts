@@ -6,6 +6,7 @@ import {
   type ParsedShortcut,
   type Platform,
 } from '@tessera/ui';
+import { defineSetting } from '../state/setting.ts';
 
 export type OrderKeyAction = 'buyMarket' | 'buyBid' | 'sellMarket' | 'sellAsk' | 'reverse' | 'flatten' | 'cancelAll';
 
@@ -31,8 +32,6 @@ export const ORDER_KEYS: readonly OrderKeyDef[] = [
   },
 ];
 
-export const ORDER_HOTKEYS_KEY = 'trade.orderHotkeys';
-
 export interface OrderHotkeys {
   enabled: boolean;
   keys: Readonly<Record<OrderKeyAction, string>>;
@@ -52,6 +51,8 @@ export function orderHotkeysOf(v: unknown): OrderHotkeys {
   }
   return { enabled: o.enabled === true, keys };
 }
+
+export const ORDER_HOTKEYS = defineSetting('trade.orderHotkeys', orderHotkeysOf);
 
 export function orderHotkeysValue(h: OrderHotkeys): { enabled: boolean; keys: Record<OrderKeyAction, string | null> } {
   const keys = {} as Record<OrderKeyAction, string | null>;

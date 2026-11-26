@@ -1,24 +1,16 @@
 import { useMemo } from 'react';
 import { layoutsStore } from '../state/layouts.ts';
 import { BASE_TICKET, patchTicket, ticketOf, ticketsStore } from '../state/tickets.ts';
-import { useRuntimeSetting, runtimeSettingsStore } from '../state/runtimeSettings.ts';
+import { readSetting, useSetting } from '../state/runtimeSettings.ts';
 import { workspaceContext } from '../workspace/controller.ts';
 import { useListing } from './listing.ts';
-import {
-  ACCOUNT_BY_EXCHANGE,
-  DATA_BY_EXCHANGE,
-  exchangeOf,
-  exchangeOfId,
-  readRoutes,
-  routedAccount,
-  type ExchangeRoutes,
-} from './routes.ts';
+import { ACCOUNT_ROUTES, DATA_ROUTES, exchangeOf, exchangeOfId, routedAccount, type ExchangeRoutes } from './routes.ts';
 import { read } from '../app/store.ts';
 
 export function useExchangeRoutes(): { data: ExchangeRoutes; accounts: ExchangeRoutes } {
-  const data = useRuntimeSetting(DATA_BY_EXCHANGE);
-  const accounts = useRuntimeSetting(ACCOUNT_BY_EXCHANGE);
-  return useMemo(() => ({ data: readRoutes(data), accounts: readRoutes(accounts) }), [data, accounts]);
+  const data = useSetting(DATA_ROUTES);
+  const accounts = useSetting(ACCOUNT_ROUTES);
+  return useMemo(() => ({ data, accounts }), [data, accounts]);
 }
 
 export function useRoutedAccount(instrument: string | null): string | null {
@@ -31,7 +23,7 @@ export function useRoutedAccount(instrument: string | null): string | null {
 
 export function routedAccountNow(instrument: string | null): string | null {
   if (!instrument) return null;
-  return routedAccount(readRoutes(read(runtimeSettingsStore).values[ACCOUNT_BY_EXCHANGE]), exchangeOfId(instrument));
+  return routedAccount(readSetting(ACCOUNT_ROUTES), exchangeOfId(instrument));
 }
 
 export function chartInstrumentNow(tileId: string): string | null {

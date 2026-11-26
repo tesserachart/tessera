@@ -22,8 +22,10 @@ import {
   type ToolName,
 } from '@tessera/protocol';
 import { useLoadPending } from '@tessera/ui';
+import { useCallback } from 'react';
 import { stableStringify } from '../workspace/layouts.ts';
 import { everConnectedStore } from './connection.ts';
+import { useLatestWrite } from './mutations.ts';
 import { queryClient, TOOL_LIST, TOOL_READS, TOOL_WRITES } from './queries.ts';
 import { appClient } from './services.ts';
 import { useStore } from './store.ts';
@@ -171,6 +173,47 @@ export async function runToolResult<N extends ToolName>(
   const result = await Runtime.invokeResult(appClient(), name, input, invokeOptions);
   if (refresh?.length) void refreshTools(...refresh);
   return result;
+}
+
+export const DID_NOT_GO_THROUGH = 'It did not go through.';
+
+export type Attempt<O> =
+  { readonly ok: true; readonly out: O } | { readonly ok: false; readonly drafted: boolean; readonly why: string };
+
+export interface AttemptOptions extends RunToolOptions {
+  readonly unanswered?: ((error: unknown) => string) | undefined;
+}
+
+export async function attempt<N extends ToolName>(
+  name: N,
+  input: ToolInput<N>,
+  options: AttemptOptions = {},
+): Promise<Attempt<ToolOutput<N>>> {
+  const { unanswered = failureText, ...run } = options;
+  try {
+    const r = await runToolResult(name, input, run);
+    if (r.ok) return { ok: true, out: r.output! };
+    return { ok: false, drafted: r.status === 'pending_approval', why: r.error?.message ?? DID_NOT_GO_THROUGH };
+  } catch (e) {
+    return { ok: false, drafted: false, why: unanswered(e) };
+  }
+}
+
+export interface UseAttempt<N extends ToolName> {
+  readonly run: (input: ToolInput<N>) => Promise<Attempt<ToolOutput<N>> | null>;
+  readonly busy: boolean;
+}
+
+export function useAttempt<N extends ToolName>(name: N, options: AttemptOptions = {}): UseAttempt<N> {
+  const { write, pending } = useLatestWrite((input: ToolInput<N>) => attempt(name, input, options));
+  const run = useCallback(
+    async (input: ToolInput<N>) => {
+      const reply = await write.send(input);
+      return reply.kind === 'done' ? reply.value : null;
+    },
+    [write],
+  );
+  return { run, busy: pending };
 }
 
 export function approve(params: ApprovalsResolveParams, options: CallOptions = {}): Promise<ApprovalsResolveResult> {

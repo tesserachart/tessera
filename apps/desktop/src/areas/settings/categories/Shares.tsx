@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAccount } from '../../../account/account.ts';
 import { openExternal } from '../../../app/host.ts';
 import { useNow } from '../../../app/runtimeContext.ts';
-import { failureText, runTool, useToolValue } from '../../../app/tools.ts';
+import { attempt, useToolValue } from '../../../app/tools.ts';
 import { screenWords } from '../../../shell/deskWords.ts';
 import { canShare, sharedOnWords } from '../../../share/model.ts';
 import { SHARE_LIST } from '../../../share/store.ts';
@@ -19,9 +19,9 @@ function ShareRow({ share, zone, now }: { share: ShareLink; zone: string; now: n
   const [copied, setCopied] = useState(false);
   const remove = () => {
     setWhy(null);
-    runTool('share.delete', { id: share.id }, { refresh: [SHARE_LIST] }).catch((e: unknown) =>
-      setWhy(screenWords(failureText(e), DELETE_FAILED)),
-    );
+    void attempt('share.delete', { id: share.id }, { refresh: [SHARE_LIST] }).then((r) => {
+      if (!r.ok) setWhy(screenWords(r.why, DELETE_FAILED));
+    });
   };
   return (
     <SettingsRow

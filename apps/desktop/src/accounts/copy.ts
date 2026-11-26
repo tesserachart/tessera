@@ -1,7 +1,7 @@
 import type { ConnectionInfo, CopyFollower, CopyGroup, CopySyncUpdate, TradingAccount } from '@tessera/protocol';
 import { makeStore, useStore } from '../app/store.ts';
 import { orderEntryOf } from '../shell/orderEntry.ts';
-import { runToolResult, type ToolInput, type ToolOutput } from '../app/tools.ts';
+import { attempt } from '../app/tools.ts';
 
 export interface CopyState {
   groups: CopyGroup[] | null;
@@ -182,22 +182,7 @@ export function without(followers: readonly CopyFollower[], account: string): Co
   return followers.filter((f) => f.accountId !== account);
 }
 
-type CopyTool = 'copy.create' | 'copy.update' | 'copy.enable' | 'copy.disable' | 'copy.delete';
-
-export async function copyCall<N extends CopyTool>(
-  name: N,
-  input: ToolInput<N>,
-): Promise<{ ok: true; out: ToolOutput<N> } | { ok: false; why: string }> {
-  try {
-    const r = await runToolResult(name, input);
-    if (r.ok && r.output) return { ok: true, out: r.output };
-    return { ok: false, why: r.error?.message ?? 'It did not go through.' };
-  } catch (e) {
-    return { ok: false, why: e instanceof Error ? e.message : String(e) };
-  }
-}
-
 export async function stopAllCopying(groups: readonly CopyGroup[] | null): Promise<void> {
   const on = (groups ?? []).filter((g) => g.enabled);
-  await Promise.all(on.map((g) => copyCall('copy.disable', { groupId: g.id })));
+  await Promise.all(on.map((g) => attempt('copy.disable', { groupId: g.id })));
 }

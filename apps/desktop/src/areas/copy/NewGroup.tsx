@@ -1,14 +1,8 @@
 import type { ConnectionInfo, CopyGroup } from '@tessera/protocol';
 import { Button, Check, Select, TextInput } from '@tessera/ui';
 import { useState } from 'react';
-import {
-  candidates,
-  copyCall,
-  defaultGroupName,
-  leaderCandidates,
-  withAdded,
-  type CopyAccount,
-} from '../../accounts/copy.ts';
+import { attempt } from '../../app/tools.ts';
+import { candidates, defaultGroupName, leaderCandidates, withAdded, type CopyAccount } from '../../accounts/copy.ts';
 import { Refused } from '../../workspace/tiles/parts.tsx';
 import { selectCopyGroup, setCreating } from './store.ts';
 
@@ -36,7 +30,7 @@ export function NewGroup({
     if (!leader) return;
     setBusy(true);
     setFailed(null);
-    void copyCall('copy.create', {
+    void attempt('copy.create', {
       name: shownName.trim(),
       leaderId: leader,
       followers: withAdded([], followers),

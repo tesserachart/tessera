@@ -1,10 +1,10 @@
 import type { Study } from '@tessera/protocol';
 import { Button, useLoadPending } from '@tessera/ui';
 import { useState } from 'react';
-import { SESSION_RUNNER_KEY, readRunnerSetting } from '../../analyst/tradingSessions.ts';
+import { SESSION_RUNNER } from '../../analyst/tradingSessions.ts';
 import { useNow } from '../../app/runtimeContext.ts';
 import { useHasTool, useToolValue } from '../../app/tools.ts';
-import { useRuntimeSetting, useRuntimeSettingsLoaded } from '../../state/runtimeSettings.ts';
+import { useRuntimeSettingsLoaded, useSetting } from '../../state/runtimeSettings.ts';
 import { openSettings } from '../settings/store.ts';
 import {
   openSetupTrades,
@@ -17,7 +17,7 @@ import {
 
 export function StudyInTrade({ study }: { study: Study }) {
   useLoadPending(!useRuntimeSettingsLoaded());
-  const setting = readRunnerSetting(useRuntimeSetting(SESSION_RUNNER_KEY));
+  const setting = useSetting(SESSION_RUNNER);
   const sessions = useHasTool('agent.trading_session');
   const catalog = useToolValue('journal.get_catalog', {});
   const setup = setupOfStudy(catalog?.setups ?? [], study);

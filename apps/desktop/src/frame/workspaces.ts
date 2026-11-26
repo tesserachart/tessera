@@ -4,6 +4,7 @@ import { displaySymbol } from '../market/instruments.ts';
 import { layoutsStore } from '../state/layouts.ts';
 import { uiStore } from '../state/ui.ts';
 import { workspaceStore } from '../state/workspace.ts';
+import { defineSetting, textOrNull } from '../state/setting.ts';
 
 export function chartsBrief(charts: readonly { instrument: string; timeframe: Timeframe }[]): string {
   return charts.map((c) => `${displaySymbol(c.instrument)} ${c.timeframe}`).join(' · ');
@@ -21,6 +22,12 @@ export function retargetDock(dock: JsonValue, from: string, to: string): JsonVal
   }
   return { ...(dock as Record<string, JsonValue>), panels: next };
 }
+
+export const DEFAULT_INSTRUMENT = defineSetting('market.defaultInstrument', textOrNull);
+
+export const DEFAULT_TIMEFRAME = defineSetting('chart.defaultTimeframe', (v) => textOrNull(v) as Timeframe | null);
+
+export const ACTIVE_LAYOUT = defineSetting('workspace.activeLayoutId', textOrNull);
 
 export function preferredInstrument(
   opts: {

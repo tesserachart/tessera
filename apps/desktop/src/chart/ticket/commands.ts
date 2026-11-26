@@ -4,17 +4,15 @@ import { commands, type Command, type CommandRegistry } from '../../commands/reg
 import { focusedTileKeys } from '../../orderflow/tileKeys.ts';
 import { BREAKEVEN_KEY } from '../../shell/keys.ts';
 import {
-  ORDER_HOTKEYS_KEY,
+  ORDER_HOTKEYS,
   ORDER_KEYS,
   keyConflicts,
-  orderHotkeysOf,
   type OrderHotkeys,
   type OrderKeyAction,
   type TakenKey,
 } from '../../shell/orderHotkeys.ts';
-import { runtimeSettingsStore } from '../../state/runtimeSettings.ts';
+import { readSetting, useSetting, watchSetting } from '../../state/runtimeSettings.ts';
 import { activeChartTarget } from '../../workspace/controller.ts';
-import { read, watch, useStore } from '../../app/store.ts';
 
 export interface TicketKeys {
   breakeven(): void;
@@ -139,7 +137,7 @@ export function orderKeyCommands(
 }
 
 function orderHotkeysNow(): OrderHotkeys {
-  return orderHotkeysOf(read(runtimeSettingsStore).values[ORDER_HOTKEYS_KEY]);
+  return readSetting(ORDER_HOTKEYS);
 }
 
 export function registerOrderKeys(registry: CommandRegistry): () => void {
@@ -154,7 +152,7 @@ export function registerOrderKeys(registry: CommandRegistry): () => void {
     off = registry.registerAll(orderKeyCommands(h, takenKeys(registry.all())));
   };
   apply();
-  const unsubscribe = watch(runtimeSettingsStore, apply);
+  const unsubscribe = watchSetting(ORDER_HOTKEYS, apply);
   return () => {
     unsubscribe();
     off();
@@ -162,8 +160,7 @@ export function registerOrderKeys(registry: CommandRegistry): () => void {
 }
 
 export function useOrderHotkeys(): OrderHotkeys {
-  const v = useStore(runtimeSettingsStore, (s) => s.values[ORDER_HOTKEYS_KEY]);
-  return useMemo(() => orderHotkeysOf(v), [v]);
+  return useSetting(ORDER_HOTKEYS);
 }
 
 export function useOrderKeys(): Partial<Record<OrderKeyAction, string>> {

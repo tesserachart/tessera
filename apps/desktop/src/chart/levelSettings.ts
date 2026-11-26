@@ -1,5 +1,6 @@
 import type { LevelSourceInfo, StyleHint } from '@tessera/protocol';
 import type { LevelSpec } from '@tessera/chart';
+import { defineSetting } from '../state/setting.ts';
 
 export type LevelColor = 'mist' | 't2' | 'up' | 'down' | 'brass' | 'teal';
 export const LEVEL_COLORS: readonly LevelColor[] = ['mist', 't2', 'up', 'down', 'brass', 'teal'];
@@ -274,3 +275,5 @@ export function readLevelSettings(v: unknown): LevelSettings {
   }
   return { sources, levels };
 }
+
+export const LEVELS = defineSetting('chart.levels', readLevelSettings);

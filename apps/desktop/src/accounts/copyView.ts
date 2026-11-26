@@ -11,7 +11,7 @@ import type {
   InvokeSurface,
 } from '@tessera/protocol';
 import type { DotState } from '@tessera/ui';
-import { runToolResult, type ToolInput } from '../app/tools.ts';
+import { attempt, type ToolInput } from '../app/tools.ts';
 import { displaySymbol } from '../market/instruments.ts';
 import { positionWord, sendSurface } from '../shell/ticket.ts';
 import { EXIT_SURFACE, sendFailure } from '../shell/tradeActions.ts';
@@ -161,14 +161,9 @@ export type CopyActResult =
 type CopyAct = 'copy.resync' | 'copy.flatten';
 
 async function act<N extends CopyAct>(name: N, input: ToolInput<N>, surface: InvokeSurface): Promise<CopyActResult> {
-  try {
-    const r = await runToolResult(name, input, { surface, queue: false });
-    if (r.status === 'pending_approval') return { kind: 'drafted' };
-    if (r.ok && r.output) return { kind: 'done', report: r.output.report };
-    return { kind: 'failed', why: r.error?.message ?? 'It did not go through.' };
-  } catch (e) {
-    return { kind: 'failed', why: sendFailure(e).text };
-  }
+  const r = await attempt(name, input, { surface, queue: false, unanswered: (e) => sendFailure(e).text });
+  if (r.ok) return { kind: 'done', report: r.out.report };
+  return r.drafted ? { kind: 'drafted' } : { kind: 'failed', why: r.why };
 }
 
 export function resync(input: ToolInput<'copy.resync'>, environments: readonly Environment[]): Promise<CopyActResult> {

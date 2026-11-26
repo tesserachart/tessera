@@ -4,6 +4,7 @@ import { formatMoney, formatPrice } from '@tessera/ui';
 import { orderPreviewOf, type AccountRef } from '../app/orders.ts';
 import { draftLeg } from '../shell/oco.ts';
 import { withAlpha } from './levelSettings.ts';
+import { defineSetting } from '../state/setting.ts';
 
 export type LegRole = 'stop' | 'target';
 
@@ -200,6 +201,8 @@ export type BracketMode = 'grow' | 'per_entry';
 export function bracketModeOf(v: unknown): BracketMode {
   return v === 'grow' ? 'grow' : 'per_entry';
 }
+
+export const POSITION_BRACKET = defineSetting('trade.positionBracket', bracketModeOf);
 
 export function protectionPairs(b: Bracket): string[] {
   const pairs = new Set<string>();

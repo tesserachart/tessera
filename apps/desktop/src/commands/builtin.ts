@@ -24,8 +24,8 @@ import { drawingCommands } from '../chart/drawings/commands.ts';
 import { orderFlowCommands } from '../chart/orderflowCommands.ts';
 import { domCommands } from '../orderflow/dom/commands.ts';
 import { registerOrderKeys, ticketCommands } from '../chart/ticket/commands.ts';
-import { ORDER_HOTKEYS_KEY, orderHotkeysOf } from '../shell/orderHotkeys.ts';
-import { setRuntimeSetting, runtimeSettingsStore } from '../state/runtimeSettings.ts';
+import { ORDER_HOTKEYS } from '../shell/orderHotkeys.ts';
+import { readSetting, saveSetting } from '../state/runtimeSettings.ts';
 import { tapeCommands } from '../orderflow/tape/commands.ts';
 import { ADD_INDICATOR_KEY, openAdd } from '../chart/settings/store.ts';
 import {
@@ -277,9 +277,9 @@ export function registerBuiltinCommands(registry: CommandRegistry, deps: Builtin
       title: 'Turn order hotkeys off',
       group: 'Trade',
       keywords: ['hotkeys', 'keyboard', 'disable', 'stop'],
-      when: () => !!deps.runtime && orderHotkeysOf(read(runtimeSettingsStore).values[ORDER_HOTKEYS_KEY]).enabled,
+      when: () => !!deps.runtime && readSetting(ORDER_HOTKEYS).enabled,
       run: async () => {
-        if (deps.runtime) await setRuntimeSetting(ORDER_HOTKEYS_KEY, { enabled: false });
+        if (deps.runtime) await saveSetting(ORDER_HOTKEYS, { enabled: false });
       },
     },
     ...tapeCommands(),

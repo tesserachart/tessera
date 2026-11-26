@@ -1,7 +1,8 @@
 import type { JsonValue } from '@tessera/protocol';
 import { newChartSetup } from '../chart/templates/model.ts';
 import { templatesStore } from '../chart/templates/store.ts';
-import { newWorkspaceId, preferredInstrument } from '../frame/workspaces.ts';
+import { DEFAULT_INSTRUMENT, newWorkspaceId, preferredInstrument } from '../frame/workspaces.ts';
+import { readSetting } from '../state/runtimeSettings.ts';
 import { LAYOUT_PRESETS, STORY_IDS, type LayoutPreset, type StoryId } from '../state/layouts.ts';
 import { setWorkspace } from '../state/ui.ts';
 import { showArea } from '../areas/store.ts';
@@ -159,9 +160,7 @@ function panelFor(target: TileTarget): string | null {
 
 async function workspaceFromStory(now: () => number, id: StoryId): Promise<string> {
   const story = storyPreset(id);
-  const settings = await runTool('settings.get', { keys: ['market.defaultInstrument'] }).catch(() => null);
-  const chosen = settings?.settings['market.defaultInstrument']?.value;
-  const instrument = preferredInstrument({ chosen, active: activeChartTarget() });
+  const instrument = preferredInstrument({ chosen: readSetting(DEFAULT_INSTRUMENT), active: activeChartTarget() });
   const names = (await runTool('layout.list', {}).catch(() => null))?.layouts.map((l) => l.name) ?? [];
   const layoutId = newWorkspaceId(now());
   const tpl = read(templatesStore);

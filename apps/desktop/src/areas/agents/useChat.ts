@@ -16,7 +16,7 @@ import {
   setSessionModel,
   stopAnalyst,
 } from '../../analyst/actions.ts';
-import { FOLLOW_UP_SETTING, dispatchMode, followUpOf } from '../../analyst/dispatch.ts';
+import { FOLLOW_UP, dispatchMode } from '../../analyst/dispatch.ts';
 import { beginEdit, endWithoutSave, stillQueued } from '../../analyst/queueEdit.ts';
 import {
   useAnalyst,
@@ -26,10 +26,10 @@ import {
   usePending,
   newConversation,
 } from '../../analyst/analystStore.ts';
-import { isMode } from '../../analyst/modes.ts';
+import { DEFAULT_MODE } from '../../analyst/modes.ts';
 import { NO_PROVIDER, pickApproval } from '../../shell/analyst.ts';
 import { focusComposer } from '../../shell/composer.ts';
-import { useRuntimeSetting } from '../../state/runtimeSettings.ts';
+import { useSetting } from '../../state/runtimeSettings.ts';
 import { uiStore, setComposerDraft } from '../../state/ui.ts';
 import type { LogNotice } from '../../shell/AgentTranscript.tsx';
 import { resolvePick, type ModelPick, type ProviderView } from './models.ts';
@@ -113,10 +113,10 @@ export function useChat(): Chat {
   useLoadPending(!settled);
   useLoadPending(replaying);
   useEffect(() => setNotices([]), [sessionId]);
-  const defaultMode = useRuntimeSetting('agent.defaultMode');
+  const defaultMode = useSetting(DEFAULT_MODE);
   const nextMode = useAgentsUi((s) => s.nextMode);
   const canSetMode = useHasTool('agent.set_mode');
-  const mode: SessionMode = session?.mode ?? nextMode ?? (isMode(defaultMode) ? defaultMode : 'auto_modify');
+  const mode: SessionMode = session?.mode ?? nextMode ?? defaultMode;
 
   const note = useCallback(
     (text: string) => {
@@ -127,7 +127,7 @@ export function useChat(): Chat {
   );
 
   const reader = readerOf(providers, session?.provider ?? pick?.provider ?? null);
-  const followUpMode = followUpOf(useRuntimeSetting(FOLLOW_UP_SETTING));
+  const followUpMode = useSetting(FOLLOW_UP);
   const items = session?.queue ?? NO_QUEUE;
   const held = session?.queueHeld ?? false;
   const edit = useAgentsUi((s) => s.editing);

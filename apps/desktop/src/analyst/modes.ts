@@ -1,5 +1,6 @@
 import type { SessionMode } from '@tessera/protocol';
 import type { IconName } from '@tessera/ui';
+import { defineSetting } from '../state/setting.ts';
 
 export interface ModeInfo {
   value: SessionMode;
@@ -36,6 +37,8 @@ export const MODES: readonly ModeInfo[] = [
 ];
 
 export const isMode = (v: unknown): v is SessionMode => MODES.some((m) => m.value === v);
+
+export const DEFAULT_MODE = defineSetting('agent.defaultMode', (v): SessionMode => (isMode(v) ? v : 'auto_modify'));
 
 export function modeInfo(mode: SessionMode): ModeInfo {
   return MODES.find((m) => m.value === mode) ?? MODES.find((m) => m.value === 'supervised')!;

@@ -2,7 +2,7 @@ import type { BackfillLevelHistoryOutput, LevelSourceInfo } from '@tessera/proto
 import { Button, Select, SettingsRow } from '@tessera/ui';
 import { useState } from 'react';
 import { useClock } from '../app/clock.ts';
-import { refreshTools, runToolResult, useHasTool, useToolValue } from '../app/tools.ts';
+import { attempt, refreshTools, useHasTool, useToolValue } from '../app/tools.ts';
 import { openSettings } from '../areas/settings/store.ts';
 import { endSentence } from '../areas/settings/sentence.ts';
 import { openConnectionDialog } from './accountsUi.ts';
@@ -52,21 +52,19 @@ function HistoryRows({ info }: { info: LevelSourceInfo }) {
     const { from, to } = backfillRange(nyDate(clock.now()), Number(span));
     setBusy(clock.now());
     setFailed(null);
-    try {
-      const r = await runToolResult(
-        'intel.backfill_level_history',
-        { provider: info.providerId, ticker, from, to, dryRun },
-        { timeoutMs: 600_000 },
-      );
-      if (!r.ok || !r.output) throw new Error(r.error?.message ?? 'It did not go through.');
-      setOut(r.output);
-      if (!dryRun) void refreshTools('intel.list_level_history');
-    } catch (e) {
+    const r = await attempt(
+      'intel.backfill_level_history',
+      { provider: info.providerId, ticker, from, to, dryRun },
+      { timeoutMs: 600_000 },
+    );
+    setBusy(null);
+    if (!r.ok) {
       setOut(null);
-      setFailed(endSentence(e instanceof Error ? e.message : String(e)));
-    } finally {
-      setBusy(null);
+      setFailed(endSentence(r.why));
+      return;
     }
+    setOut(r.out);
+    if (!dryRun) void refreshTools('intel.list_level_history');
   };
   const toAsk = out?.files.filter((f) => f.status === 'would_ask' || f.status === 'later').length ?? 0;
   return (
