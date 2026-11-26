@@ -1,3 +1,4 @@
+use std::num::NonZeroU32;
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::time::Duration;
 
@@ -21,6 +22,7 @@ use tessera_rithmic::{OpenError, RithmicLogin, RithmicOptions};
 use tessera_runtime::connectors::{ConnectError, Connector, RithmicFactory};
 
 use crate::firm::{FirmBroker, FirmLogin, Link};
+use crate::line::Line;
 
 pub const SYSTEM: &str = "Tessera Test";
 pub const GOOD_PASSWORD: &str = "demo";
@@ -100,6 +102,7 @@ pub struct Serves {
     pub replay_pause: Duration,
     pub replays: ReplayLog,
     pub refuses_replays: bool,
+    pub prints_per_second: Option<NonZeroU32>,
 }
 
 impl Default for Serves {
@@ -110,6 +113,7 @@ impl Default for Serves {
             replay_pause: REPLAY_PAUSE,
             replays: ReplayLog::default(),
             refuses_replays: false,
+            prints_per_second: None,
         }
     }
 }
@@ -184,6 +188,7 @@ impl FakeRithmic {
                     clock: Arc::clone(&self.clock),
                     mock: mock.clone(),
                     replay_pause: serves.replay_pause,
+                    line: serves.prints_per_second.map(Line::new),
                     replays: serves.replays.clone(),
                     used: Mutex::default(),
                 })
@@ -397,6 +402,7 @@ struct ServesMock {
     clock: SharedClock,
     mock: MockMarket,
     replay_pause: Duration,
+    line: Option<Line>,
     replays: ReplayLog,
     used: Mutex<HistoryUse>,
 }
@@ -550,6 +556,9 @@ impl MarketDataProvider for ServesMock {
         self.sent();
         tokio::time::sleep(self.replay_pause).await;
         let trades = self.mock.replay_trades(req).await?;
+        if let Some(line) = &self.line {
+            line.send(trades.len()).await;
+        }
         self.answered(trades.len(), TICK_ROW_BYTES);
         Ok(trades)
     }

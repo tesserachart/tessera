@@ -1,6 +1,7 @@
 pub mod crash;
 pub mod firm;
 pub mod levels;
+pub mod line;
 pub mod rithmic;
 
 use std::sync::Arc;

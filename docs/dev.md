@@ -45,6 +45,7 @@ hot-reloaded: press `r` + Enter in the Vite terminal to restart it.
 | `bun run test:ts`, `test:rust`, `test:shell`       | vitest; `cargo nextest run --workspace`; `cargo test` of the Tauri shell (`apps/desktop/src-tauri`).                   |
 | `bun run test:perf`, `test:perf:report`            | The timing tests (`*.perf.ts`), one file at a time, against loose or strict limits.                                    |
 | `bun run bench:chart`                              | The chart frame bench (§8).                                                                                            |
+| `bun run bench:load`                               | The chart load bench (§8): seconds from opening the app to each order-flow study drawn.                                |
 | `bun run lint`, `lint:rust`, `typecheck`           | ESLint with zero warnings; `cargo fmt --check` and clippy for both cargo workspaces; `tsc --noEmit` everywhere.        |
 | `bun run knip`                                     | Unused files, exports, types and dependencies (§8).                                                                    |
 | `bun run format`, `format:check`                   | Prettier.                                                                                                              |
@@ -184,6 +185,15 @@ typecheck, eslint, knip, vitest, perf, cargo-test, shell and smoke. `e2e-agent` 
 - **The chart frame bench** (`apps/desktop/scripts/bench-chart.ts`) times the desktop chart in Chromium:
   `--setup standard` or `--setup orderflow`, `--layers` for each layer. A pull request that claims a frame time cites
   it.
+- **The chart load bench** (`apps/desktop/scripts/bench-load.ts`) times the production build on the release sim
+  runtime, served by the fake Rithmic login at the pace of one live connection (`TESSERA_TEST_PRINTS_PER_SECOND`, §9):
+  NQ with the `Order flow` template on the default desk, a history fill of the 8 trade dates before it running. For
+  bars, footprint, VP, CVD and big trades it prints when each is first drawn and when it settled (its last refine, no
+  longer loading), cold (an empty data directory) and warm (the same directory, the runtime started again), and the
+  change against `apps/desktop/bench/load-baseline.json`. The chart engine reports each layer's painted frames to
+  `globalThis.__TESSERA_PAINT_HOOK__` when a page sets it (`packages/chart/src/paintProbe.ts`), so a study counts as
+  drawn when it paints, partial or not, and each later picture that new data changes is a refine. `--save` writes the
+  baseline; a pull request that claims a loading time cites the bench before and after.
 - **One target directory per checkout.** Checkouts that share a `CARGO_TARGET_DIR` get each other's builds. The
   launchers claim the directory for their checkout and check `build-info`; a runtime built from another checkout
   exits with status 4 (`TESSERA_EXPECT_CHECKOUT`).
@@ -263,6 +273,7 @@ The sim's knobs:
 | `TESSERA_TEST_MARKET=rithmic`                     | No connection at start; the fake Rithmic login (`Tessera Test`, password `demo`) serves it. |
 | `TESSERA_TEST_RITHMIC=dropped`                    | The fake Rithmic login logs in, then reads as dropped and reconnecting on its 2nd try.      |
 | `TESSERA_TEST_HISTORY_MS=<ms>`                    | With `MARKET=rithmic`, each bar or tick replay of the fake login takes that long.           |
+| `TESSERA_TEST_PRINTS_PER_SECOND=<n>`              | With `MARKET=rithmic`, tick replays then send `n` prints a second, shared by all at once.   |
 | `TESSERA_TEST_TRADES=replay`                      | No trade history; prints replay on request, as on Rithmic.                                  |
 | `TESSERA_TEST_NOW=<RFC 3339>`                     | Freeze the clock at that instant.                                                           |
 | `TESSERA_TEST_STORED=<start>/<end>,…`             | Store the mock's prints of these spans before serving.                                      |

@@ -1,0 +1,72 @@
+{
+  "commit": "860fe5d",
+  "date": "2026-11-26",
+  "setup": {
+    "instrument": "NQ",
+    "tf": "1m",
+    "template": "Order flow",
+    "feed": {
+      "requestMs": 1200,
+      "printsPerSecond": 9000
+    },
+    "fillDays": 8,
+    "runs": 3,
+    "timeoutS": 300
+  },
+  "sheet": {
+    "cold": {
+      "bars": {
+        "drawn": 3296,
+        "settled": 172693,
+        "refines": 3
+      },
+      "footprint": {
+        "drawn": 3296,
+        "settled": 30539,
+        "refines": 5
+      },
+      "vp": {
+        "drawn": 181285,
+        "settled": 182332,
+        "refines": 1
+      },
+      "cvd": {
+        "drawn": 3296,
+        "settled": null,
+        "refines": 2
+      },
+      "bigTrades": {
+        "drawn": null,
+        "settled": null,
+        "refines": 0
+      }
+    },
+    "warm": {
+      "bars": {
+        "drawn": 2056,
+        "settled": 2349,
+        "refines": 1
+      },
+      "footprint": {
+        "drawn": 2056,
+        "settled": 2188,
+        "refines": 1
+      },
+      "vp": {
+        "drawn": 2056,
+        "settled": 2129,
+        "refines": 1
+      },
+      "cvd": {
+        "drawn": 2056,
+        "settled": 2467,
+        "refines": 1
+      },
+      "bigTrades": {
+        "drawn": 2418,
+        "settled": 2418,
+        "refines": 0
+      }
+    }
+  }
+}

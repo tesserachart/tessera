@@ -76,6 +76,14 @@ fn millis(var: &str) -> Option<std::time::Duration> {
         .map(std::time::Duration::from_millis)
 }
 
+fn prints_per_second() -> Option<std::num::NonZeroU32> {
+    let var = "TESSERA_TEST_PRINTS_PER_SECOND";
+    std::env::var(var).ok().map(|v| {
+        v.parse()
+            .unwrap_or_else(|e| panic!("{var}: {v:?} is not a positive whole number: {e}"))
+    })
+}
+
 fn paper_accounts() -> Vec<AccountSeed> {
     let mut seeds = default_seeds();
     seeds.extend(
@@ -141,6 +149,7 @@ fn main() -> ExitCode {
                     replay_pause: millis("TESSERA_TEST_HISTORY_MS")
                         .unwrap_or(rithmic::REPLAY_PAUSE),
                     refuses_replays: replays_refused(),
+                    prints_per_second: prints_per_second(),
                     ..rithmic::Serves::default()
                 }),
                 rithmic_after_login(),

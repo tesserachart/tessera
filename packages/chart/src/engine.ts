@@ -22,6 +22,7 @@ import type {
 } from './layers/types.ts';
 import { VolumeLayer } from './layers/volume.ts';
 import { formatVolumeShort } from './format.ts';
+import { PaintCensus } from './paintProbe.ts';
 import { PixelColumns } from './render/columns.ts';
 import { deOverlap, drawAxisTag, font, isLight, TextMeasurer, crisp } from './render/draw.ts';
 import { PriceScale } from './scale/price.ts';
@@ -214,6 +215,7 @@ export class ChartEngine {
   private suspended = false;
   private settleOwed = false;
   private readonly listeners = new Map<ChartEventName, Set<Listener<ChartEventName>>>();
+  private readonly census = PaintCensus.installed();
 
   constructor(host: SurfaceHost, options: EngineOptions) {
     this.host = host;
@@ -276,6 +278,7 @@ export class ChartEngine {
   private hostFor(layer: Layer) {
     return {
       invalidate: (kind?: 'data') => {
+        if (kind === 'data') this.census?.dataChanged(layer);
         for (const s of this.surfacesOf(layer)) {
           if (kind === 'data') this.invalidateData(s);
           else this.invalidate(s);
@@ -424,7 +427,10 @@ export class ChartEngine {
 
   private applyChange(change: DataChange): void {
     this.session.apply(this.store, change);
-    for (const layer of this.registry.all()) layer.onData?.(change, this.store, this.session);
+    for (const layer of this.registry.all()) {
+      this.census?.dataChanged(layer);
+      layer.onData?.(change, this.store, this.session);
+    }
   }
 
   addLayer(layer: Layer): LayerInfo {
@@ -1124,7 +1130,7 @@ export class ChartEngine {
       ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       ctx.clearRect(0, 0, this.width, this.height);
       const tags: AxisTag[] = [];
-      const base = this.frameBase(ctx, frame, now, interacting, tags);
+      const base = this.frameBase(this.census?.wrap(ctx) ?? ctx, frame, now, interacting, tags);
       const rcOf = (layer: Layer) => this.contextFor(layer, base, frame);
       const claimers = SURFACES.flatMap((k) =>
         k === 'gpu' ? [] : k === surface ? drawList : this.registry.drawList(k),
@@ -1144,11 +1150,13 @@ export class ChartEngine {
         const rc = rcOf(layer);
         if (!rc) continue;
         ctx.save();
+        this.census?.begin(layer);
         try {
           layer.draw(rc);
         } catch (err) {
           console.error(`[chart] layer ${layer.id} failed to draw`, err);
         }
+        this.census?.end();
         ctx.restore();
       }
       if (surface === 'underlay') {
@@ -1173,6 +1181,7 @@ export class ChartEngine {
       else this.clearSurfaces.delete(surface);
       timings[surface] = performanceNow() - ts;
     }
+    this.census?.flush(performanceNow(), this.store);
     this.emit('frame', { durationMs: performanceNow() - t0, surfaces, timings });
     if (bandsMoved || underlayTagsMoved) {
       this.dirty.add('main');

@@ -21,6 +21,7 @@ export {
   type SurfaceHost,
 } from './engine.ts';
 export * from './types.ts';
+export type { PaintFrame, PaintHook } from './paintProbe.ts';
 export {
   TESSERA_THEME,
   TESSERA_FLOW,

@@ -21,6 +21,9 @@
   "apps/desktop/scripts/bench-chart.ts": [
     "Chromium rasters a canvas's recorded draws at the next commit; reading a pixel rasters them now."
   ],
+  "apps/desktop/scripts/bench-load.ts": [
+    "One live Rithmic connection (Apex, NQ, 26 Nov 2026, #606) answers a tick replay after about 1.2 s, then sends about 9,000 prints a second, shared by every replay running at once."
+  ],
   "apps/desktop/scripts/dmg-background.ts": [
     "Finder draws a .dmg background at 2x on a Retina screen only from a TIFF that holds both sizes, 1x at 72 dpi then 2x at 144 dpi, the file `tiffutil -cathidpicheck` writes."
   ],

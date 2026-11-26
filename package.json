@@ -25,6 +25,7 @@
     "test:perf": "vitest run --config vitest.perf.config.ts",
     "test:perf:report": "TESSERA_PERF_REPORT=1 vitest run --config vitest.perf.config.ts --silent=false",
     "bench:chart": "node apps/desktop/scripts/bench-chart.ts",
+    "bench:load": "bun run build && node apps/desktop/scripts/bench-load.ts",
     "lint": "eslint . --max-warnings=0 --concurrency=auto",
     "knip": "knip --treat-config-hints-as-errors",
     "lint:rust": "cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml --check && cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml --all-targets -- -D warnings",
