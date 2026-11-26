@@ -172,7 +172,9 @@ describe('a Research run reads at a glance', () => {
       ]);
     }
     expect(screen.getByRole('img', { name: /^Equity curve/ })).toBeTruthy();
-    expect(screen.getByRole('img', { name: /^Drawdown, deepest −\$/ })).toBeTruthy();
+    const deepest = Math.min(base.development.metrics.maxDrawdown, base.later.metrics.maxDrawdown);
+    expect(screen.getByRole('img', { name: `Drawdown, deepest ${formatMoney(deepest)}` })).toBeTruthy();
+    expect(screen.getByText(`${formatMoney(deepest)} deepest drawdown`)).toBeTruthy();
   });
 
   it('keeps the quant statistics and the months in the overview', async () => {

@@ -97,6 +97,49 @@ describe('the equity graph', () => {
     expect(Number(shades[0]!.getAttribute('x'))).toBeCloseTo(PLOT_W / 2, 0);
   });
 
+  it('spaces trades by their number and drops a split tag that has no room', () => {
+    const stepped: EquitySample[] = [
+      ...trades.slice(0, 3),
+      { x: 2, equity: 40, peak: 40, drawdown: 0 },
+      ...trades.slice(3),
+    ];
+    const { container, rerender } = render(
+      <EquityGraph
+        samples={stepped}
+        axis={{ kind: 'trades', label: (i) => `T${String(i)}` }}
+        shade={{ from: 2, before: 'Development', after: 'Later' }}
+        label="Equity curve"
+        empty="Nothing"
+        tip={() => null}
+      />,
+    );
+    expect(Number(container.querySelector('.gr-shade')!.getAttribute('x'))).toBeCloseTo(PLOT_W / 2, 0);
+    const words = () => [...container.querySelectorAll('.gr-tag')].map((t) => t.textContent);
+    expect(words()).toEqual(['Development', 'Later']);
+    rerender(
+      <EquityGraph
+        samples={stepped}
+        axis={{ kind: 'trades', label: (i) => `T${String(i)}` }}
+        shade={{ from: 4, before: 'Development', after: 'Later' }}
+        label="Equity curve"
+        empty="Nothing"
+        tip={() => null}
+      />,
+    );
+    expect(words()).toEqual(['Development']);
+    rerender(
+      <EquityGraph
+        samples={stepped}
+        axis={{ kind: 'trades', label: (i) => `T${String(i)}` }}
+        shade={{ from: 0, before: 'Development', after: 'Later' }}
+        label="Equity curve"
+        empty="Nothing"
+        tip={() => null}
+      />,
+    );
+    expect(words()).toEqual(['Later']);
+  });
+
   it('says why it draws nothing with fewer than two points', () => {
     render(
       <EquityGraph

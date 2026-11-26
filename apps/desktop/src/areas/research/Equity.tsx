@@ -1,61 +1,64 @@
-import type { BacktestEquityPoint } from '@tessera/protocol';
+import type { BacktestTrade, CaseResult } from '@tessera/protocol';
 import { PRICE_TEXT, cx, formatMoney } from '@tessera/ui';
 import { useMemo } from 'react';
-import { EquityGraph } from '../../graphs/index.ts';
+import { EquityGraph, wallDates } from '../../graphs/index.ts';
 import { useDisplayZone } from '../../state/timeZone.ts';
 import { dateValue } from './model.ts';
-import { SPLIT_WORD, curveFrame, nsToMs, tradeTime, type CurvePoint } from './tester.ts';
+import { SPLIT_WORD, nsToMs, tradeCurve, tradeTime, type TradePoint } from './tester.ts';
 
-const CURVE_POINTS = 1000;
+const NO_TRADES = 'No closed trades in this run.';
 
-function CurveTip({ p }: { p: CurvePoint }) {
+function CurveTip({ p, t, zone }: { p: TradePoint; t: BacktestTrade; zone: string }) {
   return (
     <>
-      <b>{tradeTime(p.time)}</b>
+      <b>Trade {p.n}</b>
+      <span className="text-t3">{tradeTime(t.exitTime, zone)}</span>
       <span>
-        Net <span className={p.pnl >= 0 ? 'up' : 'down'}>{formatMoney(p.pnl, { signed: true })}</span>
+        Trade <span className={t.pnl >= 0 ? 'up' : 'down'}>{formatMoney(t.pnl, { signed: true })}</span>
       </span>
+      <span>Net {formatMoney(p.pnl, { signed: true })}</span>
       {p.drawdown < 0 ? <span className="text-t3">{formatMoney(p.drawdown)} from the high</span> : null}
     </>
   );
 }
 
-export function Equity({ points, laterFrom }: { points: readonly BacktestEquityPoint[]; laterFrom: number | null }) {
+export function Equity({ run }: { run: CaseResult }) {
   const zone = useDisplayZone();
-  const frame = useMemo(() => curveFrame(points, CURVE_POINTS), [points]);
-  if (!frame) return <p className="rs-wait">Too few bars to draw.</p>;
-  const end = frame.points[frame.points.length - 1]!;
+  const curve = useMemo(() => tradeCurve(run), [run]);
+  if (!curve) return <p className="rs-wait">{NO_TRADES}</p>;
+  const { points } = curve;
+  const first = run.trades[0]!;
+  const last = run.trades[run.trades.length - 1]!;
+  const date = wallDates(nsToMs(first.exitTime), nsToMs(last.exitTime), zone);
+  const tipOf = (i: number) => (points[i]?.kind === 'later' ? points[i - 1] : points[i]);
   return (
     <figure className="rs-equity">
       <EquityGraph
-        samples={frame.points.map((p) => ({
-          x: nsToMs(p.time),
-          equity: p.pnl,
-          peak: p.peak,
-          drawdown: -p.drawdown,
-        }))}
-        axis={{ kind: 'time', zone }}
+        samples={points.map((p) => ({ x: p.n, equity: p.pnl, peak: p.peak, drawdown: -p.drawdown }))}
+        axis={{
+          kind: 'trades',
+          label: (n) => {
+            const t = run.trades[n - 1];
+            return t ? date(nsToMs(t.exitTime)) : '';
+          },
+        }}
         height={300}
-        shade={
-          laterFrom === null
-            ? null
-            : { from: nsToMs(laterFrom), before: SPLIT_WORD.development, after: SPLIT_WORD.later }
-        }
-        label={`Equity curve, ${formatMoney(end.pnl, { signed: true })} at the end`}
-        ddLabel={`Drawdown, deepest ${formatMoney(frame.deepest)}`}
-        empty="Too few bars to draw."
+        shade={{ from: curve.laterAt, before: SPLIT_WORD.development, after: SPLIT_WORD.later }}
+        label={`Equity curve over ${String(run.trades.length)} trades, ${formatMoney(curve.end, { signed: true })} at the end`}
+        ddLabel={`Drawdown, deepest ${formatMoney(curve.deepest)}`}
+        empty={NO_TRADES}
         tip={(i) => {
-          const p = frame.points[i];
-          return p ? <CurveTip p={p} /> : null;
+          const p = tipOf(i);
+          return p?.trade ? <CurveTip p={p} t={p.trade.trade} zone={zone} /> : null;
         }}
       />
       <figcaption className="rs-curve-cap">
-        <span className={cx(PRICE_TEXT, frame.high > 0 && 'up')}>{formatMoney(frame.high)} high</span>
+        <span className={cx(PRICE_TEXT, curve.high > 0 && 'up')}>{formatMoney(curve.high)} high</span>
         <span>
-          {dateValue(frame.t0)} to {dateValue(frame.t1)}
-          {laterFrom !== null ? ' · later sessions shaded' : ''}
+          {dateValue(run.development.from, zone)} to {dateValue(run.later.to, zone)}
+          {curve.laterAt < run.trades.length ? ' · later sessions shaded' : ''}
         </span>
-        <span className={PRICE_TEXT}>{formatMoney(frame.deepest)} deepest drawdown</span>
+        <span className={PRICE_TEXT}>{formatMoney(curve.deepest)} deepest drawdown</span>
       </figcaption>
     </figure>
   );

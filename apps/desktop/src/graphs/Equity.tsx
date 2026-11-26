@@ -26,7 +26,7 @@ const TAGS_H = 24;
 
 function xFrame(samples: readonly EquitySample[], axis: EquityAxis, plotW: number) {
   if (axis.kind === 'trades') {
-    const n = samples.length - 1;
+    const n = samples[samples.length - 1]?.x ?? 0;
     const scale = scaleLinear<number>({ domain: [0, Math.max(1, n)], range: [0, plotW] });
     const values = scale.ticks(X_TICKS).filter((t) => Number.isInteger(t) && t >= 1 && t <= n);
     return {
@@ -130,15 +130,15 @@ export function EquityGraph({
               y={(s) => y(s.equity)}
               className={cx('gr-line', up ? 'up' : 'down')}
             />
-            {shade && shadeX !== null ? (
-              <>
-                <text x={8} y={14} className="gr-tag">
-                  {shade.before}
-                </text>
-                <text x={shadeX + 8} y={14} className="gr-tag">
-                  {shade.after}
-                </text>
-              </>
+            {shade && shadeX !== null && shadeX > 0 ? (
+              <text x={8} y={14} className="gr-tag">
+                {shade.before}
+              </text>
+            ) : null}
+            {shade && shadeX !== null && shadeX < plotW ? (
+              <text x={shadeX + 8} y={14} className="gr-tag">
+                {shade.after}
+              </text>
             ) : null}
             {hx !== null && point ? (
               <>

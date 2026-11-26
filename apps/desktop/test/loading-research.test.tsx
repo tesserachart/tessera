@@ -43,6 +43,23 @@ const split = (net: number): SplitDigest => ({
   approximateExits: 0,
 });
 
+const trade = (i: number, pnl: number) => ({
+  qty: 1,
+  entryTime: 1_790_000_000_000_000_000 + i * 3_600_000_000_000,
+  entryPrice: 5000,
+  exitTime: 1_790_000_000_000_000_000 + i * 3_600_000_000_000 + 600_000_000_000,
+  exitPrice: 5000 + pnl / 50,
+  pnl,
+  costs: 5,
+  bars: 2,
+  mae: -50,
+  mfe: 50,
+  exit: 'signal',
+  stop: null,
+  target: null,
+  approximate: false,
+});
+
 const result = (net: number) => ({
   sessions: 10,
   from: 1_790_000_000_000_000_000,
@@ -126,7 +143,7 @@ const fullRun = {
           { time: 2, equity: 1400 },
           { time: 3, equity: 1200 },
         ],
-        trades: [],
+        trades: [trade(1, 400), trade(2, -200)],
       },
     ],
     placebo: null,

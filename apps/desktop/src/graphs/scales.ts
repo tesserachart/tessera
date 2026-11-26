@@ -61,6 +61,11 @@ export function wallLabel(span: number): (d: Date) => string {
   return (d) => f.format(d);
 }
 
+export function wallDates(first: number, last: number, zone: string): (ms: number) => string {
+  const label = wallLabel(wallTime(last, zone) - wallTime(first, zone));
+  return (ms) => label(new Date(wallTime(ms, zone)));
+}
+
 const PALETTE_SIZE = 8;
 
 export function paletteClass(i: number): string {

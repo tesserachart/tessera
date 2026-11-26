@@ -1,11 +1,5 @@
 import { formatMoney } from '@tessera/ui';
-import {
-  type BacktestEquityPoint,
-  type BacktestTrade,
-  type CaseResult,
-  type SplitResult,
-  type Study,
-} from '@tessera/protocol';
+import { type BacktestTrade, type CaseResult, type SplitResult, type Study } from '@tessera/protocol';
 import { guessSessionOptions, tradingDayZone } from '../../market/instruments.ts';
 import { dateIn, displayZone, zonedFormat } from '../../state/timeZone.ts';
 import { moneyCi, pct, pctCi } from './model.ts';
@@ -110,52 +104,45 @@ export function monthWords(month: string): string {
   });
 }
 
-export interface CurvePoint {
-  time: number;
+export interface TradePoint {
+  kind: 'start' | 'trade' | 'later';
+  n: number;
   pnl: number;
   peak: number;
   drawdown: number;
+  trade: IndexedTrade | null;
 }
 
-export function curveOf(points: readonly BacktestEquityPoint[], width: number): CurvePoint[] {
-  const start = points[0]?.equity ?? 0;
-  const step = Math.max(1, Math.floor(points.length / Math.max(1, width)));
-  const out: CurvePoint[] = [];
-  let peak = start;
-  let deepest = 0;
-  for (let i = 0; i < points.length; i++) {
-    const p = points[i]!;
-    peak = Math.max(peak, p.equity);
-    deepest = Math.min(deepest, p.equity - peak);
-    if (i % step === 0 || i === points.length - 1) {
-      out.push({ time: p.time, pnl: p.equity - start, peak: peak - start, drawdown: deepest });
-      deepest = 0;
-    }
-  }
-  return out;
-}
-
-export interface CurveFrame {
-  points: CurvePoint[];
-  t0: number;
-  t1: number;
-  low: number;
+export interface TradeCurve {
+  points: TradePoint[];
+  laterAt: number;
   high: number;
   deepest: number;
+  end: number;
 }
 
-export function curveFrame(points: readonly BacktestEquityPoint[], width: number): CurveFrame | null {
-  const pts = curveOf(points, width);
-  if (pts.length < 2) return null;
-  let low = 0;
+export function tradeCurve(c: CaseResult): TradeCurve | null {
+  const trades = numberedTrades(c);
+  if (!trades.length) return null;
+  const points: TradePoint[] = [{ kind: 'start', n: 0, pnl: 0, peak: 0, drawdown: 0, trade: null }];
+  let pnl = 0;
+  let peak = 0;
   let high = 0;
   let deepest = 0;
-  for (const p of pts) {
-    low = Math.min(low, p.pnl);
-    high = Math.max(high, p.pnl);
-    deepest = Math.min(deepest, p.drawdown);
+  let laterAt = trades.length;
+  for (const t of trades) {
+    if (t.split === 'later' && laterAt === trades.length) {
+      laterAt = t.n - 1;
+      peak = pnl;
+      if (laterAt > 0) points.push({ kind: 'later', n: laterAt, pnl, peak, drawdown: 0, trade: null });
+    }
+    pnl += t.trade.pnl;
+    peak = Math.max(peak, pnl);
+    high = Math.max(high, pnl);
+    deepest = Math.min(deepest, pnl - peak);
+    points.push({ kind: 'trade', n: t.n, pnl, peak, drawdown: pnl - peak, trade: t });
   }
-  return { points: pts, t0: pts[0]!.time, t1: pts[pts.length - 1]!.time, low, high, deepest };
+  return { points, laterAt, high, deepest, end: pnl };
 }
 
 export type TradeKey = 'entryTime' | 'side' | 'exit' | 'bars' | 'mae' | 'mfe' | 'pnl';

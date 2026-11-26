@@ -362,7 +362,7 @@ function RunBody({
     <div className="rs-body-pad">
       <SplitTable base={base} />
       <section className="rs-sec">
-        <Equity points={base.equity} laterFrom={base.later.from} />
+        <Equity run={base} />
       </section>
       <Segmented<RunTab>
         label="Run"

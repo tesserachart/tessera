@@ -1,4 +1,4 @@
-import type { AgentSessionSummary, RunDigest, Study } from '@tessera/protocol';
+import type { AgentSessionSummary, BacktestTrade, CaseResult, RunDigest, Study } from '@tessera/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   dayWords,
@@ -13,7 +13,7 @@ import {
 } from '../src/areas/research/ledger.ts';
 import { coverageLines, dateValue, moneyCi, pctCi, placeboLine, setupRows } from '../src/areas/research/model.ts';
 import { SAMPLE_DIGEST, SAMPLE_STUDIES } from '../src/areas/research/samples.ts';
-import { curveOf, sessionSharpe } from '../src/areas/research/tester.ts';
+import { sessionSharpe, tradeCurve } from '../src/areas/research/tester.ts';
 import { putRuntimeSettings } from '../src/state/runtimeSettings.ts';
 
 afterEach(() => putRuntimeSettings({ 'display.timeZone': null }, false));
@@ -183,13 +183,35 @@ describe('the strategy tester measures', () => {
     expect(sessionSharpe([], 10)).toBeNull();
   });
 
-  it('keeps the deepest drawdown and the high of every point it thins out', () => {
-    const equity = [100, 120, 80, 130, 90, 140].map((e, i) => ({ time: i, equity: e }));
-    expect(curveOf(equity, 3)).toEqual([
-      { time: 0, pnl: 0, peak: 0, drawdown: 0 },
-      { time: 2, pnl: -20, peak: 20, drawdown: -40 },
-      { time: 4, pnl: -10, peak: 30, drawdown: -40 },
-      { time: 5, pnl: 40, peak: 40, drawdown: 0 },
+  it('draws one point per closed trade and measures the later sessions from their own high', () => {
+    const at = (entryTime: number, pnl: number) => ({ entryTime, exitTime: entryTime + 1, pnl }) as BacktestTrade;
+    const c = {
+      trades: [at(0, 100), at(10, -150), at(20, 80), at(30, -40), at(40, 120), at(50, -30)],
+      later: { from: 30 },
+    } as unknown as CaseResult;
+    const curve = tradeCurve(c)!;
+    expect(curve.points.map(({ kind, n, pnl, peak, drawdown }) => ({ kind, n, pnl, peak, drawdown }))).toEqual([
+      { kind: 'start', n: 0, pnl: 0, peak: 0, drawdown: 0 },
+      { kind: 'trade', n: 1, pnl: 100, peak: 100, drawdown: 0 },
+      { kind: 'trade', n: 2, pnl: -50, peak: 100, drawdown: -150 },
+      { kind: 'trade', n: 3, pnl: 30, peak: 100, drawdown: -70 },
+      { kind: 'later', n: 3, pnl: 30, peak: 30, drawdown: 0 },
+      { kind: 'trade', n: 4, pnl: -10, peak: 30, drawdown: -40 },
+      { kind: 'trade', n: 5, pnl: 110, peak: 110, drawdown: 0 },
+      { kind: 'trade', n: 6, pnl: 80, peak: 110, drawdown: -30 },
     ]);
+    expect(curve).toMatchObject({ laterAt: 3, high: 110, deepest: -150, end: 80 });
+  });
+
+  it('draws a run whose trades all fall on one side of the split without a step', () => {
+    const at = (entryTime: number, pnl: number) => ({ entryTime, exitTime: entryTime + 1, pnl }) as BacktestTrade;
+    const trades = [at(0, -20), at(10, 50)];
+    const allLater = tradeCurve({ trades, later: { from: 0 } } as unknown as CaseResult)!;
+    expect(allLater.points.map((p) => p.kind)).toEqual(['start', 'trade', 'trade']);
+    expect(allLater.laterAt).toBe(0);
+    const noneLater = tradeCurve({ trades, later: { from: 99 } } as unknown as CaseResult)!;
+    expect(noneLater.points.map((p) => p.kind)).toEqual(['start', 'trade', 'trade']);
+    expect(noneLater.laterAt).toBe(2);
+    expect(tradeCurve({ trades: [], later: { from: 0 } } as unknown as CaseResult)).toBeNull();
   });
 });
