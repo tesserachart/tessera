@@ -13,7 +13,7 @@
   "vars": {
     "WORKOS_CLIENT_ID": "client_01M54TYTJP2CT5GQXZEXNSKFT5",
     "SITE_URL": "https://tesserachart.com",
-    "FEEDBACK_REPO": "tesserachart/tessera",
+    "FEEDBACK_REPO": "tesserachart/tessera-internal",
   },
   "d1_databases": [
     {
@@ -31,7 +31,7 @@
       "vars": {
         "WORKOS_CLIENT_ID": "client_01M54TYT538MKZP95R9XJZ089D",
         "SITE_URL": "https://tesserachart.com",
-        "FEEDBACK_REPO": "tesserachart/tessera",
+        "FEEDBACK_REPO": "tesserachart/tessera-internal",
       },
       "d1_databases": [
         {
