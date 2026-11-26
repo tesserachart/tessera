@@ -20,7 +20,7 @@ import { noticeLine } from '../src/shell/noticeWords.ts';
 import { providerHealth } from './support/providers.ts';
 
 const RAW_ON_SCREEN =
-  /\[\d+\]|\bcode \d+|\(\d{3}\)|request rejected|rp_code|os error|tools\.invoke|market\.get_candles|::|wss?:\/\/|\w+_\w+/i;
+  /\[\d+\]|\bcode \d+|\(\d{3}\)|request rejected|rp_code|os error|tools\.invoke|market\.get_candles|::|wss?:\/\/|\w+_\w+|from is after to/i;
 
 const PROVIDER_TEXT = [
   'request rejected: [13] permission denied',
@@ -41,6 +41,8 @@ const PROVIDER_TEXT = [
   'thread panicked at tessera_rithmic::feeds',
   'tools.invoke: no response within 20000ms',
   'Cannot reach Rithmic: connection failed: IO error: Connection refused (os error 111)',
+  'from is after to',
+  'invalid request: from is after to',
 ];
 
 function failed(message: string, code = 'unsupported'): ToolFailed {

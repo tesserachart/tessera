@@ -105,6 +105,7 @@ const TECHNICAL: readonly RegExp[] = [
   /\b[a-z][a-z0-9]*_[a-z0-9_]+\b/,
   /\b[a-z]+\.[a-z_]+\b/,
   /\b0x[0-9a-f]+\b/i,
+  /\b(?:from|to) is (?:after|before) (?:from|to)\b/i,
 ];
 
 function readsPlain(text: string): boolean {

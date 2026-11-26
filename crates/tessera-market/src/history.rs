@@ -557,7 +557,7 @@ impl BarCache {
             }
             let tail = match tail_bars.take() {
                 Some(t) => t,
-                None => self.tail(conn, s, req, plan, now).await?,
+                None => self.tail(conn, s, plan, now).await?,
             };
             let mut raw = self
                 .read(s, start, kept_end)
@@ -591,14 +591,13 @@ impl BarCache {
         &self,
         conn: &Arc<dyn MarketDataProvider>,
         s: &Series,
-        req: &BarsRequest,
         plan: &Plan,
         now: Timestamp,
     ) -> Result<Vec<Bar>, Failure> {
         if plan.opens_before <= plan.kept_before {
             return Ok(Vec::new());
         }
-        let to = req.to.filter(|t| *t < now);
+        let to = Some(Timestamp(plan.opens_before - 1)).filter(|t| *t < now);
         let live = to.is_none();
         let waited_from = tokio::time::Instant::now();
         let fetching = live.then(|| self.tail_lock(s));

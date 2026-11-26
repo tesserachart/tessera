@@ -154,6 +154,11 @@ impl MarketDataProvider for Fake {
     }
     async fn get_bars(&self, req: BarsRequest) -> Result<BarSeries, MarketError> {
         self.log.lock().push(req.clone());
+        if let (Some(f), Some(t)) = (req.from, req.to)
+            && f > t
+        {
+            return Err(MarketError::InvalidRequest("from is after to".into()));
+        }
         if let (Some(from), Some(refused)) = (req.from, self.refuses_before)
             && from < refused
         {
@@ -384,6 +389,34 @@ async fn timeframes_are_aggregated_from_kept_minutes_as_the_connection_does() {
     assert_eq!(older.bars.len(), 200);
     assert!(older.bars.last().unwrap().t < first);
     assert!(!older.last_bar_open);
+}
+
+#[tokio::test]
+async fn a_read_ending_on_the_last_settled_bar_is_whole_on_every_timeframe() {
+    let d = desk().await;
+    for tf in [Timeframe::M1, Timeframe::M5, Timeframe::M15, Timeframe::H1] {
+        let last = CAL.bucket_start(Timestamp(d.settled().0 - 1), tf);
+        let req = BarsRequest {
+            from: Some(Timestamp(last.0 - 3 * tf.nanos())),
+            to: Some(last),
+            ..d.latest(tf, 10)
+        };
+        d.fake.forget();
+        let got = d
+            .router
+            .bars_from(&d.conn, req.clone(), Read::Through)
+            .await
+            .unwrap_or_else(|e| panic!("{tf}: {e}"));
+        for asked in d.fake.requests() {
+            assert!(
+                asked.from.zip(asked.to).is_none_or(|(f, t)| f <= t),
+                "{tf}: asked {asked:?}"
+            );
+        }
+        let native = d.conn.get_bars(req).await.unwrap();
+        assert_eq!(got.bars, native.bars, "{tf}");
+        assert_eq!(got.bars.last().map(|b| b.t), Some(last), "{tf}");
+    }
 }
 
 #[tokio::test]
