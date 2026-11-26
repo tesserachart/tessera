@@ -1,4 +1,13 @@
-import { Key, MOTION, SPLASH_INTRO_MS, SPLASH_MARK_CLASS, cx, formatCountdown, splashMarkSvg } from '@tessera/ui';
+import {
+  Key,
+  MOTION,
+  SPLASH_INTRO_MS,
+  SPLASH_MARK_CLASS,
+  cx,
+  formatCountdown,
+  splashMarkSvg,
+  useRootFlag,
+} from '@tessera/ui';
 import wordmark from '@tessera/ui/brand/wordmark.svg';
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react';
@@ -38,6 +47,7 @@ export function SplashFrame({
   lockRef,
   copy,
   over,
+  onboard = false,
 }: {
   children?: ReactNode;
   leaving?: boolean;
@@ -48,12 +58,14 @@ export function SplashFrame({
   lockRef?: Ref<HTMLDivElement>;
   copy?: boolean;
   over?: ReactNode;
+  onboard?: boolean;
 }) {
+  useRootFlag('data-onboarding', onboard);
   const [at] = useState(() => ({ '--intro-at': `${String(-Math.round(introElapsed()))}ms` }) as CSSProperties);
   useDropBoot();
   return (
     <div
-      className={cx('t-splash t-sh-splash', leaving && 'is-leaving', className)}
+      className={cx('t-splash t-sh-splash', leaving && 'is-leaving', onboard && 't-sh-onboard', className)}
       style={{ ...at, ...style }}
       role={copy ? undefined : role}
       aria-label={copy ? undefined : label}

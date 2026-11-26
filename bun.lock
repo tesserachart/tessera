@@ -176,6 +176,9 @@
     },
   },
   "trustedDependencies": [],
+  "patchedDependencies": {
+    "skullet@0.0.3": "patches/skullet@0.0.3.patch",
+  },
   "overrides": {
     "zod": "4.6.5",
   },

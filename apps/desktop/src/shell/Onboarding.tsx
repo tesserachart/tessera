@@ -34,7 +34,7 @@ export function Onboarding({ onDone }: { onDone: (said: string | null) => void }
   };
   const heading = connected ? OFFER_HEADING : LOGIN_HEADING;
   return createPortal(
-    <SplashFrame className="t-sh-onboard" role="dialog" label={heading}>
+    <SplashFrame onboard role="dialog" label={heading}>
       <h1 className="say">{heading}</h1>
       {connected ? (
         <div className="ob-form" key="offer">

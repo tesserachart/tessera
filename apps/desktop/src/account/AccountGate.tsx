@@ -58,7 +58,7 @@ export function TermsGate() {
     if (termsDue) acceptTerms();
   };
   return createPortal(
-    <SplashFrame className="t-sh-onboard t-sh-account" role="dialog" label={say.say}>
+    <SplashFrame onboard className="t-sh-account" role="dialog" label={say.say}>
       <div className="say">{say.say}</div>
       <div className="ob-form ac-gate" ref={form}>
         <p className="ac-line">{say.line}</p>
@@ -135,7 +135,7 @@ export function AccountGate({ gate }: { gate: Exclude<Gate, 'wait' | 'open'> }) 
   const { say, line, note: said } = gateWords(gate, state);
   const note = error ?? said;
   return createPortal(
-    <SplashFrame className="t-sh-onboard t-sh-account" role="dialog" label={say}>
+    <SplashFrame onboard className="t-sh-account" role="dialog" label={say}>
       <div className="say">{say}</div>
       <div className="ob-form ac-gate">
         <p className="ac-line">{line}</p>

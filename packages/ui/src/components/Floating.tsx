@@ -23,6 +23,7 @@ import { Button } from './Button.tsx';
 import { Key } from './Key.tsx';
 import { MenuLead, MenuMark, MenuRowEnd, MenuSubChevron, type MenuIcon } from './MenuRow.tsx';
 import { usePrivate } from './Private.tsx';
+import { useRootFlagWhileOpen } from '../rootFlags.ts';
 
 export function TooltipProvider({ children }: { children: ReactNode }) {
   return (
@@ -353,6 +354,8 @@ export function PopoverContent({
   );
 }
 
+export const DIALOG_OPEN = 'data-dialog-open';
+
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
@@ -374,10 +377,11 @@ export function DialogContent({
   ...rest
 }: DialogContentProps) {
   const privacy = usePrivate();
+  const content = useRootFlagWhileOpen(DIALOG_OPEN);
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="ui-dialog-overlay" />
-      <DialogPrimitive.Content className={cx('ui-dialog', className)} {...privacy} {...rest}>
+      <DialogPrimitive.Content ref={content} className={cx('ui-dialog', className)} {...privacy} {...rest}>
         {hideTitle ? (
           <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
         ) : (

@@ -9,6 +9,7 @@ import {
 } from '@tessera/protocol';
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import { ChartFeed, type FeedChart } from '../src/chart/feed.ts';
+import { SightSwitch } from '../src/app/inSight.ts';
 import { BarSources, toBarTuple, READ_RETRY, WARM_TIMEFRAMES } from '../src/market/bars.ts';
 import { OLDER_HISTORY_REFUSED } from '../src/shell/deskWords.ts';
 import { fakeRuntime } from './support/fakeRuntime.ts';
@@ -54,7 +55,7 @@ const snapshots = (rt: ReturnType<typeof fakeRuntime>) =>
   rt.toolCalls('market.get_candles').filter((c) => !(c.input as { cachedOnly?: boolean }).cachedOnly);
 
 function harness(
-  keep: { keepMs?: number; maxIdle?: number } = { keepMs: 0 },
+  keep: ConstructorParameters<typeof BarSources>[0] = { keepMs: 0 },
   answers?: Parameters<typeof fakeRuntime>[0],
 ) {
   const rt = fakeRuntime(answers);
@@ -897,6 +898,34 @@ describe('ChartFeed timeframe switch', () => {
     const sixth = barEvent(5, 4.5);
     barsTopic(h.rt, '5m').event(sixth);
     expect(h.chart.update).toHaveBeenCalledWith('main', toBarTuple(sixth.bar));
+    feed.dispose();
+    h.sources.clear();
+  });
+
+  it('lets the timeframes no chart draws rest while the window is hidden, and catches them up with only what they missed', async () => {
+    const window = new SightSwitch(true);
+    const h = harness({ keepMs: 60_000, sight: window }, answerEveryTimeframe);
+    const feed = new ChartFeed(h.chart, { sources: h.sources, warm: true });
+    feed.load('NQ', '1m', spec);
+    await allSettled(h, 'NQ');
+    const followed = () =>
+      h.rt.subscriptions
+        .filter((s) => s.topic === 'market.bars' && s.open)
+        .map((s) => (s.params as { tf: Timeframe }).tf)
+        .sort();
+    expect(followed()).toEqual([...WARM_TIMEFRAMES].sort());
+    const readsBefore = snapshots(h.rt).length;
+
+    window.set(false);
+    expect(followed()).toEqual(['1m']);
+
+    window.set(true);
+    expect(followed()).toEqual([...WARM_TIMEFRAMES].sort());
+    const catchUps = snapshots(h.rt).slice(readsBefore);
+    expect(catchUps.map((c) => (c.input as { tf: Timeframe }).tf).sort()).toEqual(
+      WARM_TIMEFRAMES.filter((tf) => tf !== '1m').sort(),
+    );
+    for (const c of catchUps) expect((c.input as { limit: number }).limit).toBeLessThanOrEqual(3);
     feed.dispose();
     h.sources.clear();
   });

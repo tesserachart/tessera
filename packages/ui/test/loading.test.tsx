@@ -131,6 +131,46 @@ describe('a surface that loads', () => {
   });
 });
 
+describe('a loaded surface in a hidden window', () => {
+  function List({ rows }: { rows: number }) {
+    return (
+      <ul className="row-list">
+        {Array.from({ length: rows }, (_, i) => (
+          <li key={i} className="row">
+            row
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  const rememberedRows = () =>
+    (localStorage.getItem('skullet:shapes') ?? '').split('row-list')[1]?.split('class=\\"row\\"').length ?? 0;
+  const windowShown = (shown: boolean) => {
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(shown ? 'visible' : 'hidden');
+    vi.spyOn(document, 'hidden', 'get').mockReturnValue(!shown);
+    document.dispatchEvent(new Event('visibilitychange'));
+  };
+
+  it('stops remembering its shape while hidden, and remembers the latest once shown', async () => {
+    const view = render(
+      <Loaded label="Loading the list">
+        <List rows={1} />
+      </Loaded>,
+    );
+    await waitFor(() => expect(rememberedRows()).toBe(2));
+    windowShown(false);
+    view.rerender(
+      <Loaded label="Loading the list">
+        <List rows={3} />
+      </Loaded>,
+    );
+    await new Promise((r) => setTimeout(r, 600));
+    expect(rememberedRows()).toBe(2);
+    windowShown(true);
+    await waitFor(() => expect(rememberedRows()).toBe(4));
+  });
+});
+
 describe('the look of a skeleton', () => {
   it('uses Tessera’s own muted surface with one slow, faint shimmer', () => {
     expect(LOADING_THEME).toMatchObject({
@@ -190,5 +230,64 @@ describe('the motion of a skeleton', () => {
 
   it('holds every placeholder still for someone who asks for reduced motion', () => {
     expect(shimmerRuns(true)).toBe(false);
+  });
+});
+
+describe('a skeleton that goes away', () => {
+  function endlessMotion(): Set<Element> {
+    const running = new Map<object, Element>();
+    vi.spyOn(Element.prototype, 'animate').mockImplementation(function (this: Element, _frames, options) {
+      const endless = typeof options === 'object' && options.iterations === Infinity;
+      const animation = {
+        startTime: 0,
+        finished: Promise.resolve(),
+        cancel: () => running.delete(animation),
+      };
+      if (endless) running.set(animation, this);
+      return animation as unknown as Animation;
+    });
+    vi.spyOn(Element.prototype, 'getAnimations').mockImplementation(function (this: Element) {
+      return [...running].filter(([, target]) => target === this).map(([a]) => a as Animation);
+    });
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 16));
+    vi.spyOn(Element.prototype, 'getClientRects').mockReturnValue([new DOMRect(0, 0, 200, 16)] as never);
+    return {
+      get size() {
+        return running.size;
+      },
+    } as Set<Element>;
+  }
+
+  it('stops a placeholder’s shimmer when the placeholder leaves', () => {
+    const motion = endlessMotion();
+    const view = render(
+      <LoadingProvider>
+        <Skeleton w={40} />
+      </LoadingProvider>,
+    );
+    expect(motion.size).toBeGreaterThan(0);
+    view.unmount();
+    expect(motion.size).toBe(0);
+  });
+
+  it('stops every bone’s shimmer once what it stood for has loaded', () => {
+    const motion = endlessMotion();
+    const view = render(
+      <LoadingProvider>
+        <Loaded label="Loading the card" pending>
+          <Card />
+        </Loaded>
+      </LoadingProvider>,
+    );
+    expect(motion.size).toBeGreaterThan(0);
+    view.rerender(
+      <LoadingProvider>
+        <Loaded label="Loading the card">
+          <Card />
+        </Loaded>
+      </LoadingProvider>,
+    );
+    expect(screen.queryByRole('status', { name: 'Loading the card' })).toBeNull();
+    expect(motion.size).toBe(0);
   });
 });

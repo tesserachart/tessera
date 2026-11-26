@@ -25,6 +25,7 @@
     "test:perf": "vitest run --config vitest.perf.config.ts",
     "test:perf:report": "TESSERA_PERF_REPORT=1 vitest run --config vitest.perf.config.ts --silent=false",
     "bench:chart": "node apps/desktop/scripts/bench-chart.ts",
+    "bench:energy": "node apps/desktop/scripts/bench-energy.ts",
     "bench:load": "bun run build && node apps/desktop/scripts/bench-load.ts",
     "lint": "eslint . --max-warnings=0 --concurrency=auto",
     "knip": "knip --treat-config-hints-as-errors",
@@ -77,5 +78,8 @@
   "trustedDependencies": [],
   "overrides": {
     "zod": "4.6.5"
+  },
+  "patchedDependencies": {
+    "skullet@0.0.3": "patches/skullet@0.0.3.patch"
   }
 }

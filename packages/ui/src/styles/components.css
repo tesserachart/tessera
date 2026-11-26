@@ -797,7 +797,7 @@
   margin: var(--sp-1) 0;
   background: var(--line);
 }
-body:has(.ui-dialog[data-state='open']) :is(.t-menu, .t-popover) {
+:root[data-dialog-open] :is(.t-menu, .t-popover) {
   z-index: calc(var(--z-palette) + 1);
 }
 .t-popover {

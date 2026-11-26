@@ -449,7 +449,7 @@
 .t-sh-onboard .mk-cn-form .cn-acts {
   padding-top: var(--sp-1);
 }
-body:has(.t-sh-onboard) :is(.t-menu, .t-popover, .t-tip) {
+:root[data-onboarding] :is(.t-menu, .t-popover, .t-tip) {
   z-index: calc(var(--z-splash) + 1);
 }
 

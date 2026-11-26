@@ -6,6 +6,7 @@ export * from './color.ts';
 export * from './motion.ts';
 export * from './selection.ts';
 export * from './toast.ts';
+export * from './rootFlags.ts';
 export * from './search.ts';
 export { cx, flag } from './cx.ts';
 export * from './components/Icon.tsx';

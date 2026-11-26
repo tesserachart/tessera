@@ -22,6 +22,7 @@ import { appClient, servicesStore } from '../app/services.ts';
 import { toolCode } from '../app/tools.ts';
 import { refusedByFeed, retryFeedError } from '../shell/deskWords.ts';
 import { WarmPool, type PoolTimers } from '../app/warm.ts';
+import { windowSight, type Sight } from '../app/inSight.ts';
 import { asksFrontMonths, contractSpans, withSpans, type ContractSpan } from './frontMonths.ts';
 import { sessionsInput } from '../markets/sessions.ts';
 
@@ -148,6 +149,8 @@ export class BarSource {
   private readingHours = false;
   private tailAt = 0;
   private tailing = false;
+  private unfollow: (() => void) | null = null;
+  private restingSince: number | null = null;
 
   constructor(instrument: string, tf: Timeframe, reader: BarsReader = runtimeReader, session: SessionFilter = 'all') {
     this.instrument = instrument;
@@ -166,6 +169,21 @@ export class BarSource {
     this.fetch();
   }
 
+  rest(): void {
+    if (!this.started || this.restingSince !== null || this.sinks.size > 0) return;
+    this.unfollow?.();
+    this.unfollow = null;
+    this.restingSince = Date.now();
+  }
+
+  wake(): void {
+    if (this.restingSince === null) return;
+    const away = Date.now() - this.restingSince;
+    this.restingSince = null;
+    this.follow();
+    this.fetch(barsSince(this.tf, away));
+  }
+
   stop(): void {
     this.read.end();
     this.market.end();
@@ -179,6 +197,7 @@ export class BarSource {
   }
 
   attach(sink: BarsSink): () => void {
+    this.wake();
     if (!this.shown) {
       this.shown = true;
       if (this.tf !== '1s') this.followHistory();
@@ -241,7 +260,7 @@ export class BarSource {
   }
 
   private follow(): void {
-    this.market.topic(
+    this.unfollow = this.market.topic(
       'market.bars',
       { instrument: this.instrument, tf: this.tf },
       (e) => {
@@ -298,7 +317,7 @@ export class BarSource {
     );
   }
 
-  private fetch(): void {
+  private fetch(limit = SNAPSHOT_BARS): void {
     if (this.fetching) {
       this.fetchAgain = true;
       return;
@@ -311,7 +330,7 @@ export class BarSource {
     });
     const attempt = async () => {
       try {
-        return await this.reader.candles({ ...this.ask(), limit: SNAPSHOT_BARS });
+        return await this.reader.candles({ ...this.ask(), limit });
       } catch (err) {
         if (live() && !unanswered(err)) this.fail(err as Error);
         throw err;
@@ -502,18 +521,34 @@ function ofKey(key: string): { instrument: string; tf: Timeframe; session: Sessi
   return { instrument: instrument.reverse().join('|'), tf: tf as Timeframe, session: session as SessionFilter };
 }
 
+function barsSince(tf: Timeframe, ms: number): number {
+  return Math.min(SNAPSHOT_BARS, Math.ceil(ms / timeframeMs(tf)) + 2);
+}
+
 export class BarSources {
   private readonly pool: WarmPool<BarSource>;
+  private readonly made = new Set<BarSource>();
+  private readonly sight: Sight;
+  private offSight: (() => void) | null = null;
 
-  constructor(options: { keepMs?: number; maxIdle?: number; reader?: BarsReader; timers?: PoolTimers } = {}) {
+  constructor(
+    options: { keepMs?: number; maxIdle?: number; reader?: BarsReader; timers?: PoolTimers; sight?: Sight } = {},
+  ) {
+    this.sight = options.sight ?? windowSight;
     this.pool = new WarmPool<BarSource>({
       make: (key) => {
         const { instrument, tf, session } = ofKey(key);
         const source = new BarSource(instrument, tf, options.reader, session);
         source.start();
+        this.made.add(source);
+        this.offSight ??= this.sight.subscribe(() => this.sightChanged());
+        if (!this.sight.get()) source.rest();
         return source;
       },
-      dispose: (source) => source.stop(),
+      dispose: (source) => {
+        this.made.delete(source);
+        source.stop();
+      },
       keepMs: options.keepMs ?? BARS_KEEP_MS,
       maxIdle: options.maxIdle ?? BARS_KEEP_MAX,
       ...(options.timers ? { timers: options.timers } : {}),
@@ -546,6 +581,16 @@ export class BarSources {
 
   clear(): void {
     this.pool.clear();
+    this.offSight?.();
+    this.offSight = null;
+  }
+
+  private sightChanged(): void {
+    const shown = this.sight.get();
+    for (const source of this.made) {
+      if (shown) source.wake();
+      else source.rest();
+    }
   }
 }
 

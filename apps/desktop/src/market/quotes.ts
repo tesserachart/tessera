@@ -1,5 +1,5 @@
 import type { Quote } from '@tessera/protocol';
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useEffectEvent, useSyncExternalStore } from 'react';
 import { useSight } from '../app/inSight.ts';
 import { animationFrame, type FrameScheduler } from '../app/frame.ts';
 import { Lifetime } from '../app/lifetime.ts';
@@ -173,6 +173,13 @@ export function useQuote(instrument: string | null): Quote | undefined {
   );
   const snapshot = useCallback(() => (instrument ? quoteStore.get(instrument) : undefined), [instrument]);
   return useSyncExternalStore(subscribe, snapshot);
+}
+
+export function useQuoteReader(instrument: string | null, changed: () => void): () => Quote | undefined {
+  const onChange = useEffectEvent(changed);
+  useEffect(() => (instrument ? quoteStore.watch(instrument) : undefined), [instrument]);
+  useEffect(() => (instrument ? quoteStore.listen(instrument, () => onChange()) : undefined), [instrument]);
+  return useCallback(() => (instrument ? quoteStore.get(instrument) : undefined), [instrument]);
 }
 
 export function useQuoteSource(instrument: string | null): string | null {

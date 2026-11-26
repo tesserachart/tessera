@@ -31,6 +31,15 @@ export class SightSwitch implements Sight {
   }
 }
 
+export const windowSight: Sight = {
+  get: () => typeof document === 'undefined' || document.visibilityState !== 'hidden',
+  subscribe: (changed) => {
+    if (typeof document === 'undefined') return () => undefined;
+    document.addEventListener('visibilitychange', changed);
+    return () => document.removeEventListener('visibilitychange', changed);
+  },
+};
+
 const ALWAYS: Sight = { get: () => true, subscribe: () => () => undefined };
 
 export const InSight = createContext<Sight>(ALWAYS);

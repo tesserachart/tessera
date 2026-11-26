@@ -26,7 +26,7 @@ import { useTileSight } from './inSight.ts';
 import { useAccountContract } from '../../market/contracts.ts';
 import { openConnections } from '../../accounts/navigate.ts';
 import { displaySymbol, useInstrumentSpec } from '../../market/instruments.ts';
-import { useQuote } from '../../market/quotes.ts';
+import { useQuoteReader } from '../../market/quotes.ts';
 import { instrumentRoot } from '../../shell/oco.ts';
 import { orderEntryOf } from '../../shell/orderEntry.ts';
 import { useHasTool, useToolValue } from '../../app/tools.ts';
@@ -128,7 +128,6 @@ export function DomTile({ params, api }: IDockviewPanelProps<Partial<DomParams>>
   const hasConnections = useHasTool('connections.list');
   const connections = useToolValue('connections.list', hasConnections ? {} : null, { keepFor: 5_000 })?.connections;
   const tradable = accounts.filter((a) => orderEntryOf(a, connections).open).length;
-  const quote = useQuote(broker);
   const { qty, sizing, risk, entry: entryKind } = trade.setup;
   const accountId = accountUpdate?.account.id ?? null;
   const drafts = useMemo(() => draftsFor(liveDrafts, accountId), [liveDrafts, accountId]);
@@ -185,7 +184,6 @@ export function DomTile({ params, api }: IDockviewPanelProps<Partial<DomParams>>
     mode: bracketMode,
   };
   const here = placementFor(placing, accountId, ids, scope);
-  const q: PlaceQuote = { bid: quote?.bid ?? null, ask: quote?.ask ?? null, last: quote?.last ?? null };
   const position = posBracket
     ? { side: posBracket.side, qty: posBracket.qty, average: posBracket.price, bracket: posBracket }
     : null;
@@ -193,6 +191,7 @@ export function DomTile({ params, api }: IDockviewPanelProps<Partial<DomParams>>
   const rowsRef = useRef<HTMLDivElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
   const ctrlRef = useRef<DomController | null>(null);
+  const readQuote = useQuoteReader(broker, () => ctrlRef.current?.invalidate());
   const [strip, setStrip] = useState<Strip | null>(null);
   const [edges, setEdges] = useState<readonly EdgeMark[]>([]);
   const [columns, setColumns] = useState<LadderColumns | null>(null);
@@ -218,7 +217,9 @@ export function DomTile({ params, api }: IDockviewPanelProps<Partial<DomParams>>
     position,
     report,
     keyReport,
-    quote,
+    get quote() {
+      return readQuote();
+    },
     stopLimitTicks: trade.setup.stopLimitTicks,
     context: {
       params: p,
@@ -226,7 +227,10 @@ export function DomTile({ params, api }: IDockviewPanelProps<Partial<DomParams>>
       tags,
       position,
       placing: here,
-      quote: q,
+      get quote(): PlaceQuote {
+        const quote = readQuote();
+        return { bid: quote?.bid ?? null, ask: quote?.ask ?? null, last: quote?.last ?? null };
+      },
       dropped,
       closed,
       placingLine: (pl, price, qq) => placingLine(pl, price, qq, brackets),
