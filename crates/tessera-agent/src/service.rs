@@ -222,6 +222,7 @@ pub struct AgentService {
     opening: tokio::sync::Mutex<()>,
     brief: Mutex<Arc<str>>,
     default_mode: Mutex<SessionMode>,
+    default_pick: Mutex<Option<ModelPick>>,
     attachments: Option<AttachmentStore>,
     turn_sink: OnceLock<TurnSink>,
 }
@@ -238,6 +239,35 @@ fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 fn unavailable(e: impl std::fmt::Display) -> ToolError {
     ToolError::unavailable(e.to_string())
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ModelPick {
+    pub provider: String,
+    pub model: Option<String>,
+    pub effort: Option<String>,
+}
+
+impl ModelPick {
+    pub fn provider_default(provider: &str) -> Self {
+        Self {
+            provider: provider.to_owned(),
+            model: None,
+            effort: None,
+        }
+    }
+
+    fn of(s: &AgentSessionSummary) -> Self {
+        Self {
+            provider: s.provider.clone(),
+            model: s.model.clone(),
+            effort: s.effort.clone(),
+        }
+    }
+
+    fn same_model(&self, other: &Self) -> bool {
+        self.provider == other.provider && self.model == other.model
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -357,6 +387,7 @@ impl AgentService {
             opening: tokio::sync::Mutex::new(()),
             brief: Mutex::new(Arc::from(INSTRUCTIONS)),
             default_mode: Mutex::new(SessionMode::AutoModify),
+            default_pick: Mutex::new(None),
             attachments: None,
             turn_sink: OnceLock::new(),
         }
@@ -383,6 +414,49 @@ impl AgentService {
 
     pub fn default_mode(&self) -> SessionMode {
         *lock(&self.default_mode)
+    }
+
+    pub fn set_default_pick(&self, pick: Option<ModelPick>) {
+        *lock(&self.default_pick) = pick;
+    }
+
+    fn is_ready(&self, provider: &str) -> bool {
+        self.view(provider)
+            .is_some_and(|v| v.enabled && v.provider.state().ready())
+    }
+
+    fn latest_conversation(&self) -> Option<ModelPick> {
+        let stored = match self.store.sessions().list() {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::warn!(error = %e, "agent sessions not read for the analyst's model");
+                Vec::new()
+            }
+        };
+        let live: Vec<AgentSessionSummary> = lock(&self.live)
+            .values()
+            .map(|l| l.summary.clone())
+            .collect();
+        live.into_iter()
+            .chain(stored)
+            .filter(|s| self.is_ready(&s.provider))
+            .max_by_key(|s| s.updated_at)
+            .map(|s| ModelPick::of(&s))
+    }
+
+    pub fn working_picks(&self) -> Vec<ModelPick> {
+        let candidates = self
+            .latest_conversation()
+            .into_iter()
+            .chain(lock(&self.default_pick).clone())
+            .chain(self.ids().into_iter().map(ModelPick::provider_default));
+        let mut picks: Vec<ModelPick> = Vec::new();
+        for c in candidates {
+            if self.is_ready(&c.provider) && !picks.iter().any(|p| p.same_model(&c)) {
+                picks.push(c);
+            }
+        }
+        picks
     }
 
     pub fn attach_invoker(self: &Arc<Self>, invoker: Arc<Invoker>) {
@@ -886,25 +960,21 @@ impl AgentService {
             })
     }
 
-    pub fn first_ready(&self) -> Option<&'static str> {
-        for id in self.ids() {
-            let Some(v) = self.view(id) else { continue };
-            if v.enabled && v.provider.state().ready() {
-                return Some(id);
-            }
-        }
-        None
-    }
-
     pub async fn answer_once(
         &self,
-        provider: &str,
+        pick: &ModelPick,
         instructions: &str,
         text: String,
         within: Duration,
     ) -> Result<OneAnswer, ToolError> {
-        let p = self.ready(provider).await?;
-        let (model, effort) = self.resolve(&p, None, None).await?;
+        let p = self.ready(&pick.provider).await?;
+        let (model, effort) = match &pick.model {
+            Some(_) => {
+                self.resolve(&p, pick.model.clone(), pick.effort.clone())
+                    .await?
+            }
+            None => (None, None),
+        };
         let url = self
             .mcp_url
             .get()
@@ -2163,6 +2233,7 @@ mod tests {
     #[derive(Default)]
     struct Script {
         sent: Vec<String>,
+        opened_on: Vec<Option<String>>,
         steered: Vec<String>,
         sink: Option<(SessionId, crate::provider::EventSink)>,
     }
@@ -2252,7 +2323,9 @@ mod tests {
             &self,
             req: OpenThread,
         ) -> Result<Arc<dyn ProviderThread>, crate::AgentError> {
-            lock(&self.script).sink = Some((req.session, req.events));
+            let mut script = lock(&self.script);
+            script.opened_on.push(req.model);
+            script.sink = Some((req.session, req.events));
             Ok(Arc::new(StubThread {
                 steers: self.steers,
                 script: Arc::clone(&self.script),
@@ -2759,11 +2832,10 @@ mod tests {
     async fn one_answer_comes_from_a_hidden_thread_with_no_tools_and_no_session() {
         let r = rig(Stub::default()).await;
         let sessions = r.store.sessions().list().unwrap().len();
-        assert_eq!(r.svc.first_ready(), Some(CODEX));
         let svc = Arc::clone(&r.svc);
         let asked = tokio::spawn(async move {
             svc.answer_once(
-                CODEX,
+                &ModelPick::provider_default(CODEX),
                 "Answer with JSON.",
                 "write it up".into(),
                 Duration::from_secs(5),
@@ -2791,12 +2863,87 @@ mod tests {
 
         let svc = Arc::clone(&r.svc);
         let failed = tokio::spawn(async move {
-            svc.answer_once(CODEX, "", "again".into(), Duration::from_secs(5))
-                .await
+            svc.answer_once(
+                &ModelPick::provider_default(CODEX),
+                "",
+                "again".into(),
+                Duration::from_secs(5),
+            )
+            .await
         });
         r.asked_once("again").await;
         r.stub.end(TurnEnd::Failed);
         assert!(failed.await.unwrap().is_err());
+    }
+
+    #[tokio::test]
+    async fn the_analysts_own_model_comes_first_and_a_provider_alone_runs_its_own_default() {
+        let r = rig(Stub::default()).await;
+        let pick = |provider: &str, model: Option<&str>| ModelPick {
+            provider: provider.into(),
+            model: model.map(Into::into),
+            effort: None,
+        };
+        assert_eq!(
+            r.svc.working_picks(),
+            [pick(CODEX, None)],
+            "the latest conversation, which also is the provider's own default"
+        );
+
+        r.svc
+            .set_model(&r.sid, Some("gpt-analyst".into()), None)
+            .await
+            .unwrap();
+        r.svc
+            .set_default_pick(Some(pick(CODEX, Some("gpt-new-chats"))));
+        assert_eq!(
+            r.svc.working_picks(),
+            [
+                pick(CODEX, Some("gpt-analyst")),
+                pick(CODEX, Some("gpt-new-chats")),
+                pick(CODEX, None),
+            ]
+        );
+
+        r.svc
+            .set_default_pick(Some(pick("claude-code", Some("claude-x"))));
+        assert!(
+            r.svc.working_picks().iter().all(|p| p.provider == CODEX),
+            "a provider that is not ready is never picked"
+        );
+
+        let svc = Arc::clone(&r.svc);
+        let asked = tokio::spawn(async move {
+            let pick = svc.working_picks().remove(0);
+            svc.answer_once(&pick, "", "write it up".into(), Duration::from_secs(5))
+                .await
+        });
+        r.asked_once("write it up").await;
+        r.stub.emit(ProviderEvent::Message {
+            message_id: "m1".into(),
+            text: "done".into(),
+        });
+        r.stub.end(TurnEnd::Completed);
+        asked.await.unwrap().unwrap();
+
+        let svc = Arc::clone(&r.svc);
+        let alone = tokio::spawn(async move {
+            svc.answer_once(
+                &ModelPick::provider_default(CODEX),
+                "",
+                "again".into(),
+                Duration::from_secs(5),
+            )
+            .await
+        });
+        r.asked_once("again").await;
+        r.stub.end(TurnEnd::Failed);
+        let _ = alone.await;
+        let opened = lock(&r.stub.script).opened_on.clone();
+        assert_eq!(
+            opened[opened.len() - 2..],
+            [Some("gpt-analyst".to_owned()), None]
+        );
     }
 
     fn invoker(limits: tessera_tools::LoopLimits) -> Arc<tessera_tools::Invoker> {

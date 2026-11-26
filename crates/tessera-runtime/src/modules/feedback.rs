@@ -295,13 +295,20 @@ impl FeedbackSink for CloudSink {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WriteUpPick {
+    pub writer: FeedbackWriter,
+    pub model: Option<String>,
+    pub effort: Option<String>,
+}
+
 #[async_trait]
 pub trait WriteUpAgent: Send + Sync + 'static {
-    fn writer(&self) -> Option<FeedbackWriter>;
+    fn picks(&self) -> Vec<WriteUpPick>;
 
     async fn answer(
         &self,
-        provider: &str,
+        pick: &WriteUpPick,
         instructions: &str,
         text: String,
     ) -> Result<String, ToolError>;
@@ -309,26 +316,39 @@ pub trait WriteUpAgent: Send + Sync + 'static {
 
 #[async_trait]
 impl WriteUpAgent for tessera_agent::AgentService {
-    fn writer(&self) -> Option<FeedbackWriter> {
-        let id = self.first_ready()?;
-        let name = self
-            .providers()
+    fn picks(&self) -> Vec<WriteUpPick> {
+        let providers = self.providers();
+        self.working_picks()
             .into_iter()
-            .find(|p| p.id() == id)
-            .map_or(id, |p| p.name());
-        Some(FeedbackWriter {
-            provider: id.to_owned(),
-            name: name.to_owned(),
-        })
+            .map(|p| {
+                let name = providers
+                    .iter()
+                    .find(|x| x.id() == p.provider)
+                    .map_or_else(|| p.provider.clone(), |x| x.name().to_owned());
+                WriteUpPick {
+                    writer: FeedbackWriter {
+                        provider: p.provider,
+                        name,
+                    },
+                    model: p.model,
+                    effort: p.effort,
+                }
+            })
+            .collect()
     }
 
     async fn answer(
         &self,
-        provider: &str,
+        pick: &WriteUpPick,
         instructions: &str,
         text: String,
     ) -> Result<String, ToolError> {
-        self.answer_once(provider, instructions, text, WRITE_UP_WAIT)
+        let pick = tessera_agent::ModelPick {
+            provider: pick.writer.provider.clone(),
+            model: pick.model.clone(),
+            effort: pick.effort.clone(),
+        };
+        self.answer_once(&pick, instructions, text, WRITE_UP_WAIT)
             .await
             .map(|a| a.text)
     }
@@ -990,7 +1010,11 @@ impl FeedbackService {
         FeedbackContextOutput {
             items,
             delivery: self.sink.delivery(),
-            writer: self.agent.as_ref().and_then(|a| a.writer()),
+            writer: self
+                .agent
+                .as_ref()
+                .and_then(|a| a.picks().into_iter().next())
+                .map(|p| p.writer),
             queued: u32::try_from(self.outbox.list().len()).unwrap_or(u32::MAX),
         }
     }
@@ -1130,40 +1154,57 @@ impl FeedbackService {
         &self,
         input: &FeedbackWriteUpInput,
     ) -> Result<FeedbackWriteUpOutput, ToolError> {
-        let agent = self.agent.as_ref().ok_or_else(|| {
+        let no_agent = || {
             ToolError::unavailable(
                 "no agent is connected: the user connects one in Settings › Analyst",
             )
-        })?;
-        let writer = agent.writer().ok_or_else(|| {
-            ToolError::unavailable(
-                "no agent is connected: the user connects one in Settings › Analyst",
-            )
-        })?;
+        };
+        let agent = self.agent.as_ref().ok_or_else(no_agent)?;
+        let picks = agent.picks();
+        if picks.is_empty() {
+            return Err(no_agent());
+        }
         if input.text.trim().is_empty() {
             return Err(ToolError::invalid_input("write a note first"));
         }
         let s = self.scrubber();
-        let answer = agent
-            .answer(
-                &writer.provider,
-                WRITE_UP_INSTRUCTIONS,
-                write_up_prompt(input, &s),
-            )
-            .await?;
-        let (title, steps, expected, actual) = read_write_up(&answer, &s).ok_or_else(|| {
-            ToolError::unavailable(format!(
-                "{} answered something that is not a write-up",
-                writer.name
-            ))
-        })?;
-        Ok(FeedbackWriteUpOutput {
-            title,
-            steps,
-            expected,
-            actual,
-            writer,
-        })
+        let prompt = write_up_prompt(input, &s);
+        let mut failure = no_agent();
+        for pick in picks {
+            let read = match agent
+                .answer(&pick, WRITE_UP_INSTRUCTIONS, prompt.clone())
+                .await
+            {
+                Ok(answer) => read_write_up(&answer, &s).ok_or_else(|| {
+                    ToolError::unavailable(format!(
+                        "{} answered something that is not a write-up",
+                        pick.writer.name
+                    ))
+                }),
+                Err(e) => Err(e),
+            };
+            match read {
+                Ok((title, steps, expected, actual)) => {
+                    return Ok(FeedbackWriteUpOutput {
+                        title,
+                        steps,
+                        expected,
+                        actual,
+                        writer: pick.writer,
+                    });
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        provider = %pick.writer.provider,
+                        model = pick.model.as_deref().unwrap_or("its default"),
+                        error = %e.message,
+                        "feedback write-up failed; trying the next model"
+                    );
+                    failure = e;
+                }
+            }
+        }
+        Err(failure)
     }
 }
 

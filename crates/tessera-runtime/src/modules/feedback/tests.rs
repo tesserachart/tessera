@@ -463,32 +463,59 @@ async fn signed_out_nothing_is_tried_until_a_sign_in_and_a_refusal_is_set_aside(
 }
 
 struct FakeAgent {
-    ready: bool,
+    picks: Vec<WriteUpPick>,
     answer: String,
-    asked: Mutex<Vec<String>>,
+    refused: Option<&'static str>,
+    asked: Mutex<Vec<(String, String)>>,
+}
+
+fn pick(provider: &str, name: &str, model: Option<&str>) -> WriteUpPick {
+    WriteUpPick {
+        writer: FeedbackWriter {
+            provider: provider.into(),
+            name: name.into(),
+        },
+        model: model.map(Into::into),
+        effort: None,
+    }
+}
+
+impl FakeAgent {
+    fn claude(answer: &str) -> Self {
+        Self {
+            picks: vec![pick("claude-code", "Claude Code", Some("claude-opus-5-5"))],
+            answer: answer.into(),
+            refused: None,
+            asked: Mutex::new(Vec::new()),
+        }
+    }
 }
 
 #[async_trait]
 impl WriteUpAgent for FakeAgent {
-    fn writer(&self) -> Option<FeedbackWriter> {
-        self.ready.then(|| FeedbackWriter {
-            provider: "claude-code".into(),
-            name: "Claude Code".into(),
-        })
+    fn picks(&self) -> Vec<WriteUpPick> {
+        self.picks.clone()
     }
 
     async fn answer(
         &self,
-        provider: &str,
+        pick: &WriteUpPick,
         instructions: &str,
         text: String,
     ) -> Result<String, ToolError> {
-        assert_eq!(provider, "claude-code");
         assert!(instructions.contains("Do not call any tool"));
-        self.asked.lock().push(text);
+        self.asked.lock().push((pick.writer.provider.clone(), text));
+        if pick.model.as_deref() == self.refused {
+            return Err(ToolError::unavailable(format!(
+                "The '{}' model is not supported",
+                self.refused.unwrap_or_default()
+            )));
+        }
         Ok(self.answer.clone())
     }
 }
+
+const WRITTEN: &str = "Here it is:\n```json\n{\"title\": \"Trailing stop stays put on APEX-1234567-01\", \"steps\": [\"Buy 1 NQ\", \"Price moves 10 points\"], \"expected\": \"The stop trails\", \"actual\": \"It stays\"}\n```";
 
 fn write_up_input() -> FeedbackWriteUpInput {
     FeedbackWriteUpInput {
@@ -507,11 +534,7 @@ fn write_up_input() -> FeedbackWriteUpInput {
 async fn the_users_agent_writes_it_up_from_the_note_and_the_kept_facts() {
     let dir = tempfile::tempdir().unwrap();
     let cloud = Arc::new(FakeCloud::default());
-    let agent = Arc::new(FakeAgent {
-        ready: true,
-        answer: "Here it is:\n```json\n{\"title\": \"Trailing stop stays put on APEX-1234567-01\", \"steps\": [\"Buy 1 NQ\", \"Price moves 10 points\"], \"expected\": \"The stop trails\", \"actual\": \"It stays\"}\n```".into(),
-        asked: Mutex::new(Vec::new()),
-    });
+    let agent = Arc::new(FakeAgent::claude(WRITTEN));
     let fb = service(
         &cloud,
         dir.path(),
@@ -522,7 +545,8 @@ async fn the_users_agent_writes_it_up_from_the_note_and_the_kept_facts() {
     assert_eq!(w.steps, ["Buy 1 NQ", "Price moves 10 points"]);
     assert_eq!(w.expected, "The stop trails");
     assert_eq!(w.writer.name, "Claude Code");
-    let asked = agent.asked.lock()[0].clone();
+    let (by, asked) = agent.asked.lock()[0].clone();
+    assert_eq!(by, "claude-code");
     assert!(asked.contains("orders.protect error"));
     assert!(!asked.contains("1234567"), "{asked}");
     assert!(cloud.filed.lock().is_empty(), "writing up sends nothing");
@@ -540,9 +564,8 @@ async fn without_a_connected_agent_or_a_readable_answer_there_is_no_write_up() {
     );
 
     let off = FakeAgent {
-        ready: false,
-        answer: String::new(),
-        asked: Mutex::new(Vec::new()),
+        picks: Vec::new(),
+        ..FakeAgent::claude("")
     };
     let off = service(&cloud, dir.path(), Some(Arc::new(off)));
     assert!(off.write_up(&write_up_input()).await.is_err());
@@ -551,12 +574,48 @@ async fn without_a_connected_agent_or_a_readable_answer_there_is_no_write_up() {
         None
     );
 
-    let rambling = FakeAgent {
-        ready: true,
-        answer: "I could not find anything.".into(),
-        asked: Mutex::new(Vec::new()),
-    };
+    let rambling = FakeAgent::claude("I could not find anything.");
     let rambling = service(&cloud, dir.path(), Some(Arc::new(rambling)));
     let e = rambling.write_up(&write_up_input()).await.unwrap_err();
     assert!(e.message.contains("not a write-up"), "{}", e.message);
+}
+
+#[tokio::test]
+async fn a_model_the_account_cannot_run_falls_back_to_the_next_working_one() {
+    let dir = tempfile::tempdir().unwrap();
+    let cloud = Arc::new(FakeCloud::default());
+    let agent = Arc::new(FakeAgent {
+        picks: vec![
+            pick("codex", "Codex", Some("gpt-6-astra")),
+            pick("claude-code", "Claude Code", Some("claude-opus-5-5")),
+        ],
+        refused: Some("gpt-6-astra"),
+        ..FakeAgent::claude(WRITTEN)
+    });
+    let fb = service(
+        &cloud,
+        dir.path(),
+        Some(Arc::clone(&agent) as Arc<dyn WriteUpAgent>),
+    );
+    assert_eq!(
+        fb.context(&FeedbackContextInput::default())
+            .await
+            .writer
+            .map(|w| w.provider),
+        Some("codex".into())
+    );
+    let w = fb.write_up(&write_up_input()).await.unwrap();
+    assert_eq!(w.writer.name, "Claude Code");
+    assert_eq!(w.expected, "The stop trails");
+    let by: Vec<String> = agent.asked.lock().iter().map(|(p, _)| p.clone()).collect();
+    assert_eq!(by, ["codex", "claude-code"]);
+
+    let only = Arc::new(FakeAgent {
+        picks: vec![pick("codex", "Codex", Some("gpt-6-astra"))],
+        refused: Some("gpt-6-astra"),
+        ..FakeAgent::claude(WRITTEN)
+    });
+    let fb = service(&cloud, dir.path(), Some(only as Arc<dyn WriteUpAgent>));
+    let e = fb.write_up(&write_up_input()).await.unwrap_err();
+    assert!(e.message.contains("not supported"), "{}", e.message);
 }

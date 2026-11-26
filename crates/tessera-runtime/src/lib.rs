@@ -568,7 +568,12 @@ impl Runtime {
                 let (Some(a), Some(s)) = (a.upgrade(), s.upgrade()) else {
                     return;
                 };
-                if matches!(key, "agent.customInstructions" | "agent.defaultMode") {
+                if matches!(
+                    key,
+                    "agent.customInstructions"
+                        | "agent.defaultMode"
+                        | crate::settings::AGENT_DEFAULT_MODEL
+                ) {
                     apply_agent_preferences(&a, &s);
                 } else if key == crate::settings::AGENT_PROVIDERS {
                     a.set_provider_settings(agent_providers(&s));
@@ -1211,6 +1216,24 @@ fn apply_agent_preferences(svc: &tessera_agent::AgentService, settings: &Setting
         .and_then(|v| serde_json::from_value(v).ok())
         .unwrap_or(tessera_protocol::tools::SessionMode::AutoModify);
     svc.set_default_mode(mode);
+    svc.set_default_pick(default_pick(
+        settings.value(crate::settings::AGENT_DEFAULT_MODEL),
+    ));
+}
+
+fn default_pick(value: Option<Value>) -> Option<tessera_agent::ModelPick> {
+    let v = value?;
+    let text = |key: &str| {
+        v.get(key)
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+    };
+    Some(tessera_agent::ModelPick {
+        provider: text("provider")?,
+        model: text("model"),
+        effort: text("effort"),
+    })
 }
 
 fn agent_providers(

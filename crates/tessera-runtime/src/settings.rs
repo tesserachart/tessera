@@ -74,7 +74,7 @@ pub const SETTINGS: &[SettingDef] = &[
         user_only: true,
     },
     SettingDef {
-        key: "agent.defaultModel",
+        key: AGENT_DEFAULT_MODEL,
         description: "The provider, model and reasoning effort a new conversation starts with (the composer's pick): {\"provider\": a provider id (codex, claude-code), \"model\": one of its model ids, \"effort\": a reasoning effort the model offers}, as agent.list_providers lists them. An absent field takes the first ready provider's defaults; a provider that is off (agent.providers) is never picked, and a pick of one stays stored and applies again once it is turned back on.",
         default: || json!({}),
         schema: || {
@@ -451,6 +451,7 @@ fn commission_rate(per_side: Decimal) -> Value {
 }
 
 pub const AGENT_PROVIDERS: &str = "agent.providers";
+pub const AGENT_DEFAULT_MODEL: &str = "agent.defaultModel";
 
 const AGENT_PROVIDER_IDS: [&str; 2] = ["codex", "claude-code"];
 

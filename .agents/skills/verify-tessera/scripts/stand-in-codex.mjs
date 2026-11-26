@@ -3,6 +3,8 @@ import { createInterface } from 'node:readline';
 
 const PACE_MS = 220;
 const MODEL = 'gpt-5-codex';
+const at = process.argv.indexOf('--unsupported-model');
+const UNSUPPORTED = at >= 0 ? process.argv[at + 1] : undefined;
 const send = (line) => process.stdout.write(`${JSON.stringify(line)}\n`);
 const answer = (id, result) => send({ id, result });
 const refuse = (id, message) => send({ id, error: { code: -32601, message } });
@@ -14,6 +16,21 @@ const ANSWER =
 
 let ids = 0;
 const running = new Map();
+const threadModels = new Map();
+
+const listed = (id, displayName, isDefault) => ({
+  id,
+  model: id,
+  displayName,
+  isDefault,
+  supportedReasoningEfforts: [{ reasoningEffort: 'medium' }],
+  defaultReasoningEffort: 'medium',
+});
+
+function refuseModel(threadId, turnId, model) {
+  const message = `The '${model}' model is not supported when using Codex with a ChatGPT account.`;
+  note('turn/completed', { threadId, turn: { id: turnId, status: 'failed', error: { message } } });
+}
 
 function finish(threadId, status) {
   const turn = running.get(threadId);
@@ -62,27 +79,23 @@ createInterface({ input: process.stdin }).on('line', (line) => {
       break;
     case 'model/list':
       answer(msg.id, {
-        data: [
-          {
-            id: MODEL,
-            model: MODEL,
-            displayName: 'GPT-5 Codex',
-            isDefault: true,
-            supportedReasoningEfforts: [{ reasoningEffort: 'medium' }],
-            defaultReasoningEffort: 'medium',
-          },
-        ],
+        data: [...(UNSUPPORTED ? [listed(UNSUPPORTED, UNSUPPORTED, false)] : []), listed(MODEL, 'GPT-5 Codex', true)],
         nextCursor: null,
       });
       break;
     case 'thread/start':
-    case 'thread/resume':
-      answer(msg.id, { thread: { id: p.threadId ?? `thr_${String((ids += 1))}` }, model: MODEL });
+    case 'thread/resume': {
+      const threadId = p.threadId ?? `thr_${String((ids += 1))}`;
+      threadModels.set(threadId, p.model ?? MODEL);
+      answer(msg.id, { thread: { id: threadId }, model: p.model ?? MODEL });
       break;
+    }
     case 'turn/start': {
       const turnId = `turn_${String((ids += 1))}`;
+      const model = p.model ?? threadModels.get(p.threadId) ?? MODEL;
       answer(msg.id, { turn: { id: turnId, status: 'inProgress' } });
-      stream(p.threadId, turnId);
+      if (model === UNSUPPORTED) refuseModel(p.threadId, turnId, model);
+      else stream(p.threadId, turnId);
       break;
     }
     case 'turn/interrupt':

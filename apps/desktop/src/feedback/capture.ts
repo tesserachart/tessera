@@ -1,24 +1,28 @@
-import { createContext, domToForeignObjectSvg } from 'modern-screenshot';
-import { freeze, type Frozen } from './freeze.ts';
+import { afterPaint } from '../app/onceShown.ts';
 import type { Screenshot } from './model.ts';
-import { nextFrame, timeSlicer } from './pace.ts';
-import { classify, defaultsIn, drawnProperties, slimmer, slimPseudoRules } from './slim.ts';
-import { drawTiles } from './tiles.ts';
+import { encodePicture } from './encode.ts';
+import { ABOVE_ATTR, copyPage, HIDDEN_ATTR, OUT_ATTR, readPage } from './page.ts';
+import type { Painted, Rect } from './pixels.ts';
+import { cssFor, dataUrlOf, pageCss } from './sheets.ts';
+
+export { cleanClone, maskText, xmlSafe } from './page.ts';
 
 export const LEFT_OUT_ATTR = 'data-feedback-leave-out';
 
 const LEFT_OUT = `[${LEFT_OUT_ATTR}], .t-scrim, .ui-dialog-overlay`;
 
-const MAX_PNG_BYTES = 5 * 1024 * 1024;
+const ALL = (sel: string) => `${sel},${sel} *,${sel}::before,${sel}::after,${sel} *::before,${sel} *::after`;
 
-const JPEG_QUALITY = 0.85;
+const STILL = '*,*::before,*::after{animation:none!important;transition:none!important}';
 
-const PREVIEW_WIDTH = 960;
+const LEFT_OUT_RULE = `${ALL(`[${OUT_ATTR}]`)}{visibility:hidden!important}`;
 
-const MASK = '••••';
-
-// eslint-disable-next-line no-control-regex
-const XML_UNSAFE = /[\u0000-\u0008\v\f\u000E-\u001F\uD800-\uDFFF￾￿]/gu;
+const ONLY_ABOVE = [
+  '*,*::before,*::after{visibility:hidden!important}',
+  `${ALL(`[${ABOVE_ATTR}]`)}{visibility:visible!important}`,
+  `[${HIDDEN_ATTR}],[${HIDDEN_ATTR}]::before,[${HIDDEN_ATTR}]::after{visibility:hidden!important}`,
+  LEFT_OUT_RULE,
+].join('\n');
 
 export function privateWordsOf(
   accounts: readonly { id: string; displayName: string; externalRefMasked: string | null; environment: string }[],
@@ -35,44 +39,9 @@ export function privateWordsOf(
   return [...words].sort((x, y) => y.length - x.length);
 }
 
-export function maskText(text: string, words: readonly string[]): string {
-  let out = text;
-  for (const w of words) if (out.includes(w)) out = out.split(w).join(MASK);
-  return out;
-}
-
-export function xmlSafe(text: string): string {
-  return text.replace(XML_UNSAFE, '');
-}
-
-export function cleanClone(cloned: Node, words: readonly string[]): void {
-  if (!(cloned instanceof Element)) return;
-  for (const child of cloned.childNodes) {
-    if (child.nodeType === Node.TEXT_NODE && child.textContent) {
-      child.textContent = xmlSafe(maskText(child.textContent, words));
-    }
-  }
-  if (cloned instanceof HTMLInputElement || cloned instanceof HTMLTextAreaElement) {
-    cloned.value = xmlSafe(maskText(cloned.value, words));
-  }
-  for (const a of cloned.attributes) {
-    const clean = xmlSafe(maskText(a.value, words));
-    if (clean !== a.value) a.value = clean;
-  }
-}
-
-function loadedSandbox(): Promise<HTMLIFrameElement> {
+function nextFrame(): Promise<void> {
   return new Promise((resolve) => {
-    const frame = document.createElement('iframe');
-    frame.setAttribute(LEFT_OUT_ATTR, '');
-    frame.setAttribute('aria-hidden', 'true');
-    frame.tabIndex = -1;
-    frame.width = '0';
-    frame.height = '0';
-    frame.style.cssText = 'position:fixed;visibility:hidden;border:0;';
-    frame.addEventListener('load', () => resolve(frame), { once: true });
-    frame.srcdoc = '<!DOCTYPE html><meta charset="UTF-8"><title></title><body>';
-    document.body.appendChild(frame);
+    afterPaint(resolve);
   });
 }
 
@@ -86,26 +55,66 @@ export function blobOf(canvas: HTMLCanvasElement, type: Screenshot['type'], qual
   });
 }
 
-function shrunk(canvas: HTMLCanvasElement, width: number): HTMLCanvasElement {
-  if (canvas.width <= width) return canvas;
-  const out = document.createElement('canvas');
-  out.width = width;
-  out.height = Math.max(1, Math.round((canvas.height * width) / canvas.width));
-  const ctx = out.getContext('2d');
-  if (!ctx) return canvas;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(canvas, 0, 0, out.width, out.height);
-  return out;
+function xmlText(css: string): string {
+  return css.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function dataUrlOf(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () =>
-      typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('the picture could not be read'));
-    reader.onerror = () => reject(reader.error ?? new Error('the picture could not be read'));
-    reader.readAsDataURL(blob);
-  });
+async function pictureOf(markup: string, slot: string, css: string): Promise<HTMLImageElement> {
+  const width = String(window.innerWidth);
+  const height = String(window.innerHeight);
+  const rem = getComputedStyle(document.documentElement).fontSize;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="font-size:${rem}">` +
+    `<foreignObject x="0" y="0" width="${width}" height="${height}">${markup.replace(slot, () => xmlText(css))}</foreignObject></svg>`;
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  await img.decode();
+  return img;
+}
+
+function placed(shown: Rect, frame: Rect, scale: number) {
+  return {
+    x: (shown.left - frame.left) * scale,
+    y: (shown.top - frame.top) * scale,
+    w: (shown.right - shown.left) * scale,
+    h: (shown.bottom - shown.top) * scale,
+  };
+}
+
+function compose(
+  ctx: CanvasRenderingContext2D,
+  {
+    under,
+    over,
+    painted,
+    frame,
+    scale,
+  }: {
+    under: HTMLImageElement;
+    over: HTMLImageElement | null;
+    painted: readonly Painted[];
+    frame: Rect;
+    scale: number;
+  },
+) {
+  const { width, height } = ctx.canvas;
+  const page = [frame.left, frame.top, frame.right - frame.left, frame.bottom - frame.top] as const;
+  ctx.drawImage(under, ...page, 0, 0, width, height);
+  for (const p of painted) {
+    const at = placed(p.shown, frame, scale);
+    ctx.drawImage(p.copy, 0, 0, p.copy.width, p.copy.height, at.x, at.y, at.w, at.h);
+  }
+  if (!over) return;
+  ctx.save();
+  ctx.beginPath();
+  for (const p of painted) {
+    const at = placed(p.shown, frame, scale);
+    ctx.rect(at.x, at.y, at.w, at.h);
+  }
+  ctx.clip();
+  ctx.drawImage(over, ...page, 0, 0, width, height);
+  ctx.restore();
 }
 
 export type Stamp = (canvas: HTMLCanvasElement, scale: number) => Promise<void> | void;
@@ -116,57 +125,34 @@ export async function captureWindow(
   alsoLeftOut: readonly string[] = [],
   stamp?: Stamp,
 ): Promise<Screenshot> {
-  const width = root.clientWidth || window.innerWidth;
-  const height = root.clientHeight || window.innerHeight;
   const scale = Math.min(window.devicePixelRatio || 1, 2);
   const background = getComputedStyle(document.body).backgroundColor || null;
-  const slice = timeSlicer();
-  const properties = drawnProperties();
-  const sandbox = await loadedSandbox();
-  let frozen: Frozen | null = null;
-  try {
-    const leftOut = [LEFT_OUT, ...alsoLeftOut].join(', ');
-    frozen = await freeze(root, { width, height, leftOut, properties, slice });
-    const defaults = defaultsIn(sandbox);
-    const slim = slimmer(defaults);
-    const context = await createContext(frozen.root, {
-      width,
-      height,
-      scale,
-      backgroundColor: background,
-      features: { removeControlCharacter: false },
-      includeStyleProperties: properties,
-      style: { transform: 'none' },
-      autoDestruct: true,
-      onCloneEachNode: (cloned: Node) => {
-        cleanClone(cloned, words);
-        slim.children(cloned);
-        return slice();
-      },
-      onCloneNode: async (clone: Node) => {
-        const pseudo = context.svgStyleElement?.lastChild;
-        if (pseudo && context.svgStyles.size > 0 && clone instanceof Element) {
-          pseudo.textContent = await slimPseudoRules(context.svgStyles, clone, { slim, defaultsOf: defaults, slice });
-        }
-      },
-    });
-    context.sandbox = sandbox;
-    const svg = (await domToForeignObjectSvg(context)) as SVGSVGElement;
-    const { boxes } = frozen;
-    frozen.thaw();
-    frozen = null;
-    const classes = await classify(svg, slice);
-    const canvas = await drawTiles(svg, boxes, classes, { width, height, scale, background, slice });
-    if (stamp) await stamp(canvas, scale);
-    await nextFrame();
-    let blob = await blobOf(canvas, 'image/png');
-    if (blob.size > MAX_PNG_BYTES) blob = await blobOf(canvas, 'image/jpeg', JPEG_QUALITY);
-    const url = await dataUrlOf(blob);
-    const preview = await dataUrlOf(await blobOf(shrunk(canvas, PREVIEW_WIDTH), 'image/jpeg', JPEG_QUALITY));
-    const type: Screenshot['type'] = blob.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
-    return { type, data: url.slice(url.indexOf(',') + 1), preview, width, height, bytes: blob.size };
-  } finally {
-    frozen?.thaw();
-    sandbox.remove();
+  const css = pageCss();
+  const slot = `fb-css-${crypto.randomUUID()}`;
+  const read = readPage(root, [LEFT_OUT, ...alsoLeftOut].join(', '));
+  const { markup, classes } = copyPage(read, words, slot);
+  const { frame, painted } = read;
+  const width = Math.round(frame.right - frame.left);
+  const height = Math.round(frame.bottom - frame.top);
+  await nextFrame();
+  const sheet = `${cssFor(await css, classes)}\n${STILL}\n${LEFT_OUT_RULE}`;
+  const under = await pictureOf(markup, slot, sheet);
+  await nextFrame();
+  const over = read.above.size > 0 ? await pictureOf(markup, slot, `${sheet}\n${ONLY_ABOVE}`) : null;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(width * scale);
+  canvas.height = Math.floor(height * scale);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('no canvas to draw on');
+  if (background) {
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
+  compose(ctx, { under, over, painted, frame, scale });
+  if (stamp) await stamp(canvas, scale);
+  const { full, preview } = await encodePicture(canvas);
+  const url = await dataUrlOf(full);
+  const previewUrl = await dataUrlOf(preview);
+  const type: Screenshot['type'] = full.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+  return { type, data: url.slice(url.indexOf(',') + 1), preview: previewUrl, width, height, bytes: full.size };
 }

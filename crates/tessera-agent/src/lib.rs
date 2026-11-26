@@ -23,7 +23,7 @@ pub use codex::{CodexConfig, CodexProvider};
 pub use module::{AgentModule, ts_exports};
 pub use provider::{AgentProvider, ProviderEvent, ProviderState, ProviderThread};
 pub use report::{TurnReport, TurnSink, TurnUsage};
-pub use service::{AgentService, OneAnswer};
+pub use service::{AgentService, ModelPick, OneAnswer};
 pub use session::{ContextPolicy, Preset, SessionConfig, WorkspaceContext};
 pub use tessera_protocol::agent::{AgentEvent, AgentEventEnvelope};
 pub use transcript::Transcript;
