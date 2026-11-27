@@ -687,7 +687,7 @@ describe('order flow read back as the chart scrolls', () => {
 });
 
 describe('the volume profile while the runtime reads its session back', () => {
-  it('draws no histogram for the session until its backfill completes, then all of it in one change, with its POC', async () => {
+  it('draws the session from what has arrived while its backfill runs, growing with each answer, then whole with its POC', async () => {
     const T = Date.parse('2026-10-19T10:00:00-04:00');
     const HOUR = 60 * MIN;
     const ES = 'ESZ6.CME';
@@ -810,27 +810,15 @@ describe('the volume profile while the runtime reads its session back', () => {
     await readsAgain(2);
     await vi.waitFor(() => expect(painted().today).toBeGreaterThan(blank.today));
 
-    const reading = seen.filter((x) => x.reads < 3);
-    const firstDrawn = reading.find((x) => x.reads === 1)!;
+    await vi.waitFor(() => expect(seen.some((x) => x.reads === 3)).toBe(true));
+    const drawn = [1, 2, 3].map((n) => seen.filter((x) => x.reads === n).at(-1)!.today);
     expect(
-      reading.filter((x) => x.reads === 2).every((x) => x.older === firstDrawn.older && x.today === firstDrawn.today),
-      'the first answer is drawn and an answer still filling is not',
-    ).toBe(true);
-    expect(
-      reading.some((x) => x.older > blank.older),
+      seen.some((x) => x.reads === 1 && x.older > blank.older),
       'the whole older session is drawn from the first answer',
     ).toBe(true);
-    expect(
-      reading.map((x) => x.today),
-      'nothing of the session being read is drawn',
-    ).toEqual(reading.map(() => blank.today));
-    expect(
-      reading.map((x) => x.poc),
-      'and the legend shows no POC for it',
-    ).toEqual(reading.map(() => null));
-    const drawn = seen.filter((x) => x.today > blank.today);
-    expect(new Set(drawn.map((x) => x.today)).size, 'the session lands whole, never growing').toBe(1);
-    expect(drawn[0]!.reads).toBe(3);
+    expect(drawn[0], 'the first answer draws the part of the session already read').toBeGreaterThan(blank.today);
+    expect(drawn[1], 'each answer while filling draws more of it').toBeGreaterThan(drawn[0]!);
+    expect(drawn[2], 'and the settled answer draws all of it').toBeGreaterThan(drawn[1]!);
     expect(painted().poc).toBe(`POC ${format.grouped(5800.25)}`);
 
     profiles.release();

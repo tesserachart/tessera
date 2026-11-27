@@ -540,6 +540,7 @@ async fn pull(
     id: &InstrumentId,
     now: Timestamp,
 ) {
+    let _foreground = router.foreground().enter();
     loop {
         let Some(want) = flow.upgrade().and_then(|f| f.reach.lock().wanted()) else {
             return;
@@ -567,10 +568,7 @@ async fn pull(
         };
         f.shown.lock().pin(disk, chunk);
         drop(f);
-        let answer = {
-            let _foreground = router.foreground().enter();
-            super::once_served(router, id, || saved::ask(router, id, chunk)).await
-        };
+        let answer = super::once_served(router, id, || saved::ask(router, id, chunk)).await;
         let Some(f) = flow.upgrade() else { return };
         match answer {
             Ok(rows) => {
@@ -583,6 +581,9 @@ async fn pull(
                     tracing::warn!(%id, error = %e, "older trades were not saved");
                 }
                 f.reach.lock().mark(chunk);
+                if opens_its_session(disk.calendar, chunk) {
+                    f.filled.send_modify(|n| *n += 1);
+                }
             }
             Err(e) => {
                 tracing::info!(%id, error = %e, "the connection gave no older trades");
@@ -593,6 +594,12 @@ async fn pull(
             }
         }
     }
+}
+
+fn opens_its_session(calendar: SessionCalendar, chunk: Span) -> bool {
+    calendar
+        .session(calendar.trade_date(Timestamp(chunk.start)))
+        .is_some_and(|s| s.open.0 == chunk.start)
 }
 
 #[cfg(test)]

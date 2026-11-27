@@ -1233,13 +1233,14 @@ impl Work {
             Ok(h) => h,
             Err(e) => return failed(e),
         };
+        self.router.foreground().idle().await;
         if !self.keep_minutes(job, &spans).await {
             return None;
         }
         if holes.is_empty() {
             return Some(DayStatus::AlreadySaved);
         }
-        let had_some = holes != spans;
+        let mut had_some = holes != spans;
         let pieces = pieces(&holes);
         self.progress(job, 0, pieces.len());
         let mut fetched = 0u64;
@@ -1254,13 +1255,24 @@ impl Work {
                 Served::Stopped => return None,
                 Served::Elsewhere(why) => return failed(why),
             }
-            let rows = match saved::ask(&self.router, &job.day.contract, *piece).await {
+            let unsaved = match self.holes(&contract, &[*piece]).await {
+                Ok(h) => h,
+                Err(e) => return failed(e),
+            };
+            had_some |= unsaved != [*piece];
+            let (Some(first), Some(last)) = (unsaved.first(), unsaved.last()) else {
+                n += 1;
+                self.progress(job, n, pieces.len());
+                continue;
+            };
+            let ask = Span::new(first.start, last.end);
+            let rows = match saved::ask(&self.router, &job.day.contract, ask).await {
                 Ok(rows) => rows,
                 Err(_) if self.blocked(job).is_some() => continue,
                 Err(e) => return failed(e.to_string()),
             };
             fetched += rows.len() as u64;
-            let (c, cal, span, now) = (contract.clone(), job.calendar, *piece, self.clock.now());
+            let (c, cal, span, now) = (contract.clone(), job.calendar, ask, self.clock.now());
             if let Err(e) = self
                 .blocking(move |s| s.save_answer(&c, cal, &rows, span, now))
                 .await

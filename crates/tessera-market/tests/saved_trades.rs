@@ -112,6 +112,7 @@ struct Replays {
     open: watch::Sender<bool>,
     held_before: watch::Sender<Option<i64>>,
     asked: Mutex<Vec<Span>>,
+    asked_for: Mutex<Vec<InstrumentId>>,
     in_flight: AtomicUsize,
     most_in_flight: AtomicUsize,
     refuse_before: Mutex<Option<i64>>,
@@ -131,6 +132,7 @@ impl Replays {
             open: watch::channel(true).0,
             held_before: watch::channel(None).0,
             asked: Mutex::new(Vec::new()),
+            asked_for: Mutex::new(Vec::new()),
             in_flight: AtomicUsize::new(0),
             most_in_flight: AtomicUsize::new(0),
             refuse_before: Mutex::new(None),
@@ -184,6 +186,7 @@ impl MarketDataProvider for Replays {
         }
         let span = Span::new(req.from.unwrap().0, req.to.unwrap().0);
         self.asked.lock().push(span);
+        self.asked_for.lock().push(req.instrument.clone());
         let n = self.in_flight.fetch_add(1, Ordering::SeqCst) + 1;
         self.most_in_flight.fetch_max(n, Ordering::SeqCst);
         let _ = self
@@ -520,6 +523,87 @@ async fn a_partly_saved_session_asks_only_the_span_it_misses() {
             .unwrap()
             .is_empty()
     );
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_studied_instrument_fills_its_session_before_a_watched_market_or_a_download() {
+    let dir = tempfile::tempdir().unwrap();
+    let saved = saved_in(&dir);
+    let fake = Replays::new(at(10, 2, 17, 30));
+    let hub = hub(&fake, &saved);
+    let es = InstrumentId::new("ESZ6.CME").unwrap();
+    assert_eq!(
+        hub.keep_recording(std::slice::from_ref(&es)),
+        vec![es.clone()]
+    );
+    settle(
+        "the watched market's first request",
+        || fake.asked().len(),
+        |n| *n > 0,
+    )
+    .await;
+    let _footprint = hub
+        .acquire(PumpKey::Footprint(nq(), Timeframe::M1, 1))
+        .unwrap();
+    settle(
+        "the study's first request",
+        || fake.asked_for.lock().contains(&nq()),
+        |asked| *asked,
+    )
+    .await;
+    let (router, feed) = (Arc::clone(hub.router()), Arc::clone(&fake));
+    let download = tokio::spawn(async move {
+        router.foreground().idle().await;
+        feed.asked_for.lock().iter().filter(|i| **i == nq()).count()
+    });
+    settled(&hub, &fake).await;
+    let asked = fake.asked_for.lock().clone();
+    let charted: Vec<usize> = (0..asked.len()).filter(|&k| asked[k] == nq()).collect();
+    assert!(
+        charted.len() > 30,
+        "the session is asked in half hours: {}",
+        charted.len()
+    );
+    let (first, last) = (charted[0], charted[charted.len() - 1]);
+    assert_eq!(
+        last - first + 1,
+        charted.len(),
+        "the watched market asks nothing while the studied session fills: {asked:?}"
+    );
+    assert_eq!(
+        download.await.unwrap(),
+        charted.len(),
+        "a download gets the line once the studied session is in, not between its requests"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn each_older_session_a_reach_completes_is_announced_before_the_reach_ends() {
+    let dir = tempfile::tempdir().unwrap();
+    let saved = saved_in(&dir);
+    let today = session(10, 2);
+    seed(&saved, &[today]);
+    let fake = Replays::new(at(10, 2, 17, 30));
+    let hub = hub(&fake, &saved);
+    let _chart = hub.acquire(PumpKey::Trades(nq())).unwrap();
+    settled(&hub, &fake).await;
+    let mut filled = hub.prints_filled(&nq()).unwrap();
+    filled.mark_unchanged();
+    fake.held_before.send_replace(Some(session(10, 1).start));
+
+    let (_, r) = read(&hub, Span::new(session(9, 30).start, today.end)).await;
+    assert!(r.filling, "the older sessions are being pulled");
+    settle(
+        "Thursday announced",
+        || filled.has_changed().unwrap_or(false),
+        |changed| *changed,
+    )
+    .await;
+    assert!(hub.pulling(&nq()), "Wednesday is still being pulled");
+    let (got, r) = read(&hub, session(10, 1)).await;
+    assert!(r.gaps.is_empty());
+    assert_eq!(seen(&got), seen(&truth(session(10, 1))));
+    fake.held_before.send_replace(None);
 }
 
 #[tokio::test(start_paused = true)]

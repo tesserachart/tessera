@@ -411,6 +411,55 @@ async fn a_partial_day_asks_only_its_missing_span() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_pull_waits_for_the_chart_and_never_asks_what_the_chart_saved_meanwhile() {
+    let rig = Rig::memory();
+    let rth = day_spans(CAL, date(9, 24), Scope::Rth)[0];
+    let noon = rth.start + 150 * 60 * 1_000_000_000;
+    let chart = rig.router.foreground().enter();
+    let pulls = rig.pulls().await;
+    pulls
+        .start(self::rth(NQZ6, date(9, 24), date(9, 24)))
+        .await
+        .unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    assert!(
+        rig.feed.asked().is_empty(),
+        "the pull asks nothing while the chart reads"
+    );
+    let afternoon = rig
+        .feed
+        .inner
+        .get_trades(TradesRequest {
+            instrument: InstrumentId::new(NQZ6).unwrap(),
+            from: Some(Timestamp(noon)),
+            to: Some(Timestamp(rth.end)),
+            limit: None,
+        })
+        .await
+        .unwrap();
+    let rows: Vec<_> = afternoon
+        .iter()
+        .map(tessera_store::ticks::TickRow::of)
+        .collect();
+    rig.saved
+        .save_now(&nqz6(), CAL, &rows, Span::new(noon, rth.end))
+        .unwrap();
+    drop(chart);
+    settled(&pulls).await;
+    let asked = rig.feed.asked();
+    assert!(
+        asked.iter().all(|s| s.end <= noon),
+        "the afternoon the chart saved is not asked again: {asked:?}"
+    );
+    assert_eq!(
+        asked.iter().map(|s| s.end - s.start).sum::<i64>(),
+        noon - rth.start
+    );
+    let done = pulls.list().pop().unwrap();
+    assert_eq!(done.progress.saved, 1);
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn a_pull_stopped_midway_resumes_and_asks_nothing_it_saved() {
     let dir = tempfile::tempdir().unwrap();
     let req = rth(NQZ6, date(9, 22), date(9, 24));

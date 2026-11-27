@@ -364,10 +364,7 @@ class PeriodList {
           `sessions:${String(sessions)}`,
           () => this.question(this.running.live(), { sessions }),
           (settled) => this.takeNewest(settled),
-          (filling) => {
-            this.loaded = loadedOf(filling.all);
-            this.changed.emit();
-          },
+          (filling) => this.takeNewest(filling),
         );
     } catch (e) {
       if (!live()) return;
@@ -435,15 +432,14 @@ class PeriodList {
 
   private take(answer: SessionsAnswer): Set<number> {
     const tick = this.flow.grid.tick;
-    const shown = (p: ProfileOutput) => !answer.filling || p.gaps.length === 0;
     const drawn: SessionProfileData[] = [];
-    for (const p of answer.all.profiles.filter(shown)) {
+    for (const p of answer.all.profiles) {
       const s = profileData(p, tick, this.period);
-      this.gapsBy.set(s.from, gapsOf(p.gaps));
+      this.gapsBy.set(s.from, answer.filling ? NO_GAPS : gapsOf(p.gaps));
       drawn.push(s);
     }
     if (drawn.length > 0) this.list = mergeSessions(this.list, drawn);
-    const rthDrawn = answer.rth?.profiles.filter(shown).map((p) => profileData(p, tick, this.period)) ?? [];
+    const rthDrawn = answer.rth?.profiles.map((p) => profileData(p, tick, this.period)) ?? [];
     if (rthDrawn.length > 0) this.rth = mergeSessions(this.rth, rthDrawn);
     for (const p of answer.all.profiles)
       this.oldestRead = Math.min(this.oldestRead ?? Infinity, normalizeEpochMs(p.from));
@@ -486,6 +482,7 @@ class PeriodList {
             `older:${String(to)}`,
             () => this.question(this.running.live(), q),
             (settled) => this.takeOlder(settled),
+            (filling) => this.takeOlder(filling),
           );
         if (this.oldestRead === before) this.exhausted = true;
       }
@@ -724,7 +721,7 @@ export class ProfileFeed implements ProfileSource {
     const take = (out: VolumeProfileOutput) => {
       const p = out.profiles[out.profiles.length - 1];
       held.data = p ? profileData(p, this.flow.grid.tick, q.period ?? 'session') : null;
-      held.gaps = p ? gapsOf(p.gaps) : NO_GAPS;
+      held.gaps = p && !out.filling ? gapsOf(p.gaps) : NO_GAPS;
       held.loaded = loadedOf(out);
       held.at = this.flow.clock.now();
       held.answered = true;
@@ -736,11 +733,7 @@ export class ProfileFeed implements ProfileSource {
       (out) => {
         held.reading = false;
         take(out);
-        if (out.filling)
-          this.refill.ask(`${q.mode}:${key}`, ask, take, (filling) => {
-            held.loaded = loadedOf(filling);
-            this.changed.emit();
-          });
+        if (out.filling) this.refill.ask(`${q.mode}:${key}`, ask, take, take);
       },
       (e) => {
         held.reading = false;

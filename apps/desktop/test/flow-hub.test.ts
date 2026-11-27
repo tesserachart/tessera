@@ -1966,7 +1966,7 @@ describe('where the order flow has no prints', () => {
     release();
   });
 
-  it('holds a session profile with gaps back while its answer is filling, then draws it from its stored prints, partial', async () => {
+  it('draws a session profile the runtime is still filling at once, partial, then its settled answer', async () => {
     const answers = [
       volumeProfile([session([hole], [[5800, 4, 2, 2]])], true),
       volumeProfile([session([hole], [[5800, 6, 3, 3]])], false),
@@ -1978,16 +1978,14 @@ describe('where the order flow has no prints', () => {
     const { flow, release } = hub.acquire('ES', 0.25, 2);
     const vp = flow.useProfiles();
     vp.feed.periods('session');
-    await vi.waitFor(() => expect(rt.toolCalls('market.get_volume_profile')).toHaveLength(1));
-    await quiet();
-    expect(vp.feed.periods('session'), 'a session with gaps waits while the fill may complete it').toEqual([]);
-    expect(vp.feed.status).toEqual({ reading: false, error: null });
-    expect(vp.feed.gaps).toEqual([]);
-    await readsAgain(1);
     await vi.waitFor(() => expect(vp.feed.periods('session')).toHaveLength(1));
-    const drawn = vp.feed.periods('session')[0]!;
-    expect([...drawn.volume]).toEqual([6]);
-    expect(drawn.partial).toBe(true);
+    const early = vp.feed.periods('session')[0]!;
+    expect([...early.volume], 'what has arrived is drawn at once').toEqual([4]);
+    expect(early.partial).toBe(true);
+    expect(vp.feed.gaps, 'a gap the runtime is filling is not marked').toEqual([]);
+    await readsAgain(1);
+    await vi.waitFor(() => expect([...vp.feed.periods('session')[0]!.volume]).toEqual([6]));
+    expect(vp.feed.periods('session')[0]!.partial).toBe(true);
     expect(vp.feed.gaps).toEqual([{ from: T0 - 3_600_000, to: T0 - 600_000 }]);
     expect(rt.toolCalls('market.get_volume_profile').map((c) => c.input)).toEqual([
       rt.toolCalls('market.get_volume_profile')[0]!.input,
@@ -2128,7 +2126,7 @@ describe('session profiles', () => {
     release();
   });
 
-  it('draws a session with gaps the runtime is still filling only once its answer settles, whole, in one change', async () => {
+  it('draws a session the runtime is still filling as each answer lands, partial, until the whole one replaces it', async () => {
     const yesterday: ProfileOutput = {
       ...profile([[5799, 40, 20, 20]]),
       from: ns(T0 - DAY - 3_600_000),
@@ -2157,28 +2155,24 @@ describe('session profiles', () => {
     const { flow, release } = hub.acquire('ES', 0.25, 2);
     const vp = flow.useProfiles();
     vp.feed.periods('session');
-    const seen: { sessions: readonly SessionProfileData[] }[] = [];
-    vp.feed.changed.on(() => seen.push({ sessions: vp.feed.periods('session') }));
-    await vi.waitFor(() => expect(rt.toolCalls('market.get_volume_profile')).toHaveLength(1));
-    await quiet();
-    const drawnFirst = vp.feed.periods('session');
-    expect(
-      drawnFirst.map((s) => s.from),
-      'the whole older session is drawn at once',
-    ).toEqual([T0 - DAY - 3_600_000]);
-    expect(vp.feed.status).toEqual({ reading: false, error: null });
-    await readsAgain(1);
-    await vi.waitFor(() => expect(rt.toolCalls('market.get_volume_profile')).toHaveLength(2));
-    await quiet();
-    expect(vp.feed.periods('session'), 'an answer still filling draws nothing new').toBe(drawnFirst);
-    await readsAgain(2);
+    const seen: SessionProfileData[] = [];
+    vp.feed.changed.on(() => {
+      const s = vp.feed.periods('session').find((x) => x.from === T0 - 3_600_000);
+      if (s && s !== seen.at(-1)) seen.push(s);
+    });
     await vi.waitFor(() => expect(vp.feed.periods('session')).toHaveLength(2));
-    const shown = seen.map((x) => x.sessions.find((s) => s.from === T0 - 3_600_000)).filter((s) => s !== undefined);
+    expect(vp.feed.gaps, 'a gap the runtime is filling is not marked').toEqual([]);
+    await readsAgain(1);
+    await readsAgain(2);
+    await vi.waitFor(() => expect(seen.at(-1)?.partial).toBe(false));
     expect(
-      shown.map((s) => [...s.volume]),
-      'today never shows partial rows',
-    ).toEqual(shown.map(() => [10, 30, 5]));
-    expect(shown.every((s) => s.partial === false)).toBe(true);
+      seen.map((s) => [[...s.volume], s.partial]),
+      'each answer while filling is drawn partial, and the last is the whole session',
+    ).toEqual([
+      [[5], true],
+      [[30, 5], true],
+      [[10, 30, 5], false],
+    ]);
     expect(vp.feed.gaps).toEqual([]);
     await readsAgain(3);
     expect(rt.toolCalls('market.get_volume_profile')).toHaveLength(3);

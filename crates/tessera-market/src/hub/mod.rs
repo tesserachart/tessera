@@ -118,6 +118,7 @@ struct Flow {
     shown: Mutex<Shown>,
     reach: Mutex<Reach>,
     pulls_waiting: AtomicUsize,
+    studies: AtomicUsize,
 }
 
 impl Flow {
@@ -207,7 +208,20 @@ impl Flow {
             shown: Mutex::default(),
             reach: Mutex::default(),
             pulls_waiting: AtomicUsize::new(0),
+            studies: AtomicUsize::new(0),
         }
+    }
+
+    fn studied(self: &Arc<Self>) -> OnDrop<impl FnMut() + use<>> {
+        self.studies.fetch_add(1, Ordering::Relaxed);
+        let flow = Arc::clone(self);
+        OnDrop(move || {
+            flow.studies.fetch_sub(1, Ordering::Relaxed);
+        })
+    }
+
+    fn is_studied(&self) -> bool {
+        self.studies.load(Ordering::Relaxed) > 0
     }
 }
 
@@ -1148,16 +1162,24 @@ async fn fill_session(
     };
     let join_at = join_at.min(session.close).0;
     let join_at = join_at - join_at.rem_euclid(NANOS_PER_MICRO);
+    let mut foreground = None;
     loop {
-        let gap = {
+        let (gap, studied) = {
             let Some(f) = flow.upgrade().filter(|f| f.recording(generation)) else {
                 return Ok(());
             };
-            f.past.lock().next_gap(generation, session.open.0, join_at)
+            let gap = f.past.lock().next_gap(generation, session.open.0, join_at);
+            (gap, f.is_studied())
         };
         let Some((floor, to)) = gap else {
             return Ok(());
         };
+        if studied {
+            foreground.get_or_insert_with(|| router.foreground().enter());
+        } else {
+            foreground = None;
+            router.foreground().idle().await;
+        }
         let (span, rows) = fill_step(router, disk, id, floor, to, Timestamp(join_at)).await?;
         let Some(f) = flow.upgrade() else {
             return Ok(());
@@ -1204,16 +1226,13 @@ async fn fill_step(
             Timestamp(span.start)
         )));
     }
-    let rows = {
-        let _foreground = router.foreground().enter();
-        match saved::ask(router, id, span).await {
-            Ok(rows) => rows,
-            Err(e) => {
-                if matches!(e, MarketError::Unsupported(_)) {
-                    disk.remember_refused(span);
-                }
-                return Err(e);
+    let rows = match saved::ask(router, id, span).await {
+        Ok(rows) => rows,
+        Err(e) => {
+            if matches!(e, MarketError::Unsupported(_)) {
+                disk.remember_refused(span);
             }
+            return Err(e);
         }
     };
     let (d, c) = (disk.clone(), disk.contract.clone());
@@ -1899,6 +1918,27 @@ impl MarketHub {
     }
 
     fn spawn_pump(
+        &self,
+        key: &PumpKey,
+        prep: &mut Prep,
+        asker: Asker,
+    ) -> Result<JoinHandle<()>, MarketError> {
+        let studied = match key {
+            PumpKey::Footprint(id, _, _) => self.flows.lock().get(id).map(Flow::studied),
+            _ => None,
+        };
+        let pump = self.spawn_feed(key, prep, asker)?;
+        Ok(match studied {
+            Some(study) => tokio::spawn(async move {
+                let _study = study;
+                let mut pump = AbortOnDrop(pump);
+                let _ = (&mut pump.0).await;
+            }),
+            None => pump,
+        })
+    }
+
+    fn spawn_feed(
         &self,
         key: &PumpKey,
         prep: &mut Prep,

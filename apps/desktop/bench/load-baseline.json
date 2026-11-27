@@ -1,5 +1,5 @@
 {
-  "commit": "860fe5d",
+  "commit": "0dd0ab6",
   "date": "2026-11-26",
   "setup": {
     "instrument": "NQ",
@@ -16,23 +16,23 @@
   "sheet": {
     "cold": {
       "bars": {
-        "drawn": 3296,
-        "settled": 172693,
-        "refines": 3
-      },
-      "footprint": {
-        "drawn": 3296,
-        "settled": 30539,
-        "refines": 5
-      },
-      "vp": {
-        "drawn": 181285,
-        "settled": 182332,
+        "drawn": 3277,
+        "settled": 79300,
         "refines": 1
       },
+      "footprint": {
+        "drawn": 3277,
+        "settled": 16560,
+        "refines": 4
+      },
+      "vp": {
+        "drawn": 3580,
+        "settled": 79578,
+        "refines": 21
+      },
       "cvd": {
-        "drawn": 3296,
-        "settled": null,
+        "drawn": 3277,
+        "settled": 78064,
         "refines": 2
       },
       "bigTrades": {
@@ -43,28 +43,28 @@
     },
     "warm": {
       "bars": {
-        "drawn": 2056,
-        "settled": 2349,
-        "refines": 1
+        "drawn": 2020,
+        "settled": 5815,
+        "refines": 2
       },
       "footprint": {
-        "drawn": 2056,
-        "settled": 2188,
+        "drawn": 2020,
+        "settled": 2277,
         "refines": 1
       },
       "vp": {
-        "drawn": 2056,
-        "settled": 2129,
+        "drawn": 2369,
+        "settled": 2400,
         "refines": 1
       },
       "cvd": {
-        "drawn": 2056,
-        "settled": 2467,
+        "drawn": 2020,
+        "settled": 2461,
         "refines": 1
       },
       "bigTrades": {
-        "drawn": 2418,
-        "settled": 2418,
+        "drawn": 2903,
+        "settled": 2903,
         "refines": 0
       }
     }
